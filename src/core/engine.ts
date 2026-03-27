@@ -230,6 +230,20 @@ class MemoryEngine {
         { memId: new StringRecordId(memoryId) }
       )
 
+      // Clean domain-registered edges
+      const coreEdges = new Set([
+        'tagged', 'owned_by', 'reinforces', 'contradicts',
+        'summarizes', 'refines', 'child_of', 'has_rule',
+      ])
+      for (const edgeName of this.schema.getRegisteredEdgeNames()) {
+        if (!coreEdges.has(edgeName)) {
+          await this.graph.query(
+            `DELETE ${edgeName} WHERE in = $memId OR out = $memId`,
+            { memId: new StringRecordId(memoryId) }
+          )
+        }
+      }
+
       await this.graph.deleteNode(memoryId)
 
       this.events.emit('deleted', { memoryId })

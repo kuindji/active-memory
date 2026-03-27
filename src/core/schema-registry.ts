@@ -113,6 +113,10 @@ class SchemaRegistry {
     return this.registeredNodes.get(name)
   }
 
+  getRegisteredEdgeNames(): string[] {
+    return [...this.registeredEdges.keys()]
+  }
+
   private async registerNodes(nodes: NodeDef[], contributor: string): Promise<void> {
     for (const node of nodes) {
       const existing = this.registeredNodes.get(node.name)

@@ -115,5 +115,45 @@ describe('MemoryEngine', () => {
       const memory = await engine.getGraph().getNode(memId)
       expect(memory).not.toBeNull()
     })
+
+    test('domain-defined edges are cleaned up on deletion', async () => {
+      await engine.registerDomain({
+        id: 'edge_test',
+        name: 'Edge Test',
+        schema: {
+          nodes: [],
+          edges: [{ name: 'analyzed_by', from: 'memory', to: 'memory' }],
+        },
+        async processInboxItem() {},
+      })
+
+      const r1 = await engine.ingest('first memory', { domains: ['edge_test'] })
+      const r2 = await engine.ingest('second memory', { domains: ['edge_test'] })
+
+      // Create a custom domain edge between the two memories
+      await engine.getGraph().relate(r1.id!, 'analyzed_by', r2.id!)
+
+      // Verify edge exists
+      const edgesBefore = await engine.getGraph().query<{ id: string }[]>(
+        'SELECT id FROM analyzed_by WHERE in = $mem',
+        { mem: new StringRecordId(r1.id!) }
+      )
+      expect(edgesBefore?.length).toBe(1)
+
+      // Release all ownership of first memory
+      await engine.releaseOwnership(r1.id!, 'edge_test')
+      await engine.releaseOwnership(r1.id!, 'log')
+
+      // Memory should be deleted
+      const mem = await engine.getGraph().getNode(r1.id!)
+      expect(mem).toBeNull()
+
+      // Custom edge should also be deleted
+      const edgesAfter = await engine.getGraph().query<{ id: string }[]>(
+        'SELECT id FROM analyzed_by WHERE in = $oldMem OR out = $oldMem',
+        { oldMem: new StringRecordId(r1.id!) }
+      )
+      expect(edgesAfter?.length ?? 0).toBe(0)
+    })
   })
 })
