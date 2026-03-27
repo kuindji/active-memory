@@ -128,6 +128,9 @@ class SchemaRegistry {
 
   private async registerNodes(nodes: NodeDef[], contributor: string): Promise<void> {
     for (const node of nodes) {
+      if (!/^[a-z_][a-z0-9_]*$/i.test(node.name)) {
+        throw new Error(`Invalid node name: "${node.name}"`)
+      }
       const existing = this.registeredNodes.get(node.name)
 
       if (existing) {
@@ -174,6 +177,9 @@ class SchemaRegistry {
 
   private async registerEdges(edges: EdgeDef[], contributor: string): Promise<void> {
     for (const edge of edges) {
+      if (!/^[a-z_][a-z0-9_]*$/i.test(edge.name)) {
+        throw new Error(`Invalid edge name: "${edge.name}"`)
+      }
       const existing = this.registeredEdges.get(edge.name)
       if (existing) {
         existing.contributors.push(contributor)

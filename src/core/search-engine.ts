@@ -122,9 +122,7 @@ class SearchEngine {
   }
 
   private getTokenCount(mem: ScoredMemory): number {
-    // tokenCount is stored in domainAttributes under __tokenCount or computed from content
-    const stored = (mem as unknown as Record<string, unknown>).tokenCount
-    if (typeof stored === 'number') return stored
+    if (mem.tokenCount !== undefined) return mem.tokenCount
     return countTokens(mem.content)
   }
 
@@ -158,7 +156,7 @@ class SearchEngine {
         eventTime: row.event_time ?? null,
         createdAt: row.created_at,
         tokenCount: row.token_count,
-      } as ScoredMemory & { tokenCount: number })
+      })
     }
 
     return candidates
@@ -200,7 +198,7 @@ class SearchEngine {
         eventTime: row.event_time ?? null,
         createdAt: row.created_at,
         tokenCount: row.token_count,
-      } as ScoredMemory & { tokenCount: number })
+      })
     }
 
     return candidates
@@ -250,7 +248,7 @@ class SearchEngine {
             eventTime: row.event_time ?? null,
             createdAt: row.created_at,
             tokenCount: row.token_count,
-          } as ScoredMemory & { tokenCount: number })
+          })
         }
       }
       return candidates
@@ -280,7 +278,7 @@ class SearchEngine {
             eventTime: row.event_time ?? null,
             createdAt: row.created_at,
             tokenCount: row.token_count,
-          } as ScoredMemory & { tokenCount: number })
+          })
         }
       }
 
@@ -307,7 +305,7 @@ class SearchEngine {
           eventTime: row.event_time ?? null,
           createdAt: row.created_at,
           tokenCount: row.token_count,
-        } as ScoredMemory & { tokenCount: number })
+        })
       }
     }
 

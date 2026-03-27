@@ -145,6 +145,7 @@ export interface ScoredMemory {
   domainAttributes: Record<string, Record<string, unknown>>
   eventTime: number | null
   createdAt: number
+  tokenCount?: number
   connections?: {
     references?: { id: string; type: string }[]
   }
