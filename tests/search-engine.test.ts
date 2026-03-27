@@ -246,6 +246,75 @@ describe('SearchEngine', () => {
     })
   })
 
+  describe('post-search enrichment', () => {
+    test('populates connections.references for linked memories', async () => {
+      const m1 = await store.createNode('memory', {
+        content: 'original finding about topic',
+        created_at: Date.now(),
+        token_count: 5,
+      })
+      const m2 = await store.createNode('memory', {
+        content: 'reinforcing finding about topic',
+        created_at: Date.now(),
+        token_count: 5,
+      })
+      await store.relate(m2, 'reinforces', m1)
+
+      const result = await search.search({ mode: 'graph', limit: 10 })
+
+      const m1Result = result.entries.find(e => e.id === m1)
+      const m2Result = result.entries.find(e => e.id === m2)
+
+      expect(m1Result?.connections?.references).toBeDefined()
+      expect(m1Result!.connections!.references!.length).toBeGreaterThanOrEqual(1)
+      expect(m1Result!.connections!.references!.some(
+        r => r.id === m2 && r.type === 'reinforces'
+      )).toBe(true)
+
+      expect(m2Result?.connections?.references).toBeDefined()
+      expect(m2Result!.connections!.references!.some(
+        r => r.id === m1 && r.type === 'reinforces'
+      )).toBe(true)
+    })
+
+    test('populates domainAttributes from owned_by edges', async () => {
+      await store.createNodeWithId('domain:enrichtest', { name: 'EnrichTest' })
+      const m1 = await store.createNode('memory', {
+        content: 'memory with domain attributes',
+        created_at: Date.now(),
+        token_count: 5,
+      })
+      await store.relate(m1, 'owned_by', 'domain:enrichtest', {
+        attributes: { confidence: 0.9, kind: 'report' },
+        owned_at: Date.now(),
+      })
+
+      const result = await search.search({
+        mode: 'graph',
+        domains: ['enrichtest'],
+        limit: 10,
+      })
+
+      expect(result.entries.length).toBe(1)
+      expect(result.entries[0].domainAttributes.enrichtest).toBeDefined()
+      expect(result.entries[0].domainAttributes.enrichtest.confidence).toBe(0.9)
+      expect(result.entries[0].domainAttributes.enrichtest.kind).toBe('report')
+    })
+
+    test('empty connections when no reference edges exist', async () => {
+      await store.createNode('memory', {
+        content: 'lonely memory with no references',
+        created_at: Date.now(),
+        token_count: 5,
+      })
+
+      const result = await search.search({ mode: 'graph', limit: 10 })
+      expect(result.entries.length).toBe(1)
+      const refs = result.entries[0].connections?.references
+      expect(!refs || refs.length === 0).toBe(true)
+    })
+  })
+
   describe('domain ownership filter', () => {
     test('filters by domain ownership', async () => {
       await store.createNodeWithId('domain:alpha', { name: 'Alpha' })

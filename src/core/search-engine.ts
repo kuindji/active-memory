@@ -103,6 +103,12 @@ class SearchEngine {
       entries = budgeted
     }
 
+    // Enrich results with connections and domain attributes
+    await Promise.all([
+      this.enrichConnections(entries),
+      this.enrichDomainAttributes(entries),
+    ])
+
     const totalTokens = entries.reduce((sum, e) => sum + this.getTokenCount(e), 0)
 
     return {
@@ -369,6 +375,69 @@ class SearchEngine {
     }
 
     return filtered
+  }
+
+  private async enrichConnections(entries: ScoredMemory[]): Promise<void> {
+    if (entries.length === 0) return
+    const ids = entries.map(e => new StringRecordId(e.id))
+
+    const edges: { id: unknown; in: unknown; out: unknown }[] = []
+    for (const table of ['reinforces', 'contradicts', 'summarizes', 'refines']) {
+      const rows = await this.store.query<{ id: unknown; in: unknown; out: unknown }[]>(
+        `SELECT id, in, out FROM ${table} WHERE in IN $ids OR out IN $ids`,
+        { ids }
+      )
+      if (rows) edges.push(...rows)
+    }
+
+    if (edges.length === 0) return
+
+    const connectionMap = new Map<string, { id: string; type: string }[]>()
+
+    for (const edge of edges) {
+      const edgeIdStr = String(edge.id)
+      const edgeType = edgeIdStr.includes(':') ? edgeIdStr.split(':')[0] : 'unknown'
+      const inId = String(edge.in)
+      const outId = String(edge.out)
+
+      if (!connectionMap.has(inId)) connectionMap.set(inId, [])
+      connectionMap.get(inId)!.push({ id: outId, type: edgeType })
+
+      if (!connectionMap.has(outId)) connectionMap.set(outId, [])
+      connectionMap.get(outId)!.push({ id: inId, type: edgeType })
+    }
+
+    for (const entry of entries) {
+      const refs = connectionMap.get(entry.id)
+      if (refs && refs.length > 0) {
+        entry.connections = { references: refs }
+      }
+    }
+  }
+
+  private async enrichDomainAttributes(entries: ScoredMemory[]): Promise<void> {
+    if (entries.length === 0) return
+    const ids = entries.map(e => new StringRecordId(e.id))
+
+    const ownershipEdges = await this.store.query<{
+      in: unknown; out: unknown; attributes: Record<string, unknown>
+    }[]>(
+      'SELECT in, out, attributes FROM owned_by WHERE in IN $ids',
+      { ids }
+    )
+    if (!ownershipEdges) return
+
+    const attrMap = new Map<string, Record<string, Record<string, unknown>>>()
+    for (const edge of ownershipEdges) {
+      const memId = String(edge.in)
+      const domainId = String(edge.out).replace('domain:', '')
+      if (!attrMap.has(memId)) attrMap.set(memId, {})
+      attrMap.get(memId)![domainId] = edge.attributes ?? {}
+    }
+
+    for (const entry of entries) {
+      entry.domainAttributes = attrMap.get(entry.id) ?? {}
+    }
   }
 
   private async getMemoryTags(memoryId: string): Promise<string[]> {
