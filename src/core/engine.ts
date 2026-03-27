@@ -236,9 +236,11 @@ class MemoryEngine {
   }
 
   createDomainContext(domainId: string): DomainContext {
-    const engine = this
     const graph = this.graph
     const llm = this.llm
+    const events = this.events
+    const releaseOwnership = this.releaseOwnership.bind(this)
+    const search = this.search.bind(this)
 
     return {
       domain: domainId,
@@ -309,13 +311,13 @@ class MemoryEngine {
       async tagMemory(memoryId: string, tagId: string): Promise<void> {
         const fullTagId = tagId.startsWith('tag:') ? tagId : `tag:${tagId}`
         await graph.relate(memoryId, 'tagged', fullTagId)
-        engine.events.emit('tagAssigned', { memoryId, tagId: fullTagId })
+        events.emit('tagAssigned', { memoryId, tagId: fullTagId })
       },
 
       async untagMemory(memoryId: string, tagId: string): Promise<void> {
         const fullTagId = tagId.startsWith('tag:') ? tagId : `tag:${tagId}`
         await graph.unrelate(memoryId, 'tagged', fullTagId)
-        engine.events.emit('tagRemoved', { memoryId, tagId: fullTagId })
+        events.emit('tagRemoved', { memoryId, tagId: fullTagId })
       },
 
       async getTagDescendants(tagPath: string): Promise<string[]> {
@@ -338,11 +340,11 @@ class MemoryEngine {
           attributes: attributes ?? {},
           owned_at: Date.now(),
         })
-        engine.events.emit('ownershipAdded', { memoryId, domainId: targetDomainId })
+        events.emit('ownershipAdded', { memoryId, domainId: targetDomainId })
       },
 
       async releaseOwnership(memoryId: string, targetDomainId: string): Promise<void> {
-        await engine.releaseOwnership(memoryId, targetDomainId)
+        await releaseOwnership(memoryId, targetDomainId)
       },
 
       async updateAttributes(memoryId: string, attributes: Record<string, unknown>): Promise<void> {
@@ -358,7 +360,7 @@ class MemoryEngine {
       },
 
       async search(query: Omit<SearchQuery, 'domains'>): Promise<SearchResult> {
-        return engine.search({ ...query, domains: [domainId] })
+        return search({ ...query, domains: [domainId] })
       },
 
       async getMeta(key: string): Promise<string | null> {
@@ -385,9 +387,9 @@ class MemoryEngine {
 
     // Check if a target domain has custom buildContext
     if (options?.domains?.length === 1) {
-      const domain = this.domainRegistry.get(options.domains[0]!)
+      const domain = this.domainRegistry.get(options.domains[0])
       if (domain?.buildContext) {
-        const ctx = this.createDomainContext(options.domains[0]!)
+        const ctx = this.createDomainContext(options.domains[0])
         return domain.buildContext(text, budgetTokens, ctx)
       }
     }

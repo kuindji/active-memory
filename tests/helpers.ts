@@ -17,20 +17,20 @@ export class MockLLMAdapter implements LLMAdapter {
   generateResult = ''
   synthesizeResult = ''
 
-  async extract(): Promise<string[]> {
-    return this.extractResult
+  extract(): Promise<string[]> {
+    return Promise.resolve(this.extractResult)
   }
-  async consolidate(): Promise<string> {
-    return this.consolidateResult
+  consolidate(): Promise<string> {
+    return Promise.resolve(this.consolidateResult)
   }
-  async generate(): Promise<string> {
-    return this.generateResult
+  generate(): Promise<string> {
+    return Promise.resolve(this.generateResult)
   }
-  async synthesize(
+  synthesize(
     _query: string,
     _memories: ScoredMemory[],
     _tagContext?: string[]
   ): Promise<string> {
-    return this.synthesizeResult
+    return Promise.resolve(this.synthesizeResult)
   }
 }

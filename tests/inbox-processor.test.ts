@@ -19,8 +19,9 @@ describe('InboxProcessor', () => {
   const testDomain: DomainConfig = {
     id: 'test',
     name: 'Test Domain',
-    async processInboxItem(entry: OwnedMemory, _ctx: DomainContext) {
+    processInboxItem(entry: OwnedMemory, _ctx: DomainContext): Promise<void> {
       processedItems.push(entry)
+      return Promise.resolve()
     },
   }
 
@@ -112,8 +113,9 @@ describe('InboxProcessor', () => {
     const secondDomain: DomainConfig = {
       id: 'second',
       name: 'Second Domain',
-      async processInboxItem(entry: OwnedMemory, _ctx: DomainContext) {
+      processInboxItem(entry: OwnedMemory, _ctx: DomainContext): Promise<void> {
         secondProcessed.push(entry)
+        return Promise.resolve()
       },
     }
     domainRegistry.register(secondDomain)

@@ -4,8 +4,14 @@ import type { DomainRegistry } from './domain-registry.ts'
 import type { EventEmitter } from './events.ts'
 import type { DomainContext, OwnedMemory, MemoryEntry } from './types.ts'
 
+interface RecordIdLike {
+  tb: string
+  id: string
+  toString(): string
+}
+
 interface RawMemoryRow {
-  id: { tb: string; id: string } | string
+  id: RecordIdLike | string
   content: string
   event_time: number | null
   created_at: number
@@ -13,13 +19,13 @@ interface RawMemoryRow {
 }
 
 interface RawOwnedByEdge {
-  out: { tb: string; id: string } | string
+  out: RecordIdLike | string
   attributes?: Record<string, unknown>
   owned_at?: number
 }
 
 interface RawTagRow {
-  id: { tb: string; id: string } | string
+  id: RecordIdLike | string
   label: string
 }
 
@@ -95,13 +101,15 @@ class InboxProcessor {
   start(intervalMs = 5000, batchLimit = 50): void {
     if (this.timer) return
 
-    this.timer = setInterval(async () => {
-      let processed = 0
-      while (processed < batchLimit) {
-        const didProcess = await this.processNext()
-        if (!didProcess) break
-        processed++
-      }
+    this.timer = setInterval(() => {
+      void (async () => {
+        let processed = 0
+        while (processed < batchLimit) {
+          const didProcess = await this.processNext()
+          if (!didProcess) break
+          processed++
+        }
+      })();
     }, intervalMs)
   }
 

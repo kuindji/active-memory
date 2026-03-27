@@ -30,7 +30,7 @@ class SearchEngine {
 
     switch (mode) {
       case 'vector':
-        candidates = await this.vectorSearch(query)
+        candidates = this.vectorSearch(query)
         break
       case 'fulltext':
         candidates = await this.fulltextSearch(query)
@@ -68,7 +68,6 @@ class SearchEngine {
     entries = entries.slice(0, limit)
 
     // Apply token budget
-    let totalTokens = 0
     if (query.tokenBudget) {
       const budgeted = applyTokenBudget(
         entries.map(e => ({ ...e, tokenCount: this.getTokenCount(e) })),
@@ -77,7 +76,7 @@ class SearchEngine {
       entries = budgeted
     }
 
-    totalTokens = entries.reduce((sum, e) => sum + this.getTokenCount(e), 0)
+    const totalTokens = entries.reduce((sum, e) => sum + this.getTokenCount(e), 0)
 
     return {
       entries,
@@ -96,7 +95,7 @@ class SearchEngine {
     return countTokens(mem.content)
   }
 
-  private async vectorSearch(query: SearchQuery): Promise<Map<string, ScoredMemory>> {
+  private vectorSearch(_query: SearchQuery): Map<string, ScoredMemory> {
     // Vector search requires embeddings — fail gracefully if not available
     const candidates = new Map<string, ScoredMemory>()
     // KNN search would go here once embedding model is configured
@@ -258,8 +257,8 @@ class SearchEngine {
     query: SearchQuery,
     weights: { vector: number; fulltext: number; graph: number }
   ): Promise<Map<string, ScoredMemory>> {
-    const [vectorCandidates, fulltextCandidates, graphCandidates] = await Promise.all([
-      weights.vector > 0 ? this.vectorSearch(query) : new Map<string, ScoredMemory>(),
+    const vectorCandidates = weights.vector > 0 ? this.vectorSearch(query) : new Map<string, ScoredMemory>()
+    const [fulltextCandidates, graphCandidates] = await Promise.all([
       weights.fulltext > 0 && query.text ? this.fulltextSearch(query) : new Map<string, ScoredMemory>(),
       weights.graph > 0 ? this.graphSearch(query) : new Map<string, ScoredMemory>(),
     ])

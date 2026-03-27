@@ -154,7 +154,7 @@ describe('Multi-domain integration', () => {
     expect(linkedCategory!.name).toBe('Testing')
   })
 
-  test('domain schema extension does not conflict', async () => {
+  test('domain schema extension does not conflict', () => {
     expect(engine.getDomainRegistry().has('alpha')).toBe(true)
     expect(engine.getDomainRegistry().has('beta')).toBe(true)
   })

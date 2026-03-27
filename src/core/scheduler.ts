@@ -48,7 +48,7 @@ export class Scheduler {
 
   start(tickIntervalMs = 60_000): void {
     this.stop()
-    this.timer = setInterval(() => this.tick(), tickIntervalMs)
+    this.timer = setInterval(() => { void this.tick() }, tickIntervalMs)
   }
 
   stop(): void {

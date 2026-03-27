@@ -62,7 +62,7 @@ export interface FieldDef {
   name: string
   type: string
   required?: boolean
-  default?: unknown
+  default?: string | number | boolean | null
   computed?: string
 }
 

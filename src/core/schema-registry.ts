@@ -192,7 +192,10 @@ class SchemaRegistry {
     const typeStr = field.required === false ? `option<${field.type}>` : field.type
     let query = `DEFINE FIELD IF NOT EXISTS ${field.name} ON ${table} TYPE ${typeStr}`
     if (field.default !== undefined) {
-      query += ` DEFAULT ${typeof field.default === 'string' ? `'${field.default}'` : field.default}`
+      const defaultVal = typeof field.default === 'string'
+        ? `'${field.default}'`
+        : `${field.default}`
+      query += ` DEFAULT ${defaultVal}`
     }
     if (field.computed) {
       query += ` VALUE ${field.computed}`

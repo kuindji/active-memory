@@ -9,3 +9,5 @@
 **Important:** Don't export until necessary. If something is exported but never used anywhere, it should not be exported.
 
 **Important:** Avoid disabling eslint rules when working on linting issues. Try to find proper solution.
+
+**Important:** Run `bun run lint` to check for linting issues. The project uses ESLint 9 with typescript-eslint type-checked rules.

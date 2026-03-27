@@ -5,7 +5,9 @@
   "main": "src/index.ts",
   "scripts": {
     "test": "bun test",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix"
   },
   "dependencies": {
     "surrealdb": "^2.0.0",
@@ -13,7 +15,11 @@
     "js-tiktoken": "^1.0.21"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@types/bun": "latest",
-    "typescript": "^5"
+    "eslint": "^10.1.0",
+    "jiti": "^2.6.1",
+    "typescript": "^5",
+    "typescript-eslint": "^8.57.2"
   }
 }
