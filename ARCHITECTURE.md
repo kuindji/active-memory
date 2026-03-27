@@ -28,7 +28,7 @@ tag ──has_rule──► domain
 meta (key-value store for domain state)
 ```
 
-Domains can extend the graph with custom node and edge types via `DomainSchema`. Multiple domains can share node types through `SharedSchema`.
+Domains can extend the graph with custom node and edge types via `DomainSchema`. Shared node types (e.g., `person`, `region`) are defined by registering a domain with a schema — other domains can then reference and extend those types. This keeps composability uniform: everything is a domain.
 
 ## Component Architecture
 
@@ -60,10 +60,9 @@ Entry point. Initializes all subsystems, connects to SurrealDB, registers the bu
 In-memory registry of `DomainConfig` instances. Lookup by ID, listing, registration/unregistration. The `log` domain is protected from unregistration.
 
 **`SchemaRegistry`** (`src/core/schema-registry.ts`)
-Manages SurrealDB table definitions. Handles three layers:
+Manages SurrealDB table definitions. Handles two layers:
 - **Core schema** — `memory`, `tag`, `domain`, `meta` tables and built-in edges
-- **Shared schemas** — Node/edge types shared across domains (e.g., `person`, `region`)
-- **Domain schemas** — Domain-specific extensions. Detects field type conflicts when multiple contributors define the same node type.
+- **Domain schemas** — Domain-defined node and edge types. Multiple domains can reference the same node type; the registry merges fields and detects type conflicts.
 
 **`SearchEngine`** (`src/core/search-engine.ts`)
 Multi-mode search with four strategies:
