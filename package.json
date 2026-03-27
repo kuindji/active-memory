@@ -1,0 +1,19 @@
+{
+  "name": "active-memory",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "src/index.ts",
+  "scripts": {
+    "test": "bun test",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "surrealdb": "^2.0.0",
+    "@surrealdb/node": "^3.0.0",
+    "js-tiktoken": "^1.0.21"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "^5"
+  }
+}
