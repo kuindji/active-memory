@@ -343,13 +343,6 @@ interface DomainConfig {
 
 **`logDomain`** (`src/domains/log-domain.ts`) — No-op processor that keeps all ingested memories as a chronological log. Always receives ownership. Cannot be unregistered.
 
-## Not Yet Implemented
-
-| Feature | Description |
-|---------|-------------|
-| Decay / expiry / supersession | No time-based decay or fact supersession |
-| BM25 fulltext index | The `DEFINE INDEX ... SEARCH ANALYZER ascii BM25` is not created in `registerCore`; fulltext falls back to CONTAINS keyword scan |
-
 ## Directory Structure
 
 ```

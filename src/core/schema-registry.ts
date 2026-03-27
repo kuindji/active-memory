@@ -76,6 +76,16 @@ class SchemaRegistry {
       })
     }
 
+    await this.db.query(
+      `DEFINE ANALYZER IF NOT EXISTS memory_content TOKENIZERS class, punct FILTERS lowercase, ascii`
+    )
+    await this.defineIndex('memory', {
+      name: 'idx_memory_content',
+      fields: ['content'],
+      type: 'search',
+      config: { analyzer: 'memory_content' },
+    })
+
     // Track core nodes in memory
     this.registeredNodes.set('memory', {
       name: 'memory',
@@ -232,7 +242,7 @@ class SchemaRegistry {
       query += ` HNSW DIMENSION ${dim} DIST ${dist}`
     } else if (idx.type === 'search') {
       const analyzer = (idx.config?.analyzer as string) ?? 'ascii'
-      query += ` SEARCH ANALYZER ${analyzer} BM25`
+      query += ` FULLTEXT ANALYZER ${analyzer} BM25`
     }
     await this.db.query(query)
   }
