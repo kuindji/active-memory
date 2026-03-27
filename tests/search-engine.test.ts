@@ -100,6 +100,95 @@ describe('SearchEngine', () => {
     })
   })
 
+  describe('hybrid search', () => {
+    test('combines fulltext and graph results', async () => {
+      await store.createNodeWithId('tag:hybrid_tag', { label: 'hybrid_tag', created_at: Date.now() })
+
+      const m1 = await store.createNode('memory', {
+        content: 'hybrid search memory tagged item',
+        created_at: Date.now(),
+        token_count: 5,
+      })
+      await store.relate(m1, 'tagged', 'tag:hybrid_tag')
+
+      await store.createNode('memory', {
+        content: 'hybrid search memory from fulltext only',
+        created_at: Date.now(),
+        token_count: 6,
+      })
+
+      const result = await search.search({
+        mode: 'hybrid',
+        text: 'hybrid search memory',
+        tags: ['hybrid_tag'],
+        limit: 10,
+        weights: { vector: 0.0, fulltext: 0.5, graph: 0.5 },
+      })
+
+      expect(result.mode).toBe('hybrid')
+      expect(result.entries.length).toBeGreaterThanOrEqual(1)
+    })
+
+    test('returns results even with only graph component', async () => {
+      await store.createNodeWithId('tag:only_graph', { label: 'only_graph', created_at: Date.now() })
+      const m1 = await store.createNode('memory', {
+        content: 'graph only memory',
+        created_at: Date.now(),
+        token_count: 3,
+      })
+      await store.relate(m1, 'tagged', 'tag:only_graph')
+
+      const result = await search.search({
+        mode: 'hybrid',
+        tags: ['only_graph'],
+        limit: 10,
+        weights: { vector: 0.0, fulltext: 0.0, graph: 1.0 },
+      })
+
+      expect(result.entries.length).toBe(1)
+    })
+  })
+
+  describe('minScore filter', () => {
+    test('filters out entries below minScore', async () => {
+      // Create memories that will have low scores via graph recency fallback (0.5)
+      for (let i = 0; i < 3; i++) {
+        await store.createNode('memory', {
+          content: `low score memory ${i}`,
+          created_at: Date.now(),
+          token_count: 4,
+        })
+      }
+
+      const result = await search.search({
+        mode: 'graph',
+        limit: 10,
+        minScore: 0.9, // Higher than recency score of 0.5
+      })
+
+      expect(result.entries.length).toBe(0)
+    })
+
+    test('keeps entries above minScore', async () => {
+      await store.createNodeWithId('tag:high', { label: 'high', created_at: Date.now() })
+      const m = await store.createNode('memory', {
+        content: 'high score memory',
+        created_at: Date.now(),
+        token_count: 3,
+      })
+      await store.relate(m, 'tagged', 'tag:high')
+
+      const result = await search.search({
+        mode: 'graph',
+        tags: ['high'],
+        limit: 10,
+        minScore: 0.1, // Tag-based graph search scores 1.0
+      })
+
+      expect(result.entries.length).toBe(1)
+    })
+  })
+
   describe('domain ownership filter', () => {
     test('filters by domain ownership', async () => {
       await store.createNodeWithId('domain:alpha', { name: 'Alpha' })
