@@ -8,6 +8,9 @@ export { DomainRegistry } from './core/domain-registry.ts'
 export { Scheduler } from './core/scheduler.ts'
 export { EventEmitter } from './core/events.ts'
 
+// Scoring utilities
+export { computeDecay, countTokens, mergeScores, applyTokenBudget } from './core/scoring.ts'
+
 // Types
 export type {
   EngineConfig,
@@ -18,6 +21,7 @@ export type {
   DomainContext,
   DomainSchema,
   DomainSchedule,
+  WriteMemoryEntry,
   NodeDef,
   EdgeDef,
   FieldDef,

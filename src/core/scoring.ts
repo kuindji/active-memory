@@ -36,6 +36,12 @@ export function mergeScores(
   return weightSum > 0 ? total / weightSum : 0
 }
 
+export function computeDecay(weight: number, timestamp: number, now: number, lambda: number): number {
+  if (weight === 0) return 0
+  const hours = (now - timestamp) / (3600 * 1000)
+  return weight * Math.exp(-lambda * hours)
+}
+
 export function applyTokenBudget<T extends { tokenCount?: number; content?: string }>(
   entries: T[],
   budget: number

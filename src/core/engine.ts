@@ -27,6 +27,7 @@ import type {
   ScoredMemory,
   MemoryFilter,
   RepetitionConfig,
+  WriteMemoryEntry,
 } from './types.ts'
 
 class MemoryEngine {
@@ -310,6 +311,7 @@ class MemoryEngine {
   createDomainContext(domainId: string): DomainContext {
     const graph = this.graph
     const llm = this.llm
+    const embedding = this.embedding
     const events = this.events
     const releaseOwnership = this.releaseOwnership.bind(this)
     const search = this.search.bind(this)
@@ -397,6 +399,42 @@ class MemoryEngine {
           if (entry) results.push(entry)
         }
         return results
+      },
+
+      async writeMemory(entry: WriteMemoryEntry): Promise<string> {
+        const tokens = countTokens(entry.content)
+        const now = Date.now()
+
+        const memData: Record<string, unknown> = {
+          content: entry.content,
+          created_at: now,
+          token_count: tokens,
+        }
+        if (entry.eventTime !== undefined) {
+          memData.event_time = entry.eventTime
+        }
+        if (embedding) {
+          memData.embedding = await embedding.embed(entry.content)
+        }
+
+        const memId = await graph.createNode('memory', memData)
+
+        if (entry.tags) {
+          for (const tag of entry.tags) {
+            await this.tagMemory(memId, tag)
+          }
+        }
+
+        if (entry.references) {
+          for (const ref of entry.references) {
+            await graph.relate(memId, ref.type, ref.targetId)
+          }
+        }
+
+        const ownerDomain = entry.ownership?.domain ?? domainId
+        await this.addOwnership(memId, ownerDomain, entry.ownership?.attributes)
+
+        return memId
       },
 
       async addTag(path: string): Promise<void> {

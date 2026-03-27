@@ -159,12 +159,24 @@ export interface OwnedMemory {
   tags: string[]
 }
 
+export interface WriteMemoryEntry {
+  content: string
+  eventTime?: number | null
+  tags?: string[]
+  references?: Reference[]
+  ownership?: {
+    domain: string
+    attributes?: Record<string, unknown>
+  }
+}
+
 export interface DomainContext {
   domain: string
   graph: GraphApi
   llm: LLMAdapter
   getMemory(id: string): Promise<MemoryEntry | null>
   getMemories(filter?: MemoryFilter): Promise<MemoryEntry[]>
+  writeMemory(entry: WriteMemoryEntry): Promise<string>
   addTag(path: string): Promise<void>
   tagMemory(memoryId: string, tagId: string): Promise<void>
   untagMemory(memoryId: string, tagId: string): Promise<void>
