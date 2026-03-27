@@ -45,6 +45,18 @@ class SearchEngine {
         candidates = new Map()
     }
 
+    // Apply ID filter
+    if (query.ids && query.ids.length > 0) {
+      const idSet = new Set(query.ids.map(id => id.startsWith('memory:') ? id : `memory:${id}`))
+      const filtered = new Map<string, ScoredMemory>()
+      for (const [id, mem] of candidates) {
+        if (idSet.has(id)) {
+          filtered.set(id, mem)
+        }
+      }
+      candidates = filtered
+    }
+
     // Apply domain ownership filter
     if (query.domains && query.domains.length > 0) {
       candidates = await this.filterByDomainOwnership(candidates, query.domains)

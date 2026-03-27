@@ -22,6 +22,7 @@ export type {
   EdgeDef,
   FieldDef,
   IndexDef,
+  MemoryFilter,
   SearchQuery,
   SearchResult,
   ScoredMemory,

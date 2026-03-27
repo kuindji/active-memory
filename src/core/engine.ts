@@ -24,7 +24,7 @@ import type {
   AskOptions,
   AskResult,
   ScoredMemory,
-  GetMemoriesOptions,
+  MemoryFilter,
 } from './types.ts'
 
 class MemoryEngine {
@@ -260,9 +260,8 @@ class MemoryEngine {
         }
       },
 
-      async getMemories(options?: GetMemoriesOptions): Promise<MemoryEntry[]> {
-        const filter = options?.filter
-
+      async getMemories(filter?: MemoryFilter): Promise<MemoryEntry[]> {
+        // Short-circuit: batch fetch by IDs
         if (filter?.ids) {
           const results: MemoryEntry[] = []
           for (const id of filter.ids) {
@@ -272,17 +271,57 @@ class MemoryEngine {
           return results
         }
 
-        const targetDomain = filter?.domain ?? domainId
-        const fullId = targetDomain.startsWith('domain:') ? targetDomain : `domain:${targetDomain}`
-        const query = filter?.since != null
-          ? 'SELECT in FROM owned_by WHERE out = $domainId AND owned_at >= $since'
-          : 'SELECT in FROM owned_by WHERE out = $domainId'
-        const vars: Record<string, unknown> = { domainId: new StringRecordId(fullId) }
-        if (filter?.since != null) vars.since = filter.since
-        const rows = await graph.query<{ in: unknown }[]>(query, vars)
+        // Build composable query for owned memories
+        const targetDomains = filter?.domains ?? [domainId]
+        const domainRefs = targetDomains.map(d =>
+          new StringRecordId(d.startsWith('domain:') ? d : `domain:${d}`)
+        )
+
+        const conditions: string[] = ['out IN $domainRefs']
+        const vars: Record<string, unknown> = { domainRefs }
+
+        if (filter?.since != null) {
+          conditions.push('owned_at >= $since')
+          vars.since = filter.since
+        }
+
+        if (filter?.attributes) {
+          for (const [key, value] of Object.entries(filter.attributes)) {
+            const paramName = `attr_${key}`
+            conditions.push(`attrs.${key} = $${paramName}`)
+            vars[paramName] = value
+          }
+        }
+
+        const where = conditions.join(' AND ')
+        const limitClause = filter?.limit != null ? ' LIMIT $limit' : ''
+        if (filter?.limit != null) vars.limit = filter.limit
+
+        const surql = `SELECT in FROM owned_by WHERE ${where}${limitClause}`
+        const rows = await graph.query<{ in: unknown }[]>(surql, vars)
         if (!rows) return []
+
+        let memoryIds = rows.map(r => String(r.in))
+
+        // Apply tag filter if specified
+        if (filter?.tags && filter.tags.length > 0) {
+          const tagRefs = filter.tags.map(t =>
+            new StringRecordId(t.startsWith('tag:') ? t : `tag:${t}`)
+          )
+          const taggedRows = await graph.query<{ in: unknown }[]>(
+            `SELECT in FROM tagged WHERE in IN $memIds AND out IN $tagRefs`,
+            { memIds: memoryIds.map(id => new StringRecordId(id)), tagRefs }
+          )
+          if (taggedRows) {
+            const taggedIds = new Set(taggedRows.map(r => String(r.in)))
+            memoryIds = memoryIds.filter(id => taggedIds.has(id))
+          } else {
+            memoryIds = []
+          }
+        }
+
         const results: MemoryEntry[] = []
-        for (const id of rows.map(r => String(r.in))) {
+        for (const id of memoryIds) {
           const entry = await this.getMemory(id)
           if (entry) results.push(entry)
         }

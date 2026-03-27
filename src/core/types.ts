@@ -92,9 +92,18 @@ export interface DomainSchema {
   edges: EdgeDef[]
 }
 
-// --- Search types ---
+// --- Filter & search types ---
 
-export interface SearchQuery {
+export interface MemoryFilter {
+  ids?: string[]
+  tags?: string[]
+  domains?: string[]
+  attributes?: Record<string, unknown>
+  since?: number
+  limit?: number
+}
+
+export interface SearchQuery extends MemoryFilter {
   text?: string
   mode?: 'vector' | 'fulltext' | 'hybrid' | 'graph'
   traversal?: {
@@ -102,11 +111,6 @@ export interface SearchQuery {
     pattern: string
     depth?: number
   }
-  tags?: string[]
-  domains?: string[]
-  attributes?: Record<string, unknown>
-  since?: number
-  limit?: number
   tokenBudget?: number
   minScore?: number
   weights?: {
@@ -154,22 +158,12 @@ export interface OwnedMemory {
   tags: string[]
 }
 
-export interface GetMemoriesFilter {
-  ids?: string[]
-  domain?: string
-  since?: number
-}
-
-export interface GetMemoriesOptions {
-  filter?: GetMemoriesFilter
-}
-
 export interface DomainContext {
   domain: string
   graph: GraphApi
   llm: LLMAdapter
   getMemory(id: string): Promise<MemoryEntry | null>
-  getMemories(options?: GetMemoriesOptions): Promise<MemoryEntry[]>
+  getMemories(filter?: MemoryFilter): Promise<MemoryEntry[]>
   addTag(path: string): Promise<void>
   tagMemory(memoryId: string, tagId: string): Promise<void>
   untagMemory(memoryId: string, tagId: string): Promise<void>
