@@ -26,6 +26,7 @@ import type {
   AskResult,
   ScoredMemory,
   MemoryFilter,
+  RepetitionConfig,
 } from './types.ts'
 
 class MemoryEngine {
@@ -39,6 +40,7 @@ class MemoryEngine {
   private events = new EventEmitter()
   private llm!: LLMAdapter
   private embedding?: EmbeddingAdapter
+  private repetitionConfig?: RepetitionConfig
 
   async initialize(config: EngineConfig): Promise<void> {
     const db = new Surreal({ engines: createNodeEngines() })
@@ -51,6 +53,7 @@ class MemoryEngine {
     this.db = db
     this.llm = config.llm
     this.embedding = config.embedding
+    this.repetitionConfig = config.repetition
 
     // Set up schema
     this.schema = new SchemaRegistry(db)
@@ -114,7 +117,55 @@ class MemoryEngine {
     const now = Date.now()
     const tokens = countTokens(text)
 
-    // Create memory node
+    // Generate embedding early (needed for dedup and storage)
+    let embeddingVec: number[] | undefined
+    if (this.embedding) {
+      embeddingVec = await this.embedding.embed(text)
+    }
+
+    // Dedup check
+    if (!options?.skipDedup && embeddingVec && this.repetitionConfig) {
+      const similar = await this.graph.query<(Record<string, unknown> & { score: number })[]>(
+        `SELECT *, vector::similarity::cosine(embedding, $queryVec) AS score
+         FROM memory
+         WHERE embedding IS NOT NONE
+         ORDER BY score DESC
+         LIMIT 5`,
+        { queryVec: embeddingVec }
+      )
+
+      if (similar && similar.length > 0) {
+        const top = similar[0]
+        const existingId = String(top.id)
+
+        if (top.score >= this.repetitionConfig.duplicateThreshold) {
+          return { action: 'skipped', existingId }
+        }
+
+        if (top.score >= this.repetitionConfig.reinforceThreshold) {
+          const memId = await this.createMemoryNode(text, tokens, embeddingVec, options, now)
+          await this.graph.relate(memId, 'reinforces', existingId, {
+            strength: top.score,
+            detected_at: now,
+          })
+          this.events.emit('reinforced', { id: memId, existingId, similarity: top.score })
+          return { action: 'reinforced', id: memId, existingId }
+        }
+      }
+    }
+
+    // Normal storage
+    const memId = await this.createMemoryNode(text, tokens, embeddingVec, options, now)
+    return { action: 'stored', id: memId }
+  }
+
+  private async createMemoryNode(
+    text: string,
+    tokens: number,
+    embeddingVec: number[] | undefined,
+    options: IngestOptions | undefined,
+    now: number
+  ): Promise<string> {
     const memData: Record<string, unknown> = {
       content: text,
       created_at: now,
@@ -123,12 +174,10 @@ class MemoryEngine {
     if (options?.eventTime !== undefined) {
       memData.event_time = options.eventTime
     }
-    const memId = await this.graph.createNode('memory', memData)
-
-    if (this.embedding) {
-      const vec = await this.embedding.embed(text)
-      await this.graph.updateNode(memId, { embedding: vec })
+    if (embeddingVec) {
+      memData.embedding = embeddingVec
     }
+    const memId = await this.graph.createNode('memory', memData)
 
     // Tag with inbox
     await this.graph.relate(memId, 'tagged', 'tag:inbox')
@@ -166,7 +215,7 @@ class MemoryEngine {
     // Emit event
     this.events.emit('ingested', { id: memId, content: text, tokenCount: tokens })
 
-    return { action: 'stored', id: memId }
+    return memId
   }
 
   async search(query: SearchQuery): Promise<SearchResult> {

@@ -1,7 +1,7 @@
 import { describe, test, expect, beforeEach, afterEach } from 'bun:test'
 import { StringRecordId } from 'surrealdb'
 import { MemoryEngine } from '../src/core/engine.ts'
-import { MockLLMAdapter } from './helpers.ts'
+import { MockLLMAdapter, MockEmbeddingAdapter } from './helpers.ts'
 
 describe('MemoryEngine', () => {
   let engine: MemoryEngine
@@ -155,5 +155,57 @@ describe('MemoryEngine', () => {
       )
       expect(edgesAfter?.length ?? 0).toBe(0)
     })
+  })
+})
+
+describe('deduplication', () => {
+  let dedupEngine: MemoryEngine
+  const embedding = new MockEmbeddingAdapter()
+
+  beforeEach(async () => {
+    dedupEngine = new MemoryEngine()
+    await dedupEngine.initialize({
+      connection: 'mem://',
+      namespace: 'test',
+      database: `test_dedup_${Date.now()}`,
+      llm: new MockLLMAdapter(),
+      embedding,
+      repetition: { duplicateThreshold: 0.95, reinforceThreshold: 0.80 },
+    })
+  })
+
+  afterEach(async () => {
+    await dedupEngine.close()
+  })
+
+  test('identical text is skipped', async () => {
+    const r1 = await dedupEngine.ingest('exact duplicate content for testing')
+    expect(r1.action).toBe('stored')
+
+    const r2 = await dedupEngine.ingest('exact duplicate content for testing')
+    expect(r2.action).toBe('skipped')
+    expect(r2.existingId).toBe(r1.id)
+  })
+
+  test('skipDedup bypasses dedup check', async () => {
+    await dedupEngine.ingest('content that will be duplicated')
+    const r2 = await dedupEngine.ingest('content that will be duplicated', { skipDedup: true })
+    expect(r2.action).toBe('stored')
+  })
+
+  test('no embedding adapter means no dedup', async () => {
+    const noEmbedEngine = new MemoryEngine()
+    await noEmbedEngine.initialize({
+      connection: 'mem://',
+      namespace: 'test',
+      database: `test_nodedup_${Date.now()}`,
+      llm: new MockLLMAdapter(),
+      repetition: { duplicateThreshold: 0.95, reinforceThreshold: 0.80 },
+    })
+
+    await noEmbedEngine.ingest('duplicate without embedding')
+    const r2 = await noEmbedEngine.ingest('duplicate without embedding')
+    expect(r2.action).toBe('stored')
+    await noEmbedEngine.close()
   })
 })
