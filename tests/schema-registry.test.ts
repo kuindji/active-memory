@@ -2,7 +2,7 @@ import { describe, test, expect, beforeEach, afterEach } from 'bun:test'
 import { SchemaRegistry } from '../src/core/schema-registry.ts'
 import { createTestDb } from './helpers.ts'
 import type { Surreal } from 'surrealdb'
-import type { SharedSchema, DomainSchema } from '../src/core/types.ts'
+import type { DomainSchema } from '../src/core/types.ts'
 
 describe('SchemaRegistry', () => {
   let db: Surreal
@@ -44,10 +44,10 @@ describe('SchemaRegistry', () => {
     })
   })
 
-  describe('shared schema', () => {
-    test('registerShared creates node and edge tables', async () => {
+  describe('domain schema sharing', () => {
+    test('first domain creates node and edge tables', async () => {
       await registry.registerCore()
-      const schema: SharedSchema = {
+      const schema: DomainSchema = {
         nodes: [
           { name: 'entity', fields: [{ name: 'name', type: 'string' }] }
         ],
@@ -55,15 +55,15 @@ describe('SchemaRegistry', () => {
           { name: 'related_to', from: 'entity', to: 'entity', fields: [] }
         ]
       }
-      await registry.registerShared(schema)
+      await registry.registerDomain('entities', schema)
       await db.query('CREATE entity SET name = "Alice"')
       const [entities] = await db.query<[{ count: number }[]]>('SELECT count() FROM entity GROUP ALL')
       expect(entities[0].count).toBe(1)
     })
 
-    test('registerShared creates edge with fields', async () => {
+    test('domain creates edge with fields', async () => {
       await registry.registerCore()
-      const schema: SharedSchema = {
+      const schema: DomainSchema = {
         nodes: [
           { name: 'entity', fields: [{ name: 'name', type: 'string' }] }
         ],
@@ -71,7 +71,7 @@ describe('SchemaRegistry', () => {
           { name: 'related_to', from: 'entity', to: 'entity', fields: [{ name: 'since', type: 'int' }] }
         ]
       }
-      await registry.registerShared(schema)
+      await registry.registerDomain('entities', schema)
       await db.query('CREATE entity:a SET name = "Alice"')
       await db.query('CREATE entity:b SET name = "Bob"')
       await db.query('RELATE entity:a->related_to->entity:b SET since = 2025')
@@ -97,38 +97,38 @@ describe('SchemaRegistry', () => {
       expect(resources[0].count).toBe(1)
     })
 
-    test('registerDomain extends existing node with new fields', async () => {
+    test('second domain extends existing node with new fields', async () => {
       await registry.registerCore()
-      const shared: SharedSchema = {
+      const entitiesSchema: DomainSchema = {
         nodes: [{ name: 'entity', fields: [{ name: 'name', type: 'string' }] }],
         edges: []
       }
-      await registry.registerShared(shared)
-      const domainSchema: DomainSchema = {
+      await registry.registerDomain('entities', entitiesSchema)
+      const extendedSchema: DomainSchema = {
         nodes: [{ name: 'entity', fields: [
           { name: 'name', type: 'string' },
           { name: 'bio', type: 'string', required: false }
         ] }],
         edges: []
       }
-      await registry.registerDomain('extended', domainSchema)
+      await registry.registerDomain('extended', extendedSchema)
       await db.query('CREATE entity SET name = "Alice", bio = "A test entity"')
       const [entities] = await db.query<[{ name: string; bio: string }[]]>('SELECT name, bio FROM entity')
       expect(entities[0].bio).toBe('A test entity')
     })
 
-    test('registerDomain throws on field type conflict', async () => {
+    test('registerDomain throws on field type conflict between domains', async () => {
       await registry.registerCore()
-      const shared: SharedSchema = {
+      const first: DomainSchema = {
         nodes: [{ name: 'entity', fields: [{ name: 'name', type: 'string' }] }],
         edges: []
       }
-      await registry.registerShared(shared)
-      const domainSchema: DomainSchema = {
+      await registry.registerDomain('first', first)
+      const second: DomainSchema = {
         nodes: [{ name: 'entity', fields: [{ name: 'name', type: 'int' }] }],
         edges: []
       }
-      expect(registry.registerDomain('bad_domain', domainSchema)).rejects.toThrow()
+      expect(registry.registerDomain('second', second)).rejects.toThrow()
     })
 
     test('getRegisteredNode returns tracked node info', async () => {

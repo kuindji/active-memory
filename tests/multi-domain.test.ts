@@ -1,37 +1,44 @@
 import { describe, test, expect, beforeEach, afterEach } from 'bun:test'
 import { MemoryEngine } from '../src/core/engine.ts'
 import { MockLLMAdapter } from './helpers.ts'
-import type { DomainConfig, OwnedMemory, DomainContext, SharedSchema } from '../src/core/types.ts'
+import type { DomainConfig, OwnedMemory, DomainContext } from '../src/core/types.ts'
 
-const testSharedSchema: SharedSchema = {
-  nodes: [
-    {
-      name: 'entity',
-      fields: [
-        { name: 'name', type: 'string' },
-        { name: 'labels', type: 'array<string>', required: false },
-        { name: 'first_seen', type: 'int', required: false },
-      ],
-    },
-    {
-      name: 'category',
-      fields: [
-        { name: 'name', type: 'string' },
-        { name: 'kind', type: 'string', required: false },
-      ],
-      indexes: [{ name: 'idx_category_name', fields: ['name'], type: 'unique' }],
-    },
-    {
-      name: 'topic',
-      fields: [
-        { name: 'name', type: 'string' },
-        { name: 'status', type: 'string', required: false, default: 'active' },
-      ],
-    },
-  ],
-  edges: [
-    { name: 'belongs_to', from: ['entity'], to: 'category' },
-  ],
+const entitiesDomain: DomainConfig = {
+  id: 'entities',
+  name: 'Shared Entities',
+  schema: {
+    nodes: [
+      {
+        name: 'entity',
+        fields: [
+          { name: 'name', type: 'string' },
+          { name: 'labels', type: 'array<string>', required: false },
+          { name: 'first_seen', type: 'int', required: false },
+        ],
+      },
+      {
+        name: 'category',
+        fields: [
+          { name: 'name', type: 'string' },
+          { name: 'kind', type: 'string', required: false },
+        ],
+        indexes: [{ name: 'idx_category_name', fields: ['name'], type: 'unique' }],
+      },
+      {
+        name: 'topic',
+        fields: [
+          { name: 'name', type: 'string' },
+          { name: 'status', type: 'string', required: false, default: 'active' },
+        ],
+      },
+    ],
+    edges: [
+      { name: 'belongs_to', from: ['entity'], to: 'category' },
+    ],
+  },
+  async processInboxItem() {
+    // Type-definition domain — no processing needed
+  },
 }
 
 describe('Multi-domain integration', () => {
@@ -87,8 +94,8 @@ describe('Multi-domain integration', () => {
       namespace: 'test',
       database: `test_${Date.now()}`,
       llm: new MockLLMAdapter(),
-      sharedSchemas: [testSharedSchema],
     })
+    await engine.registerDomain(entitiesDomain)
     await engine.registerDomain(alphaDomain)
     await engine.registerDomain(betaDomain)
   })
@@ -97,7 +104,7 @@ describe('Multi-domain integration', () => {
     await engine.close()
   })
 
-  test('shared schema allows creating shared node types', async () => {
+  test('entities domain allows creating shared node types', async () => {
     const graph = engine.getGraph()
     const categoryId = await graph.createNodeWithId('category:testing', { name: 'Testing', kind: 'group' })
     expect(categoryId).toBe('category:testing')
@@ -125,7 +132,7 @@ describe('Multi-domain integration', () => {
     expect(resources.length).toBe(1)
   })
 
-  test('shared entity node is accessible to both domains', async () => {
+  test('entity node from entities domain is accessible to other domains', async () => {
     const graph = engine.getGraph()
 
     await graph.createNodeWithId('entity:sample', {
