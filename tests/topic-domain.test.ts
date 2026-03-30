@@ -2,7 +2,9 @@ import { describe, test, expect, beforeEach, afterEach } from 'bun:test'
 import { MemoryEngine } from '../src/core/engine.ts'
 import { MockLLMAdapter, MockEmbeddingAdapter } from './helpers.ts'
 import { mergeSimilarTopics } from '../src/domains/topic/schedules.ts'
-import { TOPIC_TAG, TOPIC_DOMAIN_ID } from '../src/domains/topic/types.ts'
+import { TOPIC_TAG, TOPIC_DOMAIN_ID, DEFAULT_MERGE_INTERVAL_MS } from '../src/domains/topic/types.ts'
+import { createTopicDomain, topicDomain } from '../src/domains/topic/topic-domain.ts'
+import { topicSkills } from '../src/domains/topic/skills.ts'
 import type { DomainConfig, OwnedMemory, DomainContext } from '../src/core/types.ts'
 
 const testTopicDomain: DomainConfig = {
@@ -195,5 +197,78 @@ describe('Topic domain - merge schedule', () => {
       expect(attrs.status).toBe('active')
       expect(attrs.mergedInto).toBeUndefined()
     }
+  })
+})
+
+describe('Topic domain - config', () => {
+  test('topic domain registers with correct structure and skills', () => {
+    const domain = createTopicDomain()
+    expect(domain.id).toBe(TOPIC_DOMAIN_ID)
+    expect(domain.name).toBe('Topic')
+    expect(domain.structure).toBeTypeOf('string')
+    expect(domain.structure!.length).toBeGreaterThan(0)
+    expect(domain.skills).toBe(topicSkills)
+    expect(domain.skills!.length).toBe(3)
+  })
+
+  test('topic domain schema has 3 edges (subtopic_of, related_to, about_topic)', () => {
+    const domain = createTopicDomain()
+    const edges = domain.schema!.edges
+    expect(edges).toHaveLength(3)
+
+    const edgeNames = edges.map(e => e.name)
+    expect(edgeNames).toContain('subtopic_of')
+    expect(edgeNames).toContain('related_to')
+    expect(edgeNames).toContain('about_topic')
+
+    const relatedTo = edges.find(e => e.name === 'related_to')!
+    expect(relatedTo.fields).toEqual([{ name: 'strength', type: 'float' }])
+
+    const aboutTopic = edges.find(e => e.name === 'about_topic')!
+    expect(aboutTopic.fields).toEqual([{ name: 'domain', type: 'string' }])
+
+    const subtopicOf = edges.find(e => e.name === 'subtopic_of')!
+    expect(subtopicOf.fields).toBeUndefined()
+  })
+
+  test('topic domain describe() returns a non-empty string', () => {
+    const domain = createTopicDomain()
+    const describeFn = domain.describe?.bind(domain)
+    expect(describeFn).toBeTypeOf('function')
+    const description = describeFn!()
+    expect(description).toBeTypeOf('string')
+    expect(description.length).toBeGreaterThan(0)
+  })
+
+  test('createTopicDomain() with default options includes merge schedule', () => {
+    const domain = createTopicDomain()
+    expect(domain.schedules).toHaveLength(1)
+    expect(domain.schedules![0].id).toBe('merge-similar-topics')
+    expect(domain.schedules![0].intervalMs).toBe(DEFAULT_MERGE_INTERVAL_MS)
+  })
+
+  test('createTopicDomain({ mergeSchedule: { enabled: false } }) has no schedules', () => {
+    const domain = createTopicDomain({ mergeSchedule: { enabled: false } })
+    expect(domain.schedules).toHaveLength(0)
+  })
+
+  test('createTopicDomain({ mergeSchedule: { intervalMs: 5000 } }) uses custom interval', () => {
+    const domain = createTopicDomain({ mergeSchedule: { intervalMs: 5000 } })
+    expect(domain.schedules).toHaveLength(1)
+    expect(domain.schedules![0].intervalMs).toBe(5000)
+  })
+
+  test('processInboxItem is a no-op (does not throw, returns void)', async () => {
+    const domain = createTopicDomain()
+    const result = await domain.processInboxItem(
+      { memory: { id: 'test', content: '', embedding: [], eventTime: null, createdAt: 0, tokenCount: 0 }, domainAttributes: {}, tags: [] },
+      {} as DomainContext
+    )
+    expect(result).toBeUndefined()
+  })
+
+  test('default topicDomain instance is a valid DomainConfig', () => {
+    expect(topicDomain.id).toBe(TOPIC_DOMAIN_ID)
+    expect(topicDomain.schedules).toHaveLength(1)
   })
 })
