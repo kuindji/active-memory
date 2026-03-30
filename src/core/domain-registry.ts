@@ -1,4 +1,12 @@
-import type { DomainConfig } from './types.ts'
+import type { DomainConfig, DomainSkill } from './types.ts'
+
+interface DomainSummary {
+  id: string
+  name: string
+  description?: string
+  hasStructure: boolean
+  skillCount: number
+}
 
 export class DomainRegistry {
   private domains = new Map<string, DomainConfig>()
@@ -37,5 +45,32 @@ export class DomainRegistry {
 
   getAllDomainIds(): string[] {
     return [...this.domains.keys()]
+  }
+
+  getExternalSkills(domainId: string): DomainSkill[] {
+    const domain = this.domains.get(domainId)
+    if (!domain?.skills) return []
+    return domain.skills.filter(s => s.scope === 'external' || s.scope === 'both')
+  }
+
+  getInternalSkills(domainId: string): DomainSkill[] {
+    const domain = this.domains.get(domainId)
+    if (!domain?.skills) return []
+    return domain.skills.filter(s => s.scope === 'internal' || s.scope === 'both')
+  }
+
+  getSkill(domainId: string, skillId: string): DomainSkill | undefined {
+    const domain = this.domains.get(domainId)
+    return domain?.skills?.find(s => s.id === skillId)
+  }
+
+  listSummaries(): DomainSummary[] {
+    return this.list().map(d => ({
+      id: d.id,
+      name: d.name,
+      description: d.describe?.(),
+      hasStructure: d.structure != null,
+      skillCount: d.skills?.length ?? 0,
+    }))
   }
 }
