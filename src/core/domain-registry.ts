@@ -1,4 +1,5 @@
 import { readFile } from 'node:fs/promises'
+import { existsSync } from 'node:fs'
 import { join } from 'node:path'
 import type { DomainConfig, DomainSkill, DomainSummary } from './types.ts'
 
@@ -83,7 +84,7 @@ export class DomainRegistry {
       id: d.id,
       name: d.name,
       description: d.describe?.(),
-      hasStructure: d.baseDir != null,
+      hasStructure: d.baseDir != null && existsSync(join(d.baseDir, 'structure.md')),
       skillCount: d.skills?.length ?? 0,
     }))
   }
