@@ -5,6 +5,7 @@ import { mergeSimilarTopics } from '../src/domains/topic/schedules.ts'
 import { TOPIC_TAG, TOPIC_DOMAIN_ID, DEFAULT_MERGE_INTERVAL_MS } from '../src/domains/topic/types.ts'
 import { createTopicDomain, topicDomain } from '../src/domains/topic/topic-domain.ts'
 import { topicSkills } from '../src/domains/topic/skills.ts'
+import { topicDomain as topicDomainFromIndex } from '../src/domains/topic/index.ts'
 import type { DomainConfig, OwnedMemory, DomainContext } from '../src/core/types.ts'
 
 const testTopicDomain: DomainConfig = {
@@ -270,5 +271,147 @@ describe('Topic domain - config', () => {
   test('default topicDomain instance is a valid DomainConfig', () => {
     expect(topicDomain.id).toBe(TOPIC_DOMAIN_ID)
     expect(topicDomain.schedules).toHaveLength(1)
+  })
+})
+
+describe('Topic domain - integration', () => {
+  let engine: MemoryEngine
+
+  beforeEach(async () => {
+    engine = new MemoryEngine()
+    await engine.initialize({
+      connection: 'mem://',
+      namespace: 'test',
+      database: `test_${Date.now()}`,
+      llm: new MockLLMAdapter(),
+      embedding: new MockEmbeddingAdapter(),
+    })
+    await engine.registerDomain(topicDomainFromIndex)
+  })
+
+  afterEach(async () => {
+    await engine.close()
+  })
+
+  test('creating a topic via writeMemory with topic attributes', async () => {
+    const context = engine.createDomainContext(TOPIC_DOMAIN_ID)
+
+    const topicId = await context.writeMemory({
+      content: 'Machine learning and AI applications',
+      tags: [TOPIC_TAG],
+      ownership: {
+        domain: TOPIC_DOMAIN_ID,
+        attributes: {
+          name: 'Machine Learning',
+          status: 'active',
+          mentionCount: 0,
+          lastMentionedAt: Date.now(),
+          createdBy: 'test',
+        },
+      },
+    })
+
+    expect(topicId).toBeTruthy()
+
+    const memory = await context.getMemory(topicId)
+    expect(memory).toBeDefined()
+    expect(memory!.id).toBe(topicId)
+    expect(memory!.content).toBe('Machine learning and AI applications')
+
+    const searchResult = await context.search({
+      text: 'Machine learning and AI applications',
+      tags: [TOPIC_TAG],
+    })
+
+    const found = searchResult.entries.find(e => e.id === topicId)
+    expect(found).toBeDefined()
+    expect(found!.domainAttributes[TOPIC_DOMAIN_ID]).toBeDefined()
+    expect(found!.domainAttributes[TOPIC_DOMAIN_ID].name).toBe('Machine Learning')
+    expect(found!.domainAttributes[TOPIC_DOMAIN_ID].status).toBe('active')
+  })
+
+  test('linking a memory to a topic via about_topic edge', async () => {
+    const topicContext = engine.createDomainContext(TOPIC_DOMAIN_ID)
+
+    const topicId = await topicContext.writeMemory({
+      content: 'TypeScript language features',
+      tags: [TOPIC_TAG],
+      ownership: {
+        domain: TOPIC_DOMAIN_ID,
+        attributes: {
+          name: 'TypeScript',
+          status: 'active',
+          mentionCount: 0,
+          lastMentionedAt: Date.now(),
+          createdBy: 'test',
+        },
+      },
+    })
+
+    const notesDomain: DomainConfig = {
+      id: 'notes',
+      name: 'Notes',
+      schema: { nodes: [], edges: [] },
+      async processInboxItem(_entry: OwnedMemory, _context: DomainContext) {},
+    }
+    await engine.registerDomain(notesDomain)
+
+    const ingestResult = await engine.ingest(
+      'TypeScript supports generics and interfaces for strong typing',
+      { domains: ['notes'] }
+    )
+    expect(ingestResult.action).toBe('stored')
+    const memId = ingestResult.id!
+
+    await topicContext.graph.relate(memId, 'about_topic', topicId, { domain: 'notes' })
+
+    const linked = await topicContext.graph.traverse(memId, '->about_topic->memory')
+    expect(linked.length).toBeGreaterThan(0)
+    const linkedIds = linked.map(n => String((n as { id: string }).id))
+    const normalizedTopicId = topicId.startsWith('memory:') ? topicId.slice('memory:'.length) : topicId
+    expect(linkedIds.some(id => id === topicId || id === normalizedTopicId)).toBe(true)
+  })
+
+  test('subtopic_of creates parent-child relationship', async () => {
+    const context = engine.createDomainContext(TOPIC_DOMAIN_ID)
+    const now = Date.now()
+
+    const parentId = await context.writeMemory({
+      content: 'Programming Languages overview',
+      tags: [TOPIC_TAG],
+      ownership: {
+        domain: TOPIC_DOMAIN_ID,
+        attributes: {
+          name: 'Programming Languages',
+          status: 'active',
+          mentionCount: 0,
+          lastMentionedAt: now,
+          createdBy: 'test',
+        },
+      },
+    })
+
+    const childId = await context.writeMemory({
+      content: 'TypeScript typed superset of JavaScript',
+      tags: [TOPIC_TAG],
+      ownership: {
+        domain: TOPIC_DOMAIN_ID,
+        attributes: {
+          name: 'TypeScript',
+          status: 'active',
+          mentionCount: 0,
+          lastMentionedAt: now,
+          createdBy: 'test',
+        },
+      },
+    })
+
+    await context.graph.relate(childId, 'subtopic_of', parentId)
+
+    const parents = await context.graph.traverse(childId, '->subtopic_of->memory')
+    expect(parents.length).toBeGreaterThan(0)
+    const parentIds = parents.map(n => String((n as { id: string }).id))
+    const normalizedParentId = parentId.startsWith('memory:') ? parentId.slice('memory:'.length) : parentId
+    expect(parentIds.some(id => id === parentId || id === normalizedParentId)).toBe(true)
   })
 })
