@@ -118,6 +118,43 @@ describe('Domain visibility', () => {
     expect(contents).not.toContain('content from D')
   })
 
+  test('getMemory returns null for memory owned only by non-visible domain', async () => {
+    const ctx = engine.createDomainContext('domaina')
+    // domaina can only see domaina + domainb
+    // Find a memory owned by domainc
+    const ctxC = engine.createDomainContext('domainc')
+    const memoriesC = await ctxC.getMemories({ domains: ['domainc'] })
+    const memoryFromC = memoriesC.find(m => m.content === 'content from C')
+    expect(memoryFromC).toBeDefined()
+
+    const result = await ctx.getMemory(memoryFromC!.id)
+    expect(result).toBeNull()
+  })
+
+  test('getMemory returns memory owned by visible domain', async () => {
+    const ctx = engine.createDomainContext('domaina')
+    // domaina can see domainb
+    const ctxB = engine.createDomainContext('domainb')
+    const memoriesB = await ctxB.getMemories({ domains: ['domainb'] })
+    const memoryFromB = memoriesB.find(m => m.content === 'content from B')
+    expect(memoryFromB).toBeDefined()
+
+    const result = await ctx.getMemory(memoryFromB!.id)
+    expect(result).toBeDefined()
+    expect(result!.content).toBe('content from B')
+  })
+
+  test('getMemoryTags returns empty for memory owned only by non-visible domain', async () => {
+    const ctx = engine.createDomainContext('domaina')
+    const ctxC = engine.createDomainContext('domainc')
+    const memoriesC = await ctxC.getMemories({ domains: ['domainc'] })
+    const memoryFromC = memoriesC.find(m => m.content === 'content from C')
+    expect(memoryFromC).toBeDefined()
+
+    const tags = await ctx.getMemoryTags(memoryFromC!.id)
+    expect(tags).toEqual([])
+  })
+
   test('domain settings stored in DB node', async () => {
     const graph = engine.getGraph()
     const node = await graph.getNode('domain:domaina')

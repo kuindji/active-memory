@@ -359,6 +359,18 @@ class MemoryEngine {
     const mergedContext = this.mergeContext(requestContext)
     const schema = this.schema
 
+    async function isMemoryVisible(memoryId: string): Promise<boolean> {
+      const owners = await graph.query<{ out: unknown }[]>(
+        'SELECT out FROM owned_by WHERE in = $memId',
+        { memId: new StringRecordId(memoryId) }
+      )
+      if (!owners || owners.length === 0) return false
+      return owners.some(o => {
+        const ownerDomainId = String(o.out).replace(/^domain:/, '')
+        return visibleDomains.includes(ownerDomainId)
+      })
+    }
+
     return {
       domain: domainId,
       graph,
@@ -372,6 +384,7 @@ class MemoryEngine {
       async getMemory(id: string): Promise<MemoryEntry | null> {
         const node = await graph.getNode(id)
         if (!node) return null
+        if (!await isMemoryVisible(id)) return null
         return {
           id: node.id,
           content: node.content as string,
@@ -592,6 +605,7 @@ class MemoryEngine {
       },
 
       async getMemoryTags(memoryId: string): Promise<string[]> {
+        if (!await isMemoryVisible(memoryId)) return []
         const rows = await graph.query<string[]>(
           'SELECT VALUE out.label FROM tagged WHERE in = $memId',
           { memId: new StringRecordId(memoryId) }
