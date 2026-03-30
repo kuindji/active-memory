@@ -3,6 +3,9 @@
   "version": "0.1.0",
   "type": "module",
   "main": "src/index.ts",
+  "bin": {
+    "active-memory": "bin/active-memory"
+  },
   "scripts": {
     "test": "bun test",
     "typecheck": "tsc --noEmit",
