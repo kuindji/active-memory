@@ -107,7 +107,7 @@ function formatOutput(command: string, data: unknown, json: boolean): string {
       return formatDomainSkills(data as { domainId: string; skills: DomainSkill[] })
 
     case 'domain-skill':
-      return (data as DomainSkill).content
+      return (data as { content: string }).content
 
     case 'ingest':
       return formatIngest(data as IngestResult)

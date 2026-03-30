@@ -1,9 +1,12 @@
 import { describe, it, expect, beforeEach, afterEach } from 'bun:test'
+import { join } from 'node:path'
 import { MemoryEngine } from '../../../src/core/engine.ts'
 import { MockLLMAdapter } from '../../helpers.ts'
 import { domainsCommand, domainCommand } from '../../../src/cli/commands/domains.ts'
 import type { DomainConfig, OwnedMemory, DomainContext } from '../../../src/core/types.ts'
 import type { ParsedCommand } from '../../../src/cli/types.ts'
+
+const FIXTURES_DIR = join(import.meta.dir, '..', '..', 'fixtures', 'test-domain')
 
 function makeParsed(command: string, args: string[] = []): ParsedCommand {
   return {
@@ -16,32 +19,25 @@ function makeParsed(command: string, args: string[] = []): ParsedCommand {
 const testDomain: DomainConfig = {
   id: 'test-domain',
   name: 'Test Domain',
-  structure: `# Test Domain Structure
-
-## Tags
-- \`test/category\` - Categorization tag
-`,
+  baseDir: FIXTURES_DIR,
   skills: [
     {
       id: 'consumption',
       name: 'How to use Test Domain data',
       description: 'Tells external agents how to query and interpret test domain data',
       scope: 'external',
-      content: 'When querying the test domain, use tags test/category to filter by type.',
     },
     {
       id: 'ingestion',
       name: 'How to create Test Domain data',
       description: 'Tells external agents how to create data for this domain',
       scope: 'external',
-      content: 'Create entries with kind attribute set to unit, integration, or e2e.',
     },
     {
       id: 'analyze',
       name: 'Internal analysis',
       description: 'Used by domain agent to analyze test results',
       scope: 'internal',
-      content: 'Analyze test results by grouping by kind and severity.',
     },
   ],
   async processInboxItem(_entry: OwnedMemory, _context: DomainContext) {
