@@ -397,7 +397,7 @@ class MemoryEngine {
         if (filter?.attributes) {
           for (const [key, value] of Object.entries(filter.attributes)) {
             const paramName = `attr_${key}`
-            conditions.push(`attrs.${key} = $${paramName}`)
+            conditions.push(`attributes.${key} = $${paramName}`)
             vars[paramName] = value
           }
         }

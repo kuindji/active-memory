@@ -439,12 +439,12 @@ class SearchEngine {
   }
 
   private async getMemoryTags(memoryId: string): Promise<string[]> {
-    const tags = await this.store.query<{ label: string }[]>(
+    const tags = await this.store.query<string[]>(
       `SELECT VALUE out.label FROM tagged WHERE in = $mem`,
       { mem: new StringRecordId(memoryId) }
     )
     if (!tags || !Array.isArray(tags)) return []
-    return tags.map((t) => t.label).filter((label): label is string => typeof label === 'string')
+    return tags.filter((label): label is string => typeof label === 'string')
   }
 }
 
