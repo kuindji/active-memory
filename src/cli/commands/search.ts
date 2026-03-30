@@ -33,4 +33,4 @@ const searchCommand: CommandHandler = async (engine, parsed) => {
   return { output: result, exitCode: 0 }
 }
 
-export default searchCommand
+export { searchCommand }

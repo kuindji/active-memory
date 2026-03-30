@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'bun:test'
 import { StringRecordId } from 'surrealdb'
 import { MemoryEngine } from '../../../src/core/engine.ts'
 import { MockLLMAdapter } from '../../helpers.ts'
-import ingestCommand from '../../../src/cli/commands/ingest.ts'
+import { ingestCommand } from '../../../src/cli/commands/ingest.ts'
 import type { ParsedCommand } from '../../../src/cli/types.ts'
 
 function makeParsed(flags: Record<string, string | boolean> = {}): ParsedCommand {
