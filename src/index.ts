@@ -21,6 +21,8 @@ export type {
   DomainContext,
   DomainSchema,
   DomainSchedule,
+  DomainSkill,
+  DomainSettings,
   WriteMemoryEntry,
   NodeDef,
   EdgeDef,
