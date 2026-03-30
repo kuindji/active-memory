@@ -95,12 +95,17 @@ class MemoryEngine {
     }
 
     // Create domain node in SurrealDB
+    const domainData: Record<string, unknown> = { name: domain.name }
+    if (domain.settings) {
+      domainData.settings = domain.settings
+    }
     try {
-      await this.graph.createNodeWithId(`domain:${domain.id}`, {
-        name: domain.name,
-      })
+      await this.graph.createNodeWithId(`domain:${domain.id}`, domainData)
     } catch {
-      // Already exists — that's fine
+      // Already exists — update settings if provided
+      if (domain.settings) {
+        await this.graph.updateNode(`domain:${domain.id}`, { settings: domain.settings })
+      }
     }
 
     // Register in DomainRegistry
@@ -308,11 +313,37 @@ class MemoryEngine {
     }
   }
 
+  private resolveVisibleDomains(domainId: string): string[] {
+    const domain = this.domainRegistry.get(domainId)
+    // Exclude the built-in log domain from visibility resolution since it
+    // auto-owns every memory and would bypass domain filtering.
+    const allIds = this.domainRegistry.getAllDomainIds().filter(id => id !== 'log')
+
+    if (!domain?.settings?.includeDomains && !domain?.settings?.excludeDomains) {
+      return allIds
+    }
+
+    if (domain.settings.includeDomains) {
+      const allowed = new Set(domain.settings.includeDomains)
+      allowed.add(domainId)
+      return allIds.filter(id => allowed.has(id))
+    }
+
+    if (domain.settings.excludeDomains) {
+      const blocked = new Set(domain.settings.excludeDomains)
+      blocked.delete(domainId)
+      return allIds.filter(id => !blocked.has(id))
+    }
+
+    return allIds
+  }
+
   createDomainContext(domainId: string): DomainContext {
     const graph = this.graph
     const llm = this.llm
     const embedding = this.embedding
     const events = this.events
+    const visibleDomains = this.resolveVisibleDomains(domainId)
     const releaseOwnership = this.releaseOwnership.bind(this)
     const search = this.search.bind(this)
 
@@ -320,6 +351,10 @@ class MemoryEngine {
       domain: domainId,
       graph,
       llm,
+
+      getVisibleDomains(): string[] {
+        return [...visibleDomains]
+      },
 
       async getMemory(id: string): Promise<MemoryEntry | null> {
         const node = await graph.getNode(id)
@@ -345,7 +380,8 @@ class MemoryEngine {
         }
 
         // Build composable query for owned memories
-        const targetDomains = filter?.domains ?? [domainId]
+        const requestedDomains = filter?.domains ?? visibleDomains
+        const targetDomains = requestedDomains.filter(d => visibleDomains.includes(d))
         const domainRefs = targetDomains.map(d =>
           new StringRecordId(d.startsWith('domain:') ? d : `domain:${d}`)
         )
@@ -523,7 +559,7 @@ class MemoryEngine {
       },
 
       async search(query: Omit<SearchQuery, 'domains'>): Promise<SearchResult> {
-        return search({ ...query, domains: [domainId] })
+        return search({ ...query, domains: visibleDomains })
       },
 
       async getMeta(key: string): Promise<string | null> {
