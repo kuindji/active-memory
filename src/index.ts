@@ -53,3 +53,6 @@ export { logDomain } from './domains/log-domain.ts'
 
 // Adapters
 export { ClaudeCliAdapter } from './adapters/llm/claude-cli.ts'
+
+// Config
+export { resolveConfigPath, loadConfig } from './config-loader.ts'
