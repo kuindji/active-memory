@@ -1,7 +1,10 @@
 import { describe, test, expect, beforeEach, afterEach } from 'bun:test'
+import { join } from 'node:path'
 import { MemoryEngine } from '../src/core/engine.ts'
 import { MockLLMAdapter } from './helpers.ts'
 import type { DomainConfig, OwnedMemory, DomainContext } from '../src/core/types.ts'
+
+const FIXTURES_DIR = join(import.meta.dir, 'fixtures', 'test-domain')
 
 describe('Domain skills and structure', () => {
   let engine: MemoryEngine
@@ -9,44 +12,31 @@ describe('Domain skills and structure', () => {
   const testDomain: DomainConfig = {
     id: 'test-domain',
     name: 'Test Domain',
-    structure: `# Test Domain Structure
-
-## Tags
-- \`test/category\` - Categorization tag
-- \`test/priority\` - Priority level
-
-## Attributes
-- \`kind\`: string - The type of test entry (unit, integration, e2e)
-- \`severity\`: string - How critical (low, medium, high)
-`,
+    baseDir: FIXTURES_DIR,
     skills: [
       {
         id: 'consumption',
         name: 'How to use Test Domain data',
         description: 'Tells external agents how to query and interpret test domain data',
         scope: 'external',
-        content: 'When querying the test domain, use tags test/category to filter by type.',
       },
       {
         id: 'ingestion',
         name: 'How to create Test Domain data',
         description: 'Tells external agents how to create data for this domain',
         scope: 'external',
-        content: 'Create entries with kind attribute set to unit, integration, or e2e.',
       },
       {
         id: 'analyze',
         name: 'Internal analysis',
         description: 'Used by domain agent to analyze test results',
         scope: 'internal',
-        content: 'Analyze test results by grouping by kind and severity.',
       },
       {
         id: 'summarize',
         name: 'Summarize test results',
         description: 'Can be used internally or by other agents',
         scope: 'both',
-        content: 'Summarize test results across all categories.',
       },
     ],
     async processInboxItem(_entry: OwnedMemory, _context: DomainContext) {
@@ -78,17 +68,17 @@ describe('Domain skills and structure', () => {
     await engine.close()
   })
 
-  test('getDomainRegistry exposes domain structure', () => {
+  test('getStructure loads structure from .md file', async () => {
     const registry = engine.getDomainRegistry()
-    const domain = registry.get('test-domain')
-    expect(domain?.structure).toContain('## Tags')
-    expect(domain?.structure).toContain('test/category')
+    const structure = await registry.getStructure('test-domain')
+    expect(structure).toContain('## Tags')
+    expect(structure).toContain('test/category')
   })
 
-  test('domain without structure returns undefined', () => {
+  test('domain without baseDir returns null for structure', async () => {
     const registry = engine.getDomainRegistry()
-    const domain = registry.get('minimal')
-    expect(domain?.structure).toBeUndefined()
+    const structure = await registry.getStructure('minimal')
+    expect(structure).toBeNull()
   })
 
   test('getExternalSkills returns only external and both-scoped skills', () => {
@@ -111,6 +101,12 @@ describe('Domain skills and structure', () => {
     expect(skill).toBeDefined()
     expect(skill!.name).toBe('How to use Test Domain data')
     expect(skill!.scope).toBe('external')
+  })
+
+  test('getSkillContent loads content from .md file', async () => {
+    const registry = engine.getDomainRegistry()
+    const content = await registry.getSkillContent('test-domain', 'consumption')
+    expect(content).toContain('test/category')
   })
 
   test('getSkill returns undefined for nonexistent skill', () => {
