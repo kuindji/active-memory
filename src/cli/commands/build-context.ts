@@ -20,6 +20,10 @@ const buildContextCommand: CommandHandler = async (engine, parsed) => {
     options.maxMemories = Number(parsed.flags['max-memories'])
   }
 
+  if (parsed.flags['user-id']) {
+    options.context = { userId: parsed.flags['user-id'] as string }
+  }
+
   const result = await engine.buildContext(text, options)
   return { output: result, exitCode: 0 }
 }

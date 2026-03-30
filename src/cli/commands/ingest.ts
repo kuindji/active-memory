@@ -28,6 +28,10 @@ const ingestCommand: CommandHandler = async (engine, parsed) => {
     options.skipDedup = true
   }
 
+  if (parsed.flags['user-id']) {
+    options.context = { userId: parsed.flags['user-id'] as string }
+  }
+
   const result = await engine.ingest(text, options)
   return { output: result, exitCode: 0 }
 }

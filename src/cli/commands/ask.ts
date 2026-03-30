@@ -23,6 +23,10 @@ const askCommand: CommandHandler = async (engine, parsed) => {
     options.limit = Number(parsed.flags['limit'])
   }
 
+  if (parsed.flags['user-id']) {
+    options.context = { userId: parsed.flags['user-id'] as string }
+  }
+
   const result = await engine.ask(question, options)
   return { output: result, exitCode: 0 }
 }

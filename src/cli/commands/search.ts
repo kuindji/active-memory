@@ -29,6 +29,10 @@ const searchCommand: CommandHandler = async (engine, parsed) => {
     query.minScore = Number(parsed.flags['min-score'])
   }
 
+  if (parsed.flags['user-id']) {
+    query.context = { userId: parsed.flags['user-id'] as string }
+  }
+
   const result = await engine.search(query)
   return { output: result, exitCode: 0 }
 }
