@@ -3,9 +3,7 @@ import { MemoryEngine } from '../src/core/engine.ts'
 import { MockLLMAdapter, MockEmbeddingAdapter } from './helpers.ts'
 import { mergeSimilarTopics } from '../src/domains/topic/schedules.ts'
 import { TOPIC_TAG, TOPIC_DOMAIN_ID, DEFAULT_MERGE_INTERVAL_MS } from '../src/domains/topic/types.ts'
-import { createTopicDomain, topicDomain } from '../src/domains/topic/topic-domain.ts'
-import { topicSkills } from '../src/domains/topic/skills.ts'
-import { topicDomain as topicDomainFromIndex } from '../src/domains/topic/index.ts'
+import { createTopicDomain, topicDomain } from '../src/domains/topic/index.ts'
 import type { DomainConfig, OwnedMemory, DomainContext } from '../src/core/types.ts'
 
 const testTopicDomain: DomainConfig = {
@@ -208,8 +206,11 @@ describe('Topic domain - config', () => {
     expect(domain.name).toBe('Topic')
     expect(domain.structure).toBeTypeOf('string')
     expect(domain.structure!.length).toBeGreaterThan(0)
-    expect(domain.skills).toBe(topicSkills)
-    expect(domain.skills!.length).toBe(3)
+    expect(domain.skills).toHaveLength(3)
+    const skillIds = domain.skills!.map(s => s.id)
+    expect(skillIds).toContain('topic-management')
+    expect(skillIds).toContain('topic-query')
+    expect(skillIds).toContain('topic-processing')
   })
 
   test('topic domain schema has 3 edges (subtopic_of, related_to, about_topic)', () => {
@@ -286,7 +287,7 @@ describe('Topic domain - integration', () => {
       llm: new MockLLMAdapter(),
       embedding: new MockEmbeddingAdapter(),
     })
-    await engine.registerDomain(topicDomainFromIndex)
+    await engine.registerDomain(topicDomain)
   })
 
   afterEach(async () => {

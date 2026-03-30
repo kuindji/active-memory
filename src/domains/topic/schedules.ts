@@ -1,5 +1,6 @@
 import { StringRecordId } from 'surrealdb'
 import type { DomainContext } from '../../core/types.ts'
+import type { TopicAttributes } from './types.ts'
 import { TOPIC_TAG, TOPIC_DOMAIN_ID, MERGE_SIMILARITY_THRESHOLD } from './types.ts'
 
 export async function mergeSimilarTopics(context: DomainContext): Promise<void> {
@@ -27,49 +28,45 @@ export async function mergeSimilarTopics(context: DomainContext): Promise<void> 
     })
 
     for (const similar of similarEntries) {
-      // Get fresh attributes for the current topic via search
+      // Get fresh attributes for the current topic via graph query
       const topicAttrs = await getTopicAttributesFromGraph(context, topic.id)
-      const similarAttrs = similar.domainAttributes[TOPIC_DOMAIN_ID]
+      const similarAttrs = parseTopicAttributes(similar.domainAttributes[TOPIC_DOMAIN_ID])
 
       if (!topicAttrs || !similarAttrs) continue
 
-      const topicMentionCount = (topicAttrs.mentionCount as number) ?? 0
-      const similarMentionCount = (similarAttrs.mentionCount as number) ?? 0
-
       let canonicalId: string
       let mergedId: string
-      let canonicalAttrs: Record<string, unknown>
-      let mergedMentionCount: number
+      let canonicalAttrs: TopicAttributes
+      let mergedAttrs: TopicAttributes
 
-      if (topicMentionCount > similarMentionCount) {
+      if (topicAttrs.mentionCount > similarAttrs.mentionCount) {
         canonicalId = topic.id
         mergedId = similar.id
         canonicalAttrs = topicAttrs
-        mergedMentionCount = similarMentionCount
-      } else if (similarMentionCount > topicMentionCount) {
+        mergedAttrs = similarAttrs
+      } else if (similarAttrs.mentionCount > topicAttrs.mentionCount) {
         canonicalId = similar.id
         mergedId = topic.id
         canonicalAttrs = similarAttrs
-        mergedMentionCount = topicMentionCount
+        mergedAttrs = topicAttrs
       } else {
         // Equal mentionCount: prefer older createdAt
         if (topic.createdAt <= similar.createdAt) {
           canonicalId = topic.id
           mergedId = similar.id
           canonicalAttrs = topicAttrs
-          mergedMentionCount = similarMentionCount
+          mergedAttrs = similarAttrs
         } else {
           canonicalId = similar.id
           mergedId = topic.id
           canonicalAttrs = similarAttrs
-          mergedMentionCount = topicMentionCount
+          mergedAttrs = topicAttrs
         }
       }
 
       // Mark the non-canonical as merged
-      const mergedTopicAttrs = mergedId === topic.id ? topicAttrs : similarAttrs
       await context.updateAttributes(mergedId, {
-        ...mergedTopicAttrs,
+        ...mergedAttrs,
         status: 'merged',
         mergedInto: canonicalId,
       })
@@ -79,11 +76,11 @@ export async function mergeSimilarTopics(context: DomainContext): Promise<void> 
         strength: similar.score,
       })
 
-      // Update canonical's mentionCount
-      const canonicalMentionCount = (canonicalAttrs.mentionCount as number) ?? 0
+      // Update canonical's mentionCount and lastMentionedAt
       await context.updateAttributes(canonicalId, {
         ...canonicalAttrs,
-        mentionCount: canonicalMentionCount + mergedMentionCount,
+        mentionCount: canonicalAttrs.mentionCount + mergedAttrs.mentionCount,
+        lastMentionedAt: Date.now(),
       })
 
       mergedInThisRun.add(mergedId)
@@ -94,10 +91,31 @@ export async function mergeSimilarTopics(context: DomainContext): Promise<void> 
   }
 }
 
+function parseTopicAttributes(
+  raw: Record<string, unknown> | undefined
+): TopicAttributes | null {
+  if (!raw) return null
+  if (
+    typeof raw.name !== 'string' ||
+    typeof raw.status !== 'string' ||
+    typeof raw.mentionCount !== 'number' ||
+    typeof raw.lastMentionedAt !== 'number' ||
+    typeof raw.createdBy !== 'string'
+  ) return null
+  return {
+    name: raw.name,
+    status: raw.status as TopicAttributes['status'],
+    mentionCount: raw.mentionCount,
+    lastMentionedAt: raw.lastMentionedAt,
+    createdBy: raw.createdBy,
+    mergedInto: typeof raw.mergedInto === 'string' ? raw.mergedInto : undefined,
+  }
+}
+
 async function getTopicAttributesFromGraph(
   context: DomainContext,
   memoryId: string
-): Promise<Record<string, unknown> | null> {
+): Promise<TopicAttributes | null> {
   const memRef = new StringRecordId(memoryId.startsWith('memory:') ? memoryId : `memory:${memoryId}`)
   const domainRef = new StringRecordId(`domain:${TOPIC_DOMAIN_ID}`)
   const rows = await context.graph.query<{ attributes: Record<string, unknown> }[]>(
@@ -105,5 +123,5 @@ async function getTopicAttributesFromGraph(
     { memId: memRef, domainId: domainRef }
   )
   if (!rows || rows.length === 0) return null
-  return rows[0].attributes ?? null
+  return parseTopicAttributes(rows[0].attributes)
 }
