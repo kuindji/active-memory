@@ -636,7 +636,27 @@ class MemoryEngine {
           )
           if (rows) results.push(...rows)
         }
-        return results
+
+        // Filter edges that connect to memory nodes from non-visible domains
+        const filtered: Edge[] = []
+        for (const edge of results) {
+          const inId = String(edge.in)
+          const outId = String(edge.out)
+          // Determine the "other" node — the one that isn't the queried node
+          const otherId = inId === nodeId ? outId : inId
+
+          // Only check visibility for memory nodes
+          if (otherId.startsWith('memory:')) {
+            if (await isMemoryVisible(otherId)) {
+              filtered.push(edge)
+            }
+          } else {
+            // Non-memory nodes (tags, domains, user nodes, etc.) pass through
+            filtered.push(edge)
+          }
+        }
+
+        return filtered
       },
     }
   }

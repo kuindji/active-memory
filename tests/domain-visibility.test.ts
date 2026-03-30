@@ -155,6 +155,46 @@ describe('Domain visibility', () => {
     expect(tags).toEqual([])
   })
 
+  test('getNodeEdges filters edges connecting to memories from non-visible domains', async () => {
+    // domaina can only see domaina + domainb
+    const ctx = engine.createDomainContext('domaina')
+
+    // Get a memory from domaina
+    const memoriesA = await ctx.getMemories({ domains: ['domaina'] })
+    const memoryFromA = memoriesA.find(m => m.content === 'content from A')
+    expect(memoryFromA).toBeDefined()
+
+    // Get all edges from this memory — owned_by and tagged edges point to non-memory nodes and should pass through
+    const edges = await ctx.getNodeEdges(memoryFromA!.id, 'out')
+    expect(edges.length).toBeGreaterThan(0)
+  })
+
+  test('getNodeEdges excludes edges to non-visible memory nodes', async () => {
+    // Create a cross-memory reference edge between domainA memory and domainD memory
+    const graph = engine.getGraph()
+    const ctxD = engine.createDomainContext('domaind')
+    const memoriesD = await ctxD.getMemories({ domains: ['domaind'] })
+    const memoryFromD = memoriesD.find(m => m.content === 'content from D')
+
+    const ctxA = engine.createDomainContext('domaina')
+    const memoriesA = await ctxA.getMemories({ domains: ['domaina'] })
+    const memoryFromA = memoriesA.find(m => m.content === 'content from A')
+
+    // Create a reinforces edge from A -> D
+    await graph.relate(memoryFromA!.id, 'reinforces', memoryFromD!.id, {
+      strength: 0.9,
+      detected_at: Date.now(),
+    })
+
+    // From domaina's context, getNodeEdges should NOT include the edge to memoryFromD
+    // because domaina can only see domaina + domainb
+    const ctxFiltered = engine.createDomainContext('domaina')
+    const edges = await ctxFiltered.getNodeEdges(memoryFromA!.id, 'out')
+
+    const reinforcesEdges = edges.filter(e => String(e.id).startsWith('reinforces:'))
+    expect(reinforcesEdges.length).toBe(0)
+  })
+
   test('domain settings stored in DB node', async () => {
     const graph = engine.getGraph()
     const node = await graph.getNode('domain:domaina')
