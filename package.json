@@ -8,6 +8,7 @@
   },
   "scripts": {
     "test": "bun test",
+    "test:integration": "bun test --timeout 120000 --test-root ./tests-integration",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix"
@@ -15,7 +16,8 @@
   "dependencies": {
     "surrealdb": "^2.0.0",
     "@surrealdb/node": "^3.0.0",
-    "js-tiktoken": "^1.0.21"
+    "js-tiktoken": "^1.0.21",
+    "onnxruntime-node": "^1.24.1"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

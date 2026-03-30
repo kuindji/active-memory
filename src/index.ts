@@ -61,6 +61,8 @@ export { createUserDomain, userDomain } from './domains/user/index.ts'
 
 // Adapters
 export { ClaudeCliAdapter } from './adapters/llm/claude-cli.ts'
+export { OnnxEmbeddingAdapter } from './adapters/onnx-embedding.ts'
+export type { OnnxEmbeddingConfig } from './adapters/onnx-embedding.ts'
 
 // Config
 export { resolveConfigPath, loadConfig } from './config-loader.ts'
