@@ -268,8 +268,9 @@ class MemoryEngine {
     return results
   }
 
-  async relate(from: string, to: string, edgeType: string, domainId: string, attrs?: Record<string, unknown>): Promise<string> {
-    void domainId
+  // domainId is required by the CLI contract for audit/authorization context.
+  // Currently not enforced — reserved for future domain-level access control.
+  async relate(from: string, to: string, edgeType: string, _domainId: string, attrs?: Record<string, unknown>): Promise<string> {
     return this.graph.relate(from, edgeType, to, attrs)
   }
 

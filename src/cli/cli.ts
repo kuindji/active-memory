@@ -59,6 +59,14 @@ async function main(): Promise<void> {
 
   try {
     const result: CommandResult = await handler(engine, parsed)
+
+    // Command-level validation errors: output has an error property with exitCode 1
+    if (result.exitCode !== 0 && result.output && typeof result.output === 'object' && 'error' in result.output) {
+      const errorMsg = (result.output as { error: string }).error
+      console.error(formatError('VALIDATION_ERROR', errorMsg))
+      process.exit(result.exitCode)
+    }
+
     const formatCommand = result.formatCommand ?? parsed.command
     const output = formatOutput(formatCommand, result.output, pretty)
 

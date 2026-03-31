@@ -77,10 +77,10 @@ describe('parseArgs', () => {
   })
 
   it('handles mixed flags and positional args', () => {
-    const result = parseArgs(['ingest', '--json', 'some-file.txt', '--cwd', '/workspace'])
+    const result = parseArgs(['ingest', '--pretty', 'some-file.txt', '--cwd', '/workspace'])
     expect(result.command).toBe('ingest')
     expect(result.args).toEqual(['some-file.txt'])
-    expect(result.flags['json']).toBe(true)
+    expect(result.flags['pretty']).toBe(true)
     expect(result.flags['cwd']).toBe('/workspace')
   })
 
