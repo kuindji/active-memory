@@ -1,19 +1,7 @@
 import type { OwnedMemory, DomainContext } from '../../core/types.ts'
 import { CHAT_TAG, CHAT_MESSAGE_TAG } from './types.ts'
 import { TOPIC_TAG, TOPIC_DOMAIN_ID } from '../topic/types.ts'
-
-/**
- * Ensures a tag node exists in the graph with the given label.
- * Hierarchical tags (containing `/`) need backtick-escaping in SurrealDB
- * record IDs to prevent `/` being interpreted as a path separator.
- */
-async function ensureTag(context: DomainContext, label: string): Promise<string> {
-  const tagId = label.includes('/') ? `tag:\`${label}\`` : `tag:${label}`
-  try {
-    await context.graph.createNodeWithId(tagId, { label, created_at: Date.now() })
-  } catch { /* already exists */ }
-  return tagId
-}
+import { ensureTag } from './utils.ts'
 
 export async function processInboxItem(entry: OwnedMemory, context: DomainContext): Promise<void> {
   const userId = context.requestContext.userId as string | undefined

@@ -13,21 +13,11 @@ import {
   DEFAULT_EPISODIC_LAMBDA,
   DEFAULT_PRUNE_THRESHOLD,
 } from './types.ts'
+import { ensureTag } from './utils.ts'
 
 interface WorkingMemoryRow {
   in: string
   attributes: Record<string, unknown>
-}
-
-/**
- * Ensures a tag node exists in the graph with the given label.
- */
-async function ensureTag(context: DomainContext, label: string): Promise<string> {
-  const tagId = label.includes('/') ? `tag:\`${label}\`` : `tag:${label}`
-  try {
-    await context.graph.createNodeWithId(tagId, { label, created_at: Date.now() })
-  } catch { /* already exists */ }
-  return tagId
 }
 
 export async function promoteWorkingMemory(context: DomainContext, options?: ChatDomainOptions): Promise<void> {
