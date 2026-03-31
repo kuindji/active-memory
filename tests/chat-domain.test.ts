@@ -4,7 +4,7 @@ import type { DomainContext } from '../src/core/types.ts'
 import { MockLLMAdapter, MockEmbeddingAdapter } from './helpers.ts'
 import { createChatDomain, chatDomain } from '../src/domains/chat/index.ts'
 import { createTopicDomain } from '../src/domains/topic/index.ts'
-import { promoteWorkingMemory, consolidateEpisodic } from '../src/domains/chat/schedules.ts'
+import { promoteWorkingMemory, consolidateEpisodic, pruneDecayed } from '../src/domains/chat/schedules.ts'
 import {
   CHAT_DOMAIN_ID,
   CHAT_TAG,
@@ -552,5 +552,100 @@ describe('Chat domain - consolidate episodic', () => {
       attributes: { layer: 'semantic' },
     })
     expect(semanticMemories).toHaveLength(0)
+  })
+})
+
+describe('Chat domain - prune decayed', () => {
+  let engine: MemoryEngine
+  let llm: MockLLMAdapter
+
+  beforeEach(async () => {
+    llm = new MockLLMAdapter()
+    engine = new MemoryEngine()
+    await engine.initialize({
+      connection: 'mem://',
+      namespace: 'test',
+      database: `test_${Date.now()}`,
+      context: { userId: 'test-user' },
+      llm,
+      embedding: new MockEmbeddingAdapter(),
+    })
+    await engine.registerDomain(createChatDomain({
+      promoteSchedule: { enabled: false },
+      consolidateSchedule: { enabled: false },
+      pruneSchedule: { enabled: false },
+    }))
+  })
+
+  afterEach(async () => {
+    await engine.close()
+  })
+
+  test('prunes episodic memories with decayed weight below threshold', async () => {
+    const ctx = engine.createDomainContext(CHAT_DOMAIN_ID)
+
+    await ctx.writeMemory({
+      content: 'Low weight episodic fact',
+      tags: [CHAT_TAG, CHAT_EPISODIC_TAG],
+      ownership: {
+        domain: CHAT_DOMAIN_ID,
+        attributes: { layer: 'episodic', userId: 'test-user', weight: 0.01 },
+      },
+    })
+
+    // Prune with a high threshold (0.5) — decayed weight 0.01 is well below 0.5
+    await pruneDecayed(ctx, { decay: { pruneThreshold: 0.5 } })
+
+    const remaining = await ctx.getMemories({
+      tags: [CHAT_EPISODIC_TAG],
+      attributes: { layer: 'episodic' },
+    })
+    expect(remaining).toHaveLength(0)
+  })
+
+  test('preserves episodic memories with decayed weight above threshold', async () => {
+    const ctx = engine.createDomainContext(CHAT_DOMAIN_ID)
+
+    await ctx.writeMemory({
+      content: 'High weight episodic fact',
+      tags: [CHAT_TAG, CHAT_EPISODIC_TAG],
+      ownership: {
+        domain: CHAT_DOMAIN_ID,
+        attributes: { layer: 'episodic', userId: 'test-user', weight: 0.9 },
+      },
+    })
+
+    // Prune with a low threshold (0.05) — weight 0.9 with near-zero decay remains above 0.05
+    await pruneDecayed(ctx, { decay: { pruneThreshold: 0.05, episodicLambda: 0.0001 } })
+
+    const remaining = await ctx.getMemories({
+      tags: [CHAT_EPISODIC_TAG],
+      attributes: { layer: 'episodic' },
+    })
+    expect(remaining).toHaveLength(1)
+    expect(remaining[0].content).toBe('High weight episodic fact')
+  })
+
+  test('does not prune semantic memories', async () => {
+    const ctx = engine.createDomainContext(CHAT_DOMAIN_ID)
+
+    await ctx.writeMemory({
+      content: 'Semantic knowledge',
+      tags: [CHAT_TAG, CHAT_SEMANTIC_TAG],
+      ownership: {
+        domain: CHAT_DOMAIN_ID,
+        attributes: { layer: 'semantic', userId: 'test-user', weight: 0.01 },
+      },
+    })
+
+    // Prune with a high threshold (0.5) — semantic memories should not be touched
+    await pruneDecayed(ctx, { decay: { pruneThreshold: 0.5 } })
+
+    const remaining = await ctx.getMemories({
+      tags: [CHAT_SEMANTIC_TAG],
+      attributes: { layer: 'semantic' },
+    })
+    expect(remaining).toHaveLength(1)
+    expect(remaining[0].content).toBe('Semantic knowledge')
   })
 })

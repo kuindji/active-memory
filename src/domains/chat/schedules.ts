@@ -10,6 +10,8 @@ import {
   DEFAULT_WORKING_MAX_AGE,
   DEFAULT_CONSOLIDATION_SIMILARITY,
   DEFAULT_CONSOLIDATION_MIN_CLUSTER,
+  DEFAULT_EPISODIC_LAMBDA,
+  DEFAULT_PRUNE_THRESHOLD,
 } from './types.ts'
 
 interface WorkingMemoryRow {
@@ -241,6 +243,30 @@ export async function consolidateEpisodic(context: DomainContext, options?: Chat
   }
 }
 
-export async function pruneDecayed(_context: DomainContext, _options?: ChatDomainOptions): Promise<void> {
-  // Stub — implemented in Task 10
+export async function pruneDecayed(context: DomainContext, options?: ChatDomainOptions): Promise<void> {
+  const lambda = options?.decay?.episodicLambda ?? DEFAULT_EPISODIC_LAMBDA
+  const threshold = options?.decay?.pruneThreshold ?? DEFAULT_PRUNE_THRESHOLD
+
+  const rows = await context.graph.query<WorkingMemoryRow[]>(
+    'SELECT in, attributes FROM owned_by WHERE out = $domainId AND attributes.layer = "episodic"',
+    { domainId: new StringRecordId(`domain:${CHAT_DOMAIN_ID}`) }
+  )
+  if (!rows || rows.length === 0) return
+
+  const now = Date.now()
+
+  for (const row of rows) {
+    const memId = String(row.in)
+    const weight = typeof row.attributes.weight === 'number' ? row.attributes.weight : 1.0
+
+    const memory = await context.getMemory(memId)
+    if (!memory) continue
+
+    const hoursSinceCreation = (now - memory.createdAt) / (1000 * 60 * 60)
+    const decayedWeight = weight * Math.exp(-lambda * hoursSinceCreation)
+
+    if (decayedWeight < threshold) {
+      await context.releaseOwnership(memId, CHAT_DOMAIN_ID)
+    }
+  }
 }
