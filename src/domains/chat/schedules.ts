@@ -5,8 +5,11 @@ import {
   CHAT_DOMAIN_ID,
   CHAT_TAG,
   CHAT_EPISODIC_TAG,
+  CHAT_SEMANTIC_TAG,
   DEFAULT_WORKING_CAPACITY,
   DEFAULT_WORKING_MAX_AGE,
+  DEFAULT_CONSOLIDATION_SIMILARITY,
+  DEFAULT_CONSOLIDATION_MIN_CLUSTER,
 } from './types.ts'
 
 interface WorkingMemoryRow {
@@ -150,8 +153,92 @@ export async function promoteWorkingMemory(context: DomainContext, options?: Cha
   }
 }
 
-export async function consolidateEpisodic(_context: DomainContext, _options?: ChatDomainOptions): Promise<void> {
-  // Stub — implemented in Task 9
+export async function consolidateEpisodic(context: DomainContext, options?: ChatDomainOptions): Promise<void> {
+  const similarityThreshold = options?.consolidation?.similarityThreshold ?? DEFAULT_CONSOLIDATION_SIMILARITY
+  const minClusterSize = options?.consolidation?.minClusterSize ?? DEFAULT_CONSOLIDATION_MIN_CLUSTER
+
+  // Get all episodic memories owned by the chat domain
+  const episodicMemories = await context.getMemories({
+    tags: [CHAT_EPISODIC_TAG],
+    attributes: { layer: 'episodic' },
+  })
+
+  if (episodicMemories.length < minClusterSize) return
+
+  // Cluster episodic memories by embedding similarity
+  const clustered = new Set<string>()
+  const clusters: string[][] = []
+
+  for (const memory of episodicMemories) {
+    if (clustered.has(memory.id)) continue
+
+    // Search for similar episodic memories
+    const searchResult = await context.search({
+      text: memory.content,
+      tags: [CHAT_EPISODIC_TAG],
+      attributes: { layer: 'episodic' },
+      minScore: similarityThreshold,
+    })
+
+    // Filter to only episodic memories not already in a cluster
+    const clusterMembers = searchResult.entries
+      .filter(entry => !clustered.has(entry.id))
+      .map(entry => entry.id)
+
+    if (clusterMembers.length >= minClusterSize) {
+      clusters.push(clusterMembers)
+      for (const id of clusterMembers) {
+        clustered.add(id)
+      }
+    }
+  }
+
+  // Consolidate each cluster into a semantic memory
+  for (const cluster of clusters) {
+    const contents: string[] = []
+    for (const memId of cluster) {
+      const memory = await context.getMemory(memId)
+      if (memory) {
+        contents.push(memory.content)
+      }
+    }
+
+    if (contents.length === 0) continue
+
+    // Call LLM to produce a summary
+    const summary = await context.llm.consolidate(contents)
+    if (!summary) continue
+
+    // Ensure tag nodes exist
+    const chatTagId = await ensureTag(context, CHAT_TAG)
+    const semanticTagId = await ensureTag(context, CHAT_SEMANTIC_TAG)
+    try {
+      await context.graph.relate(semanticTagId, 'child_of', chatTagId)
+    } catch { /* already related */ }
+
+    // Create semantic memory
+    const semanticId = await context.writeMemory({
+      content: summary,
+      tags: [CHAT_TAG, CHAT_SEMANTIC_TAG],
+      ownership: {
+        domain: CHAT_DOMAIN_ID,
+        attributes: {
+          layer: 'semantic',
+          weight: 0.8,
+        },
+      },
+    })
+
+    // Link semantic → each episodic in cluster via summarizes edges
+    for (const memId of cluster) {
+      await context.graph.relate(semanticId, 'summarizes', memId)
+    }
+
+    // Release ownership on consolidated episodic memories
+    for (const memId of cluster) {
+      await context.releaseOwnership(memId, CHAT_DOMAIN_ID)
+    }
+  }
 }
 
 export async function pruneDecayed(_context: DomainContext, _options?: ChatDomainOptions): Promise<void> {

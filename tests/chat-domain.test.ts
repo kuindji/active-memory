@@ -4,12 +4,13 @@ import type { DomainContext } from '../src/core/types.ts'
 import { MockLLMAdapter, MockEmbeddingAdapter } from './helpers.ts'
 import { createChatDomain, chatDomain } from '../src/domains/chat/index.ts'
 import { createTopicDomain } from '../src/domains/topic/index.ts'
-import { promoteWorkingMemory } from '../src/domains/chat/schedules.ts'
+import { promoteWorkingMemory, consolidateEpisodic } from '../src/domains/chat/schedules.ts'
 import {
   CHAT_DOMAIN_ID,
   CHAT_TAG,
   CHAT_MESSAGE_TAG,
   CHAT_EPISODIC_TAG,
+  CHAT_SEMANTIC_TAG,
   DEFAULT_PROMOTE_INTERVAL_MS,
   DEFAULT_CONSOLIDATE_INTERVAL_MS,
   DEFAULT_PRUNE_INTERVAL_MS,
@@ -457,5 +458,99 @@ describe('Chat domain - promote working memory', () => {
       attributes: { layer: 'working' },
     })
     expect(workingAfter.length).toBeLessThan(workingBefore.length)
+  })
+})
+
+describe('Chat domain - consolidate episodic', () => {
+  let engine: MemoryEngine
+  let llm: MockLLMAdapter
+
+  beforeEach(async () => {
+    llm = new MockLLMAdapter()
+    llm.consolidateResult = 'User is learning TypeScript for web development'
+    engine = new MemoryEngine()
+    await engine.initialize({
+      connection: 'mem://',
+      namespace: 'test',
+      database: `test_${Date.now()}`,
+      context: { userId: 'test-user' },
+      llm,
+      embedding: new MockEmbeddingAdapter(),
+    })
+    await engine.registerDomain(createChatDomain({
+      promoteSchedule: { enabled: false },
+      consolidateSchedule: { enabled: false },
+      pruneSchedule: { enabled: false },
+    }))
+  })
+
+  afterEach(async () => {
+    await engine.close()
+  })
+
+  test('consolidates clustered episodic memories into semantic', async () => {
+    const ctx = engine.createDomainContext(CHAT_DOMAIN_ID)
+
+    // Create 3 episodic memories with identical content so mock embeddings match
+    for (let i = 0; i < 3; i++) {
+      await ctx.writeMemory({
+        content: 'TypeScript programming fact',
+        tags: [CHAT_TAG, CHAT_EPISODIC_TAG],
+        ownership: {
+          domain: CHAT_DOMAIN_ID,
+          attributes: { layer: 'episodic', userId: 'test-user', weight: 0.5 },
+        },
+      })
+    }
+
+    // Run consolidation with low thresholds
+    await consolidateEpisodic(ctx, {
+      consolidation: { similarityThreshold: 0.1, minClusterSize: 2 },
+    })
+
+    // Verify semantic memory was created
+    const semanticMemories = await ctx.getMemories({
+      tags: [CHAT_SEMANTIC_TAG],
+      attributes: { layer: 'semantic' },
+    })
+    expect(semanticMemories.length).toBeGreaterThanOrEqual(1)
+    expect(semanticMemories[0].content).toBe('User is learning TypeScript for web development')
+  })
+
+  test('skips consolidation when no episodic memories exist', async () => {
+    const ctx = engine.createDomainContext(CHAT_DOMAIN_ID)
+
+    await consolidateEpisodic(ctx, {
+      consolidation: { similarityThreshold: 0.5, minClusterSize: 2 },
+    })
+
+    const semanticMemories = await ctx.getMemories({
+      tags: [CHAT_SEMANTIC_TAG],
+      attributes: { layer: 'semantic' },
+    })
+    expect(semanticMemories).toHaveLength(0)
+  })
+
+  test('skips clusters below minimum size', async () => {
+    const ctx = engine.createDomainContext(CHAT_DOMAIN_ID)
+
+    // Create only 1 episodic memory
+    await ctx.writeMemory({
+      content: 'TypeScript programming fact',
+      tags: [CHAT_TAG, CHAT_EPISODIC_TAG],
+      ownership: {
+        domain: CHAT_DOMAIN_ID,
+        attributes: { layer: 'episodic', userId: 'test-user', weight: 0.5 },
+      },
+    })
+
+    // Run consolidation with default minClusterSize=3
+    await consolidateEpisodic(ctx)
+
+    const semanticMemories = await ctx.getMemories({
+      tags: [CHAT_SEMANTIC_TAG],
+      attributes: { layer: 'semantic' },
+    })
+    expect(semanticMemories).toHaveLength(0)
   })
 })
