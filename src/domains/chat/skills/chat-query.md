@@ -4,20 +4,15 @@ Retrieve conversational memory using search and context building.
 
 ## Building Context
 
-Use `buildContext` to assemble a token-budgeted context string from all three memory tiers:
+Use `build-context` to assemble a token-budgeted context string from all three memory tiers:
 
-```ts
-const result = await engine.buildContext(queryText, {
-  domains: ['chat'],
-  budgetTokens: 4000,
-  context: { userId: 'user-123', chatSessionId: 'session-456' },
-})
-// result.context contains the assembled string
-// result.memories lists the memories used
-// result.totalTokens is the token count
+```sh
+active-memory build-context "current topic" \
+  --domains chat \
+  --budget 4000 \
+  --meta userId=user-123 \
+  --meta chatSessionId=session-456
 ```
-
-## Context Sections
 
 The assembled context contains three sections:
 
@@ -27,28 +22,25 @@ The assembled context contains three sections:
 
 ## Searching Chat Memories
 
-Use search with domain and tag filters:
+```sh
+# Find episodic memories for a user
+active-memory search "TypeScript" \
+  --domains chat \
+  --tags chat/episodic \
+  --meta userId=user-123
 
-```ts
-// Find episodic memories for a user
-const results = await engine.search({
-  text: 'TypeScript',
-  domains: ['chat'],
-  tags: ['chat/episodic'],
-  context: { userId: 'user-123' },
-})
-
-// Find all working memories for a session
-const session = await engine.search({
-  text: '',
-  domains: ['chat'],
-  tags: ['chat/message'],
-  context: { userId: 'user-123', chatSessionId: 'session-456' },
-})
+# Find working memories for a session
+active-memory search "" \
+  --domains chat \
+  --tags chat/message \
+  --meta userId=user-123 \
+  --meta chatSessionId=session-456
 ```
 
-## Depth Parameter
+## Available Tags
 
-Context building supports a `depth` parameter that shifts budget allocation:
-- Low depth (default): favors working memory (recent conversation)
-- High depth: favors semantic/episodic (background knowledge)
+| Tag | Tier |
+|-----|------|
+| `chat/message` | Working memory (raw messages) |
+| `chat/episodic` | Episodic memory (session summaries) |
+| `chat/semantic` | Semantic memory (cross-session knowledge) |

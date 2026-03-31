@@ -1,107 +1,64 @@
 # Querying Project Knowledge
 
-Search and retrieve project knowledge by classification, audience, entity references, and architecture graph traversal.
+Search and retrieve project knowledge by classification, audience, entity references, and graph traversal.
 
 ## Searching Memories
 
-### By Text
-
-```ts
-const result = await engine.search({
-  text: 'order processing',
-  domains: ['project'],
-})
-```
-
-### By Classification
-
-Find all decisions:
-
-```ts
-const decisions = await engine.search({
-  text: 'payment flow',
-  domains: ['project'],
-  tags: ['project/decision'],
-})
-```
-
-### By Audience
-
-Filter for non-technical stakeholders:
-
-```ts
-const businessContext = await engine.buildContext('What does the order pipeline do?', {
-  domains: ['project'],
-  context: { audience: 'business' },
-})
-```
-
-### Via CLI
-
 ```sh
-active-memory search --domain project "order processing"
-active-memory search --domain project --tag project/decision "payment"
-active-memory build-context --domain project "order pipeline architecture"
+# By text
+active-memory search "order processing" --domains project
+
+# By classification tag
+active-memory search "payment flow" --domains project --tags project/decision
+
+# Build context with audience filter
+active-memory build-context "order pipeline architecture" \
+  --domains project \
+  --meta audience=business
 ```
+
+### Classification Tags
+
+| Tag | Content |
+|-----|---------|
+| `project/decision` | Architectural and design decisions |
+| `project/rationale` | Reasoning behind choices |
+| `project/clarification` | Corrections and non-obvious explanations |
+| `project/direction` | Future plans and migration paths |
+| `project/question` | Observations needing human explanation |
 
 ## Architecture Graph Queries
 
-The project domain maintains an entity graph of modules, data entities, concepts, and patterns. Use graph traversal to explore architecture.
+The project domain maintains an entity graph. Use graph traversal to explore architecture.
 
-### What connects to a module?
+```sh
+# What modules connect to a service?
+active-memory graph traverse <module-id> --edges connects_to --depth 1
 
-```ts
-// Find modules that communicate with order-processor
-const connected = await context.graph.traverse(
-  'module:order-processor',
-  '<->connects_to<->module'
-)
-```
+# What data entities does a service manage?
+active-memory graph traverse <module-id> --edges manages --direction out --depth 1
 
-### What does a service manage?
+# What modules implement a concept?
+active-memory graph traverse <concept-id> --edges implements --direction in --depth 1
 
-```ts
-// Find data entities managed by a service
-const entities = await context.graph.traverse(
-  'module:order-processor',
-  '->manages->data_entity'
-)
-```
-
-### What implements a concept?
-
-```ts
-// Find all modules implementing the reconciliation concept
-const modules = await context.graph.traverse(
-  'concept:reconciliation',
-  '<-implements<-module'
-)
-```
-
-### What memories are about an entity?
-
-```ts
-// Find all knowledge about a specific module
-const memories = await context.graph.traverse(
-  'module:order-processor',
-  '<-about_entity<-memory'
-)
+# What memories are about an entity?
+active-memory graph traverse <entity-id> --edges about_entity --direction in --depth 1
 ```
 
 ## Surfacing Questions
 
-The commit scanner and drift detector create `question` memories when they detect changes that may need human explanation:
+The commit scanner and drift detector create `question` memories when they detect changes needing explanation:
 
 ```sh
-active-memory search --domain project --tag project/question ""
+active-memory search "" --domains project --tags project/question
 ```
 
-## Using buildContext
+## Context Building
 
-The project domain's `buildContext` returns structured sections:
+The project domain's `build-context` returns structured sections:
 
-- **[Decisions]** — Relevant decisions and rationale (50% of token budget)
-- **[Architecture]** — Entity-linked context from graph traversal (30%)
-- **[Recent Observations]** — Latest observations from scans (20%)
+- **Decisions** — Relevant decisions and rationale (50% of token budget)
+- **Architecture** — Entity-linked context from graph traversal (30%)
+- **Recent Observations** — Latest observations from scans (20%)
 
-Audience filtering removes technical-only content when `audience: 'business'` is set in request context.
+Audience filtering removes technical-only content when `audience=business` is set via `--meta`.

@@ -61,6 +61,7 @@ async function main(): Promise<void> {
     process.exit(1)
   }
 
+  let exitCode = 1
   try {
     const result: CommandResult = await handler(engine, parsed)
 
@@ -68,7 +69,8 @@ async function main(): Promise<void> {
     if (result.exitCode !== 0 && result.output && typeof result.output === 'object' && 'error' in result.output) {
       const errorMsg = (result.output as { error: string }).error
       console.error(formatError('VALIDATION_ERROR', errorMsg))
-      process.exit(result.exitCode)
+      exitCode = result.exitCode
+      return
     }
 
     const formatCommand = result.formatCommand ?? parsed.command
@@ -78,13 +80,13 @@ async function main(): Promise<void> {
       console.log(output)
     }
 
-    process.exit(result.exitCode)
+    exitCode = result.exitCode
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
     console.error(formatError('COMMAND_ERROR', message))
-    process.exit(1)
   } finally {
     await engine.close()
+    process.exit(exitCode)
   }
 }
 

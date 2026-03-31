@@ -1,39 +1,36 @@
 # Chat Ingestion
 
-Feed messages into the Chat domain by ingesting text with the chat domain as owner. Both user and assistant messages are supported.
+Feed messages into the chat domain. Both user and assistant messages are supported.
 
-## Required Request Context
+## Required Metadata
 
-Every ingestion call must include `userId` and `chatSessionId` in the request context:
+Every ingestion call must include `userId` and `chatSessionId` via `--meta`:
 
-```ts
-await engine.ingest(messageText, {
-  domains: ['chat'],
-  context: {
-    userId: 'user-123',
-    chatSessionId: 'session-456',
-  },
-})
+```sh
+active-memory ingest --domains chat \
+  --meta userId=user-123 \
+  --meta chatSessionId=session-456 \
+  --text "What is TypeScript?"
 ```
 
 ## Message Role
 
-The `role` field distinguishes user input from agent output. Pass it via ingest metadata:
+Use the `role` metadata field to distinguish user input from agent output:
 
-```ts
-// User message
-await engine.ingest('What is TypeScript?', {
-  domains: ['chat'],
-  metadata: { role: 'user' },
-  context: { userId: 'user-123', chatSessionId: 'session-456' },
-})
+```sh
+# User message
+active-memory ingest --domains chat \
+  --meta userId=user-123 \
+  --meta chatSessionId=session-456 \
+  --meta role=user \
+  --text "What is TypeScript?"
 
-// Assistant response
-await engine.ingest('TypeScript is a typed superset of JavaScript.', {
-  domains: ['chat'],
-  metadata: { role: 'assistant' },
-  context: { userId: 'user-123', chatSessionId: 'session-456' },
-})
+# Assistant response
+active-memory ingest --domains chat \
+  --meta userId=user-123 \
+  --meta chatSessionId=session-456 \
+  --meta role=assistant \
+  --text "TypeScript is a typed superset of JavaScript."
 ```
 
 ## What Happens on Ingestion

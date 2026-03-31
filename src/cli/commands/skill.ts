@@ -1,3 +1,6 @@
+import { readFile } from 'node:fs/promises'
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import type { CommandHandler } from '../types.ts'
 
 const skillCommand: CommandHandler = async (engine, _parsed) => {
@@ -5,6 +8,15 @@ const skillCommand: CommandHandler = async (engine, _parsed) => {
   const domains = registry.list()
 
   const sections: string[] = []
+
+  // Prepend general CLI guide
+  try {
+    const cliDir = dirname(fileURLToPath(import.meta.url))
+    const cliGuide = await readFile(join(cliDir, '..', 'skills', 'cli-guide.md'), 'utf-8')
+    sections.push(cliGuide)
+  } catch {
+    // CLI guide file missing — skip
+  }
 
   for (const domain of domains) {
     const skills = registry.getExternalSkills(domain.id)
