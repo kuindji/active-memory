@@ -345,6 +345,141 @@ describe('Chat domain - search', () => {
   })
 })
 
+describe('Chat domain - buildContext', () => {
+  let engine: MemoryEngine
+  let llm: MockLLMAdapter
+
+  beforeEach(async () => {
+    llm = new MockLLMAdapter()
+    llm.extractResult = []
+    engine = new MemoryEngine()
+    await engine.initialize({
+      connection: 'mem://',
+      namespace: 'test',
+      database: `test_${Date.now()}`,
+      context: { userId: 'test-user', chatSessionId: 'session-1' },
+      llm,
+      embedding: new MockEmbeddingAdapter(),
+    })
+    await engine.registerDomain(createTopicDomain({ mergeSchedule: { enabled: false } }))
+    await engine.registerDomain(createChatDomain({
+      promoteSchedule: { enabled: false },
+      consolidateSchedule: { enabled: false },
+      pruneSchedule: { enabled: false },
+    }))
+  })
+
+  afterEach(async () => {
+    await engine.close()
+  })
+
+  test('includes working memory from current session', async () => {
+    await engine.ingest('Hello from session 1', {
+      domains: ['chat'],
+      metadata: { role: 'user' },
+    })
+    await engine.processInbox()
+
+    const result = await engine.buildContext('message', {
+      domains: ['chat'],
+      context: { userId: 'test-user', chatSessionId: 'session-1' },
+    })
+
+    expect(result.context).toContain('Hello from session 1')
+    expect(result.context).toContain('[Recent]')
+    expect(result.memories.length).toBeGreaterThanOrEqual(1)
+  })
+
+  test('returns empty context when userId is missing', async () => {
+    const engine2 = new MemoryEngine()
+    await engine2.initialize({
+      connection: 'mem://',
+      namespace: 'test',
+      database: `test_no_user_${Date.now()}`,
+      context: { chatSessionId: 'session-1' },
+      llm,
+      embedding: new MockEmbeddingAdapter(),
+    })
+    await engine2.registerDomain(createTopicDomain({ mergeSchedule: { enabled: false } }))
+    await engine2.registerDomain(createChatDomain({
+      promoteSchedule: { enabled: false },
+      consolidateSchedule: { enabled: false },
+      pruneSchedule: { enabled: false },
+    }))
+
+    const result = await engine2.buildContext('message', {
+      domains: ['chat'],
+      context: { chatSessionId: 'session-1' },
+    })
+
+    expect(result.context).toBe('')
+    expect(result.memories).toHaveLength(0)
+    expect(result.totalTokens).toBe(0)
+
+    await engine2.close()
+  })
+
+  test('includes episodic and semantic memories', async () => {
+    const ctx = engine.createDomainContext(CHAT_DOMAIN_ID)
+
+    await ctx.writeMemory({
+      content: 'Episodic highlight about testing',
+      tags: [CHAT_EPISODIC_TAG],
+      ownership: {
+        domain: CHAT_DOMAIN_ID,
+        attributes: { layer: 'episodic', userId: 'test-user', weight: 0.5 },
+      },
+    })
+
+    await ctx.writeMemory({
+      content: 'Semantic knowledge about testing',
+      tags: [CHAT_SEMANTIC_TAG],
+      ownership: {
+        domain: CHAT_DOMAIN_ID,
+        attributes: { layer: 'semantic', userId: 'test-user', weight: 0.8 },
+      },
+    })
+
+    const result = await engine.buildContext('testing', {
+      domains: ['chat'],
+      context: { userId: 'test-user', chatSessionId: 'session-1' },
+    })
+
+    expect(result.context).toContain('Episodic highlight about testing')
+    expect(result.context).toContain('Semantic knowledge about testing')
+    expect(result.context).toContain('[Context]')
+    expect(result.context).toContain('[Background]')
+  })
+
+  test('does not include other session working memory', async () => {
+    // Ingest a message for session-1 via normal flow
+    await engine.ingest('Session 1 message', {
+      domains: ['chat'],
+      metadata: { role: 'user' },
+    })
+    await engine.processInbox()
+
+    // Write a session-2 working memory directly
+    const ctx = engine.createDomainContext(CHAT_DOMAIN_ID)
+    await ctx.writeMemory({
+      content: 'Session 2 message',
+      tags: [CHAT_TAG, CHAT_MESSAGE_TAG],
+      ownership: {
+        domain: CHAT_DOMAIN_ID,
+        attributes: { role: 'user', layer: 'working', chatSessionId: 'session-2', userId: 'test-user', messageIndex: 0 },
+      },
+    })
+
+    const result = await engine.buildContext('message', {
+      domains: ['chat'],
+      context: { userId: 'test-user', chatSessionId: 'session-1' },
+    })
+
+    expect(result.context).toContain('Session 1 message')
+    expect(result.context).not.toContain('Session 2 message')
+  })
+})
+
 describe('Chat domain - promote working memory', () => {
   let engine: MemoryEngine
   let llm: MockLLMAdapter
