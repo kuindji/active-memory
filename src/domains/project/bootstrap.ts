@@ -127,15 +127,25 @@ function execGit(args: string[], cwd: string): Promise<string> {
 
 // --- Phase 1: Triage prompt — assess repo and pick files to read ---
 
-const TRIAGE_PROMPT = `You are analyzing a software project's directory structure to decide which files to read for a deep understanding of the project.
+const TRIAGE_PROMPT = `You are analyzing a software project's directory structure to decide which files to read for architectural understanding.
 
 Your job:
 1. Assess the repo size: small (< 20 directories), medium (20-100), or large (> 100).
 2. Based on the size, select files to read. Budget:
-   - Small repo: up to 20 files — read entry points, main types, key configs, READMEs
-   - Medium repo: up to 12 files — focus on root configs, main entry points, core type definitions
-   - Large repo: up to 6 files — only root configs and the most important entry points/types
-3. Prefer files that reveal architecture: type definitions, entry points (index.ts, main.ts, app.ts), config files, READMEs. Avoid test files, lock files, generated code.
+   - Small repo: up to 20 files
+   - Medium repo: up to 12 files
+   - Large repo: up to 6 files
+3. Prioritize files that reveal architecture:
+   - Type definitions and interfaces (types.ts, models/, schemas/)
+   - Entry points (index.ts, main.ts, app.ts, server.ts, mod.rs)
+   - Configuration (package.json, tsconfig.json, Cargo.toml, Dockerfile)
+   - READMEs at any level
+4. Deprioritize:
+   - Test files and fixtures (*.test.ts, *.spec.ts, __tests__/, fixtures/)
+   - Generated code and lock files
+   - Asset files (images, fonts, CSS)
+5. For monorepos: prioritize shared packages (packages/, libs/) and core services over apps/frontends.
+6. Return paths relative to the project root.
 
 Return ONLY a JSON object:
 {
@@ -148,31 +158,39 @@ Directory structure:
 
 // --- Phase 2: Analysis prompt — build entity graph from structure + code ---
 
-const ANALYSIS_PROMPT = `You are analyzing a software project. Based on the directory tree and file contents below, identify:
+const ANALYSIS_PROMPT = `You are analyzing a software project. Based on the directory tree and file contents below, identify the following.
 
-1. **modules**: Top-level subsystems, packages, or services. For each, provide:
-   - name: short identifier
-   - path: relative directory path
+1. **modules**: Architectural boundaries — subsystems a team would own or describe as a unit. NOT every directory.
+   - name: short, lowercase, hyphenated identifier (e.g., "order-processor")
+   - path: relative directory path from project root
    - kind: one of "package", "service", "lambda", "subsystem", "library"
    - description: one sentence about what it does
 
-2. **data_entities**: Key domain objects or data models you found in the code. For each:
-   - name: entity name (e.g., "User", "Order")
-   - source: file where it's defined
+2. **data_entities**: Domain/business objects that cross module boundaries or represent core data models. Only proper domain models (e.g., User, Order, Payment). Exclude utility types, config shapes, and framework-specific types.
+   - name: entity name (PascalCase)
+   - source: file where defined
 
-3. **concepts**: Business or architectural concepts. For each:
-   - name: concept name
+3. **concepts**: Business or architectural concepts not captured as code modules (e.g., "payment-processing", "order-fulfillment").
+   - name: concept name (lowercase, hyphenated)
    - description: one sentence
 
-4. **patterns**: Architectural patterns observed in the code. For each:
-   - name: pattern name
-   - scope: where it applies
+4. **patterns**: Architectural or design patterns observed in the code. Include where each pattern is applied.
+   - name: pattern name (e.g., "Repository Pattern", "Event Sourcing")
+   - scope: specific module or area where applied
 
-5. **relationships**: Connections between modules. For each:
-   - from: module name
-   - to: module name
-   - type: "contains" | "connects_to" | "implements"
+5. **relationships**: Connections between entities. Each MUST be between two DIFFERENT entities.
+   - from: entity name
+   - to: entity name
+   - type: one of:
+     - "contains": parent module structurally nests child module (e.g., monorepo root contains packages)
+     - "connects_to": runtime communication between different modules (HTTP, queue, gRPC, shared DB)
+     - "implements": a module realizes a business concept (from=module name, to=concept name)
    - description: one sentence (optional)
+
+Constraints:
+- Every relationship must be between two DIFFERENT entities. No self-references.
+- Module names must be short, lowercase, hyphenated identifiers.
+- Only include data_entities that are domain nouns, not internal utility types.
 
 Return ONLY a JSON object:
 {
