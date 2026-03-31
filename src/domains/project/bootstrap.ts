@@ -10,7 +10,7 @@ import {
 } from './types.ts'
 import type { ProjectDomainOptions, DirEntry, TriageResult, AnalysisResult } from './types.ts'
 import { ensureTag, findOrCreateEntity } from './utils.ts'
-import { formatTree, countDirectories, calculateScanDepth } from './bootstrap-utils.ts'
+import { formatTree, countDirectories, calculateScanDepth, validateAnalysisResult } from './bootstrap-utils.ts'
 
 const META_LAST_COMMIT = 'project:lastCommitHash'
 
@@ -259,6 +259,10 @@ export async function bootstrapProject(
     return // LLM or parsing failure — skip bootstrap
   }
 
+  // Step 4b: Validate and sanitize LLM output
+  const validated = validateAnalysisResult(analysis)
+  analysis = validated.analysis
+
   // Step 5: Create entities in graph
   const projectTagId = await ensureTag(context, PROJECT_TAG)
   const techTagId = await ensureTag(context, PROJECT_TECHNICAL_TAG)
@@ -288,12 +292,14 @@ export async function bootstrapProject(
     }
   }
 
+  const conceptNameToId = new Map<string, string>()
   if (analysis.concepts) {
     for (const concept of analysis.concepts) {
       if (!concept.name) continue
-      await findOrCreateEntity(context, 'concept', concept.name, {
+      const entityId = await findOrCreateEntity(context, 'concept', concept.name, {
         description: concept.description,
       })
+      conceptNameToId.set(concept.name, entityId)
     }
   }
 
@@ -306,17 +312,24 @@ export async function bootstrapProject(
     }
   }
 
-  // Step 6: Create relationships between modules
+  // Step 6: Create relationships
   if (analysis.relationships) {
     for (const rel of analysis.relationships) {
-      const fromId = moduleNameToId.get(rel.from)
-      const toId = moduleNameToId.get(rel.to)
+      if (rel.type !== 'contains' && rel.type !== 'connects_to' && rel.type !== 'implements') continue
+
+      let fromId: string | undefined
+      let toId: string | undefined
+
+      if (rel.type === 'implements') {
+        fromId = moduleNameToId.get(rel.from)
+        toId = conceptNameToId.get(rel.to)
+      } else {
+        fromId = moduleNameToId.get(rel.from)
+        toId = moduleNameToId.get(rel.to)
+      }
+
       if (!fromId || !toId) continue
-      if (
-        rel.type !== 'contains' &&
-        rel.type !== 'connects_to' &&
-        rel.type !== 'implements'
-      ) continue
+      if (fromId === toId) continue
 
       try {
         const edgeData: Record<string, unknown> = {}
