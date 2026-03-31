@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'bun:test'
-import { formatOutput } from '../../src/cli/format.ts'
+import { formatOutput, formatError } from '../../src/cli/format.ts'
 import type {
   DomainSummary,
   DomainSkill,
@@ -22,92 +22,95 @@ const makeScoredMemory = (overrides: Partial<ScoredMemory> = {}): ScoredMemory =
   ...overrides,
 })
 
-describe('formatOutput - JSON mode', () => {
-  it('returns JSON for domains command', () => {
+describe('formatOutput - JSON envelope mode (pretty=false)', () => {
+  it('wraps domains data in ok envelope', () => {
     const data: DomainSummary[] = [
       { id: 'dom1', name: 'Domain One', hasStructure: true, skillCount: 3 },
     ]
-    const result = formatOutput('domains', data, true)
-    expect(JSON.parse(result)).toEqual(data)
+    const result = formatOutput('domains', data, false)
+    const parsed = JSON.parse(result) as { ok: boolean; data: unknown }
+    expect(parsed.ok).toBe(true)
+    expect(parsed.data).toEqual(data)
   })
 
-  it('returns JSON for domain-structure command', () => {
-    const data = { domainId: 'dom1', structure: 'some structure' }
-    const result = formatOutput('domain-structure', data, true)
-    expect(JSON.parse(result)).toEqual(data)
-  })
-
-  it('returns JSON for domain-skills command', () => {
-    const skills: DomainSkill[] = [
-      { id: 'sk1', name: 'Skill One', description: 'A skill', scope: 'internal' },
-    ]
-    const data = { domainId: 'dom1', skills }
-    const result = formatOutput('domain-skills', data, true)
-    expect(JSON.parse(result)).toEqual(data)
-  })
-
-  it('returns JSON for domain-skill command', () => {
-    const skill = {
-      id: 'sk1',
-      name: 'Skill One',
-      description: 'A skill',
-      scope: 'external',
-      content: 'full content',
-    }
-    const result = formatOutput('domain-skill', skill, true)
-    expect(JSON.parse(result)).toEqual(skill)
-  })
-
-  it('returns JSON for ingest command', () => {
+  it('wraps ingest data in ok envelope', () => {
     const data: IngestResult = { action: 'stored', id: 'abc123' }
-    const result = formatOutput('ingest', data, true)
-    expect(JSON.parse(result)).toEqual(data)
+    const result = formatOutput('ingest', data, false)
+    const parsed = JSON.parse(result) as { ok: boolean; data: unknown }
+    expect(parsed.ok).toBe(true)
+    expect(parsed.data).toEqual(data)
   })
 
-  it('returns JSON for search command', () => {
+  it('wraps search data in ok envelope', () => {
     const data: SearchResult = {
       entries: [makeScoredMemory()],
       totalTokens: 100,
       mode: 'hybrid',
     }
-    const result = formatOutput('search', data, true)
-    expect(JSON.parse(result)).toEqual(data)
+    const result = formatOutput('search', data, false)
+    const parsed = JSON.parse(result) as { ok: boolean; data: unknown }
+    expect(parsed.ok).toBe(true)
+    expect(parsed.data).toEqual(data)
   })
 
-  it('returns JSON for ask command', () => {
+  it('wraps ask data in ok envelope', () => {
     const data: AskResult = {
       answer: 'The answer',
       memories: [makeScoredMemory()],
       rounds: 2,
     }
-    const result = formatOutput('ask', data, true)
-    expect(JSON.parse(result)).toEqual(data)
+    const result = formatOutput('ask', data, false)
+    const parsed = JSON.parse(result) as { ok: boolean; data: unknown }
+    expect(parsed.ok).toBe(true)
+    expect(parsed.data).toEqual(data)
   })
 
-  it('returns JSON for build-context command', () => {
+  it('wraps build-context data in ok envelope', () => {
     const data: ContextResult = {
       context: 'The context text',
       memories: [makeScoredMemory()],
       totalTokens: 512,
     }
-    const result = formatOutput('build-context', data, true)
-    expect(JSON.parse(result)).toEqual(data)
+    const result = formatOutput('build-context', data, false)
+    const parsed = JSON.parse(result) as { ok: boolean; data: unknown }
+    expect(parsed.ok).toBe(true)
+    expect(parsed.data).toEqual(data)
   })
 
-  it('returns JSON for error command', () => {
-    const data = { error: 'Something went wrong' }
-    const result = formatOutput('error', data, true)
-    expect(JSON.parse(result)).toEqual(data)
+  it('wraps unknown command data in ok envelope', () => {
+    const data = { foo: 'bar' }
+    const result = formatOutput('unknown-command', data, false)
+    const parsed = JSON.parse(result) as { ok: boolean; data: unknown }
+    expect(parsed.ok).toBe(true)
+    expect(parsed.data).toEqual(data)
   })
 })
 
-describe('formatOutput - text mode: domains', () => {
+describe('formatError', () => {
+  it('returns ok:false envelope with code and message', () => {
+    const result = formatError('CONFIG_ERROR', 'Config file not found')
+    const parsed = JSON.parse(result) as { ok: boolean; error: { code: string; message: string } }
+    expect(parsed.ok).toBe(false)
+    expect(parsed.error.code).toBe('CONFIG_ERROR')
+    expect(parsed.error.message).toBe('Config file not found')
+  })
+
+  it('returns valid JSON for any code and message', () => {
+    const result = formatError('UNKNOWN', 'Something went wrong')
+    const parsed = JSON.parse(result) as { ok: boolean; error: { code: string; message: string } }
+    expect(parsed.ok).toBe(false)
+    expect(parsed.error.code).toBe('UNKNOWN')
+    expect(parsed.error.message).toBe('Something went wrong')
+  })
+})
+
+describe('formatOutput - pretty mode: domains', () => {
   it('formats domains with description, skills, and structure', () => {
     const data: DomainSummary[] = [
       { id: 'domain-id', name: 'Domain Name', description: 'Description text', hasStructure: true, skillCount: 3 },
       { id: 'other-id', name: 'Other Name', hasStructure: false, skillCount: 0 },
     ]
-    const result = formatOutput('domains', data, false)
+    const result = formatOutput('domains', data, true)
     const lines = result.split('\n')
     expect(lines).toHaveLength(2)
     expect(lines[0]).toContain('domain-id')
@@ -126,13 +129,13 @@ describe('formatOutput - text mode: domains', () => {
     const data: DomainSummary[] = [
       { id: 'dom1', name: 'Domain', hasStructure: false, skillCount: 1 },
     ]
-    const result = formatOutput('domains', data, false)
+    const result = formatOutput('domains', data, true)
     expect(result).toContain('1 skill')
     expect(result).not.toContain('1 skills')
   })
 
   it('returns empty string for empty domains list', () => {
-    const result = formatOutput('domains', [], false)
+    const result = formatOutput('domains', [], true)
     expect(result).toBe('')
   })
 
@@ -141,47 +144,45 @@ describe('formatOutput - text mode: domains', () => {
       { id: 'a', name: 'Short', hasStructure: false, skillCount: 0 },
       { id: 'longer-id', name: 'Long', hasStructure: false, skillCount: 0 },
     ]
-    const result = formatOutput('domains', data, false)
+    const result = formatOutput('domains', data, true)
     const lines = result.split('\n')
-    // Both should be padded: first line id 'a' padded to length of 'longer-id' (9)
     expect(lines[0].startsWith('a        ')).toBe(true)
   })
 })
 
-describe('formatOutput - text mode: domain-structure', () => {
+describe('formatOutput - pretty mode: domain-structure', () => {
   it('returns the structure string as-is', () => {
     const data = { domainId: 'dom1', structure: 'This is the structure\nwith multiple lines' }
-    const result = formatOutput('domain-structure', data, false)
+    const result = formatOutput('domain-structure', data, true)
     expect(result).toBe('This is the structure\nwith multiple lines')
   })
 })
 
-describe('formatOutput - text mode: domain-skills', () => {
+describe('formatOutput - pretty mode: domain-skills', () => {
   it('formats skills without content', () => {
     const skills: DomainSkill[] = [
       { id: 'sk1', name: 'Skill One', description: 'First skill', scope: 'internal' },
       { id: 'sk2', name: 'Skill Two', description: 'Second skill', scope: 'external' },
     ]
     const data = { domainId: 'dom1', skills }
-    const result = formatOutput('domain-skills', data, false)
+    const result = formatOutput('domain-skills', data, true)
     const lines = result.split('\n')
     expect(lines).toHaveLength(2)
     expect(lines[0]).toContain('sk1')
     expect(lines[0]).toContain('Skill One')
     expect(lines[0]).toContain('First skill')
-    expect(lines[0]).not.toContain('very long content here')
     expect(lines[1]).toContain('sk2')
     expect(lines[1]).toContain('Skill Two')
     expect(lines[1]).toContain('Second skill')
   })
 
   it('returns empty string for empty skills list', () => {
-    const result = formatOutput('domain-skills', { domainId: 'dom1', skills: [] }, false)
+    const result = formatOutput('domain-skills', { domainId: 'dom1', skills: [] }, true)
     expect(result).toBe('')
   })
 })
 
-describe('formatOutput - text mode: domain-skill', () => {
+describe('formatOutput - pretty mode: domain-skill', () => {
   it('prints the skill content', () => {
     const skill = {
       id: 'sk1',
@@ -190,32 +191,32 @@ describe('formatOutput - text mode: domain-skill', () => {
       scope: 'both',
       content: 'This is the full skill content.',
     }
-    const result = formatOutput('domain-skill', skill, false)
+    const result = formatOutput('domain-skill', skill, true)
     expect(result).toBe('This is the full skill content.')
   })
 })
 
-describe('formatOutput - text mode: ingest', () => {
+describe('formatOutput - pretty mode: ingest', () => {
   it('formats stored action', () => {
     const data: IngestResult = { action: 'stored', id: 'abc123' }
-    const result = formatOutput('ingest', data, false)
+    const result = formatOutput('ingest', data, true)
     expect(result).toBe('Stored memory abc123')
   })
 
   it('formats reinforced action', () => {
     const data: IngestResult = { action: 'reinforced', id: 'abc123', existingId: 'def456' }
-    const result = formatOutput('ingest', data, false)
+    const result = formatOutput('ingest', data, true)
     expect(result).toBe('Reinforced memory abc123 (existing: def456)')
   })
 
   it('formats skipped action', () => {
     const data: IngestResult = { action: 'skipped', existingId: 'def456' }
-    const result = formatOutput('ingest', data, false)
+    const result = formatOutput('ingest', data, true)
     expect(result).toBe('Skipped (duplicate of def456)')
   })
 })
 
-describe('formatOutput - text mode: search', () => {
+describe('formatOutput - pretty mode: search', () => {
   it('formats search results with score, preview, and tags', () => {
     const data: SearchResult = {
       entries: [
@@ -225,7 +226,7 @@ describe('formatOutput - text mode: search', () => {
       totalTokens: 1234,
       mode: 'hybrid',
     }
-    const result = formatOutput('search', data, false)
+    const result = formatOutput('search', data, true)
     expect(result).toContain('[0.85] memory:abc123')
     expect(result).toContain('Memory content here')
     expect(result).toContain('Tags: tag1, tag2')
@@ -241,7 +242,7 @@ describe('formatOutput - text mode: search', () => {
       totalTokens: 100,
       mode: 'vector',
     }
-    const result = formatOutput('search', data, false)
+    const result = formatOutput('search', data, true)
     expect(result).toContain('A'.repeat(200) + '...')
     expect(result).not.toContain('A'.repeat(201) + 'A')
   })
@@ -252,7 +253,7 @@ describe('formatOutput - text mode: search', () => {
       totalTokens: 50,
       mode: 'fulltext',
     }
-    const result = formatOutput('search', data, false)
+    const result = formatOutput('search', data, true)
     expect(result).not.toContain('Tags:')
   })
 
@@ -262,45 +263,47 @@ describe('formatOutput - text mode: search', () => {
       totalTokens: 50,
       mode: 'vector',
     }
-    const result = formatOutput('search', data, false)
+    const result = formatOutput('search', data, true)
     expect(result).toContain('Found 1 result (')
   })
 
   it('shows summary only when no entries', () => {
     const data: SearchResult = { entries: [], totalTokens: 0, mode: 'hybrid' }
-    const result = formatOutput('search', data, false)
+    const result = formatOutput('search', data, true)
     expect(result).toBe('Found 0 results (0 tokens, mode: hybrid)')
   })
 })
 
-describe('formatOutput - text mode: ask', () => {
+describe('formatOutput - pretty mode: ask', () => {
   it('formats answer with memory and rounds summary', () => {
     const data: AskResult = {
       answer: 'The answer to your question.',
       memories: [makeScoredMemory(), makeScoredMemory({ id: 'mem2' })],
       rounds: 2,
     }
-    const result = formatOutput('ask', data, false)
+    const result = formatOutput('ask', data, true)
     expect(result).toBe('The answer to your question.\n\n--- 2 memories, 2 rounds ---')
   })
 })
 
-describe('formatOutput - text mode: build-context', () => {
+describe('formatOutput - pretty mode: build-context', () => {
   it('formats context with memories and token summary', () => {
     const data: ContextResult = {
       context: 'The context text here.',
       memories: [makeScoredMemory(), makeScoredMemory({ id: 'mem2' }), makeScoredMemory({ id: 'mem3' })],
       totalTokens: 2048,
     }
-    const result = formatOutput('build-context', data, false)
+    const result = formatOutput('build-context', data, true)
     expect(result).toBe('The context text here.\n\n--- 3 memories, 2048 tokens ---')
   })
 })
 
-describe('formatOutput - text mode: error', () => {
-  it('formats error message', () => {
-    const data = { error: 'Something went wrong' }
-    const result = formatOutput('error', data, false)
-    expect(result).toBe('Error: Something went wrong')
+describe('formatOutput - pretty mode: unknown command fallback', () => {
+  it('falls back to JSON envelope for unknown commands', () => {
+    const data = { foo: 'bar' }
+    const result = formatOutput('unknown-command', data, true)
+    const parsed = JSON.parse(result) as { ok: boolean; data: unknown }
+    expect(parsed.ok).toBe(true)
+    expect(parsed.data).toEqual(data)
   })
 })

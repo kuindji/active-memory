@@ -9,7 +9,7 @@ function makeParsed(flags: Record<string, string | boolean> = {}): ParsedCommand
   return {
     command: 'ingest',
     args: [],
-    flags: { json: false, ...flags },
+    flags: { ...flags },
   }
 }
 

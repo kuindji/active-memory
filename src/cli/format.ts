@@ -8,6 +8,19 @@ import type {
   ScoredMemory,
 } from '../core/types.ts'
 
+interface JsonEnvelope {
+  ok: true
+  data: unknown
+}
+
+interface JsonError {
+  ok: false
+  error: {
+    code: string
+    message: string
+  }
+}
+
 function padRight(str: string, length: number): string {
   return str + ' '.repeat(Math.max(0, length - str.length))
 }
@@ -85,13 +98,10 @@ function formatBuildContext(data: ContextResult): string {
   return `${data.context}\n\n--- ${data.memories.length} memories, ${data.totalTokens} tokens ---`
 }
 
-function formatError(data: { error: string }): string {
-  return `Error: ${data.error}`
-}
-
-function formatOutput(command: string, data: unknown, json: boolean): string {
-  if (json) {
-    return JSON.stringify(data, null, 2)
+function formatOutput(command: string, data: unknown, pretty: boolean): string {
+  if (!pretty) {
+    const envelope: JsonEnvelope = { ok: true, data }
+    return JSON.stringify(envelope)
   }
 
   switch (command) {
@@ -121,12 +131,16 @@ function formatOutput(command: string, data: unknown, json: boolean): string {
     case 'build-context':
       return formatBuildContext(data as ContextResult)
 
-    case 'error':
-      return formatError(data as { error: string })
-
-    default:
-      return String(data)
+    default: {
+      const envelope: JsonEnvelope = { ok: true, data }
+      return JSON.stringify(envelope)
+    }
   }
 }
 
-export { formatOutput }
+function formatError(code: string, message: string): string {
+  const envelope: JsonError = { ok: false, error: { code, message } }
+  return JSON.stringify(envelope)
+}
+
+export { formatOutput, formatError }

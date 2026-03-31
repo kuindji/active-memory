@@ -12,7 +12,7 @@ function makeParsed(command: string, args: string[] = []): ParsedCommand {
   return {
     command,
     args,
-    flags: { json: false },
+    flags: {},
   }
 }
 

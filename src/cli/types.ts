@@ -2,14 +2,14 @@ import type { MemoryEngine } from '../core/engine.ts'
 
 interface GlobalFlags {
   config?: string
-  json: boolean
+  pretty?: boolean
   cwd?: string
 }
 
 interface ParsedCommand {
   command: string
   args: string[]
-  flags: GlobalFlags & Record<string, string | boolean>
+  flags: GlobalFlags & Record<string, string | boolean | Record<string, string>>
 }
 
 interface CommandResult {

@@ -1,5 +1,6 @@
 import type { CommandHandler } from '../types.ts'
 import type { AskOptions } from '../../core/types.ts'
+import { parseMeta } from '../utils.ts'
 
 const askCommand: CommandHandler = async (engine, parsed) => {
   const question = parsed.args[0]
@@ -23,8 +24,9 @@ const askCommand: CommandHandler = async (engine, parsed) => {
     options.limit = Number(parsed.flags['limit'])
   }
 
-  if (parsed.flags['user-id']) {
-    options.context = { userId: parsed.flags['user-id'] as string }
+  const meta = parseMeta(parsed.flags)
+  if (meta) {
+    options.context = meta
   }
 
   const result = await engine.ask(question, options)

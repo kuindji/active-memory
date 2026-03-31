@@ -1,5 +1,6 @@
 import type { CommandHandler } from '../types.ts'
 import type { SearchQuery } from '../../core/types.ts'
+import { parseMeta } from '../utils.ts'
 
 const searchCommand: CommandHandler = async (engine, parsed) => {
   const text = parsed.args[0]
@@ -29,8 +30,9 @@ const searchCommand: CommandHandler = async (engine, parsed) => {
     query.minScore = Number(parsed.flags['min-score'])
   }
 
-  if (parsed.flags['user-id']) {
-    query.context = { userId: parsed.flags['user-id'] as string }
+  const meta = parseMeta(parsed.flags)
+  if (meta) {
+    query.context = meta
   }
 
   const result = await engine.search(query)

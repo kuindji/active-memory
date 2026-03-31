@@ -1,5 +1,6 @@
 import type { IngestOptions } from '../../core/types.ts'
 import type { CommandHandler } from '../types.ts'
+import { parseMeta } from '../utils.ts'
 
 const ingestCommand: CommandHandler = async (engine, parsed) => {
   let text = parsed.flags['text'] as string | undefined
@@ -28,8 +29,9 @@ const ingestCommand: CommandHandler = async (engine, parsed) => {
     options.skipDedup = true
   }
 
-  if (parsed.flags['user-id']) {
-    options.context = { userId: parsed.flags['user-id'] as string }
+  const meta = parseMeta(parsed.flags)
+  if (meta) {
+    options.context = meta
   }
 
   const result = await engine.ingest(text, options)

@@ -36,9 +36,14 @@ describe('parseArgs', () => {
     expect(result.flags['config']).toBe('/path/to/config')
   })
 
-  it('parses boolean flag --json', () => {
+  it('parses boolean flag --json (backward compat)', () => {
     const result = parseArgs(['search', 'query', '--json'])
-    expect(result.flags.json).toBe(true)
+    expect(result.flags['json']).toBe(true)
+  })
+
+  it('parses boolean flag --pretty', () => {
+    const result = parseArgs(['search', 'query', '--pretty'])
+    expect(result.flags['pretty']).toBe(true)
   })
 
   it('parses boolean flag --skip-dedup', () => {
@@ -75,7 +80,7 @@ describe('parseArgs', () => {
     const result = parseArgs(['ingest', '--json', 'some-file.txt', '--cwd', '/workspace'])
     expect(result.command).toBe('ingest')
     expect(result.args).toEqual(['some-file.txt'])
-    expect(result.flags.json).toBe(true)
+    expect(result.flags['json']).toBe(true)
     expect(result.flags['cwd']).toBe('/workspace')
   })
 
@@ -91,8 +96,38 @@ describe('parseArgs', () => {
     expect(result.flags['config']).toBe('/path/config')
   })
 
-  it('json flag defaults to false', () => {
+  it('pretty flag defaults to undefined', () => {
     const result = parseArgs(['search'])
-    expect(result.flags.json).toBe(false)
+    expect(result.flags['pretty']).toBeUndefined()
+  })
+
+  it('parses single --meta key=value', () => {
+    const result = parseArgs(['ingest', '--meta', 'userId=abc123'])
+    expect(result.flags['meta']).toEqual({ userId: 'abc123' })
+  })
+
+  it('parses multiple --meta flags into object', () => {
+    const result = parseArgs(['ingest', '--meta', 'userId=abc', '--meta', 'sessionId=xyz'])
+    expect(result.flags['meta']).toEqual({ userId: 'abc', sessionId: 'xyz' })
+  })
+
+  it('parses --meta=key=value syntax', () => {
+    const result = parseArgs(['ingest', '--meta=userId=abc123'])
+    expect(result.flags['meta']).toEqual({ userId: 'abc123' })
+  })
+
+  it('parses single --attr key=value', () => {
+    const result = parseArgs(['ingest', '--attr', 'priority=high'])
+    expect(result.flags['attr']).toEqual({ priority: 'high' })
+  })
+
+  it('parses multiple --attr flags into object', () => {
+    const result = parseArgs(['ingest', '--attr', 'a=1', '--attr', 'b=2'])
+    expect(result.flags['attr']).toEqual({ a: '1', b: '2' })
+  })
+
+  it('meta is undefined when not provided', () => {
+    const result = parseArgs(['ingest', '--text', 'hello'])
+    expect(result.flags['meta']).toBeUndefined()
   })
 })

@@ -1,5 +1,5 @@
 import { parseArgs } from './parse-args.ts'
-import { formatOutput } from './format.ts'
+import { formatOutput, formatError } from './format.ts'
 import { getHelpText, getCommandHelp } from './commands/help.ts'
 import { domainsCommand, domainCommand } from './commands/domains.ts'
 import { ingestCommand } from './commands/ingest.ts'
@@ -35,6 +35,8 @@ async function main(): Promise<void> {
     process.exit(1)
   }
 
+  const pretty = parsed.flags['pretty'] === true
+
   // Load engine from config
   let engine
   try {
@@ -43,18 +45,14 @@ async function main(): Promise<void> {
     engine = await loadConfig(cwd, config)
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
-    if (parsed.flags.json) {
-      console.log(JSON.stringify({ error: message }, null, 2))
-    } else {
-      console.error(`Error: ${message}`)
-    }
+    console.error(formatError('CONFIG_ERROR', message))
     process.exit(1)
   }
 
   try {
     const result: CommandResult = await handler(engine, parsed)
     const formatCommand = result.formatCommand ?? parsed.command
-    const output = formatOutput(formatCommand, result.output, parsed.flags.json === true)
+    const output = formatOutput(formatCommand, result.output, pretty)
 
     if (output) {
       console.log(output)
@@ -63,8 +61,7 @@ async function main(): Promise<void> {
     process.exit(result.exitCode)
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
-    const output = formatOutput('error', { error: message }, parsed.flags.json === true)
-    console.error(output)
+    console.error(formatError('COMMAND_ERROR', message))
     process.exit(1)
   } finally {
     await engine.close()

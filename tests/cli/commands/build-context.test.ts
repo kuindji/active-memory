@@ -9,7 +9,7 @@ function makeParsed(args: string[], flags: Record<string, string | boolean> = {}
   return {
     command: 'build-context',
     args,
-    flags: { json: false, ...flags },
+    flags: { ...flags },
   }
 }
 
