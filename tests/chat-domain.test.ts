@@ -317,3 +317,26 @@ describe('Chat domain - inbox processing', () => {
     expect(memories).toHaveLength(1)
   })
 })
+
+describe('Chat domain - search', () => {
+  test('search.expand returns empty ids when userId is missing', () => {
+    const domain = createChatDomain()
+    const result = domain.search!.expand!({ text: 'test' }, {
+      requestContext: {},
+    } as DomainContext)
+    return result.then(q => {
+      expect(q.ids).toEqual([])
+    })
+  })
+
+  test('search.expand passes through query when userId is present', () => {
+    const domain = createChatDomain()
+    const query = { text: 'test', tags: ['chat'] }
+    const result = domain.search!.expand!(query, {
+      requestContext: { userId: 'test-user' },
+    } as DomainContext)
+    return result.then(q => {
+      expect(q).toEqual(query)
+    })
+  })
+})
