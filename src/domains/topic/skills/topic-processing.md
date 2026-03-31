@@ -2,18 +2,21 @@
 
 This skill describes the merge detection logic run by the topic domain schedule.
 
+## Triggering
+
+```sh
+active-memory schedule trigger topic merge-similar-topics
+```
+
 ## Finding Candidate Pairs
 
 Search for active topics and identify pairs with high embedding similarity (threshold: 0.85):
 
-```ts
-const activeTopics = await context.getMemories({
-  tags: ['topic'],
-  attributes: { status: 'active' },
-})
-
-// Compare embeddings pairwise; flag pairs where similarity > 0.85
+```sh
+active-memory search "" --tags topic --mode vector
 ```
+
+The schedule compares embeddings pairwise and flags pairs where similarity exceeds 0.85.
 
 ## Selecting the Canonical Topic
 
@@ -23,29 +26,23 @@ For each candidate pair, the topic with the higher `mentionCount` is kept as the
 
 1. Mark the non-canonical topic as merged:
 
-```ts
-await context.updateAttributes(mergedTopicId, {
-  status: 'merged',
-  mergedInto: canonicalTopicId,
-})
+```sh
+active-memory memory <merged-topic-id> update --attr status=merged --attr mergedInto=<canonical-topic-id>
 ```
 
 2. Create a `related_to` edge between the two topics for traceability:
 
-```ts
-await context.graph.relate(mergedTopicId, 'related_to', canonicalTopicId)
+```sh
+active-memory graph relate <merged-topic-id> <canonical-topic-id> related_to --domain topic
 ```
 
 3. Transfer mention count from the merged topic to the canonical topic:
 
-```ts
-await context.updateAttributes(canonicalTopicId, {
-  mentionCount: canonicalMentionCount + mergedMentionCount,
-  lastMentionedAt: Date.now(),
-})
+```sh
+active-memory memory <canonical-topic-id> update --attr mentionCount=<combined-count>
 ```
 
 ## Notes
 
-- Only process topics with `status: 'active'`. Skip merged or stale entries.
+- Only process topics with `status: active`. Skip merged or stale entries.
 - After merging, do not re-process the newly merged topic in the same run.

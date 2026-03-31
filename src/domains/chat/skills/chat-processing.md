@@ -34,7 +34,7 @@ Removes episodic memories whose weight has decayed below threshold.
 ## Decay Formula
 
 ```
-decayedWeight = weight * Math.exp(-lambda * hoursSinceCreation)
+decayedWeight = weight * e^(-lambda * hoursSinceCreation)
 ```
 
 - Episodic lambda: 0.01 (default) — decays to ~50% in ~69 hours

@@ -52,10 +52,10 @@ When writing about specific architectural components, create entity nodes and li
 
 ```sh
 # Link a memory to an entity
-active-memory graph relate <memory-id> <entity-id> about_entity --domain project
+node active-memory graph relate <memory-id> <entity-id> about_entity --domain project
 
 # Relate two entities
-active-memory graph relate <module-id> <data-entity-id> manages --domain project
+node active-memory graph relate <module-id> <data-entity-id> manages --domain project
 ```
 
 ## When to Capture
