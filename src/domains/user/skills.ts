@@ -5,6 +5,7 @@ const userData: DomainSkill = {
   name: 'How to store user facts',
   description: 'Tells external agents how to find or create a user node, store user facts, and link existing memories to a user',
   scope: 'external',
+  writes: true,
 }
 
 const userQuery: DomainSkill = {

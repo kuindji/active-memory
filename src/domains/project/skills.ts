@@ -5,6 +5,7 @@ const projectCapture: DomainSkill = {
   name: 'How to record project knowledge',
   description: 'Tells external agents how to write curated project knowledge — decisions, rationale, clarifications, direction — with classification metadata and audience tags (technical/business)',
   scope: 'external',
+  writes: true,
 }
 
 const projectQuery: DomainSkill = {

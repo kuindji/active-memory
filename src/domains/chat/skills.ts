@@ -5,6 +5,7 @@ const chatIngest: DomainSkill = {
   name: 'How to feed messages into the chat domain',
   description: 'Tells external agents how to ingest user and assistant messages, including required request context (userId, chatSessionId) and message format',
   scope: 'external',
+  writes: true,
 }
 
 const chatQuery: DomainSkill = {

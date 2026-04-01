@@ -5,6 +5,7 @@ const topicManagement: DomainSkill = {
   name: 'How to create and manage topics',
   description: 'Tells external agents how to create topics, link memories to topics, set parent topics, and track mention counts',
   scope: 'external',
+  writes: true,
 }
 
 const topicQuery: DomainSkill = {
