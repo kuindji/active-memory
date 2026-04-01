@@ -211,11 +211,17 @@ export interface DomainSkill {
   name: string
   description: string
   scope: 'internal' | 'external' | 'both'
+  writes?: boolean
 }
 
 export interface DomainSettings {
   includeDomains?: string[]
   excludeDomains?: string[]
+  autoOwn?: boolean
+}
+
+export interface DomainRegistrationOptions {
+  access?: 'read' | 'write'
 }
 
 export interface DomainSummary {
