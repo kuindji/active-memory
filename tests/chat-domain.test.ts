@@ -23,15 +23,16 @@ describe('Chat domain - config', () => {
     expect(domain.name).toBe('Chat')
   })
 
-  test('has baseDir and 3 skills', () => {
+  test('has baseDir and 4 skills', () => {
     const domain = createChatDomain()
     expect(domain.baseDir).toBeTypeOf('string')
     expect(domain.baseDir!.length).toBeGreaterThan(0)
-    expect(domain.skills).toHaveLength(3)
+    expect(domain.skills).toHaveLength(4)
     const skillIds = domain.skills!.map(s => s.id)
     expect(skillIds).toContain('chat-ingest')
     expect(skillIds).toContain('chat-query')
-    expect(skillIds).toContain('chat-processing')
+    expect(skillIds).toContain('chat-promote-working-memory')
+    expect(skillIds).toContain('chat-consolidate-episodic')
   })
 
   test('schema has 1 edge (summarizes)', () => {

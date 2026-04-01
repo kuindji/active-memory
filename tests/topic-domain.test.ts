@@ -206,11 +206,10 @@ describe('Topic domain - config', () => {
     expect(domain.name).toBe('Topic')
     expect(domain.baseDir).toBeTypeOf('string')
     expect(domain.baseDir!.length).toBeGreaterThan(0)
-    expect(domain.skills).toHaveLength(3)
+    expect(domain.skills).toHaveLength(2)
     const skillIds = domain.skills!.map(s => s.id)
     expect(skillIds).toContain('topic-management')
     expect(skillIds).toContain('topic-query')
-    expect(skillIds).toContain('topic-processing')
   })
 
   test('topic domain schema has 3 edges (subtopic_of, related_to, about_topic)', () => {

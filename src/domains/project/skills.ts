@@ -14,11 +14,11 @@ const projectQuery: DomainSkill = {
   scope: 'external',
 }
 
-const projectProcessing: DomainSkill = {
-  id: 'project-processing',
-  name: 'Internal project processing',
-  description: 'Documents inbox processing for unstructured knowledge dumps, commit scanner schedule, and drift detector schedule',
+const projectInbox: DomainSkill = {
+  id: 'project-inbox',
+  name: 'Inbox processing for unstructured knowledge',
+  description: 'System prompt for the LLM that classifies unstructured knowledge, extracts entities, and detects contradictions during inbox processing',
   scope: 'internal',
 }
 
-export const projectSkills: DomainSkill[] = [projectCapture, projectQuery, projectProcessing]
+export const projectSkills: DomainSkill[] = [projectCapture, projectQuery, projectInbox]

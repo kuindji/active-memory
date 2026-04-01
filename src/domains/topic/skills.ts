@@ -14,11 +14,4 @@ const topicQuery: DomainSkill = {
   scope: 'external',
 }
 
-const topicProcessing: DomainSkill = {
-  id: 'topic-processing',
-  name: 'Internal topic merge detection',
-  description: 'Internal skill for detecting and merging duplicate or near-duplicate topics',
-  scope: 'internal',
-}
-
-export const topicSkills: DomainSkill[] = [topicManagement, topicQuery, topicProcessing]
+export const topicSkills: DomainSkill[] = [topicManagement, topicQuery]

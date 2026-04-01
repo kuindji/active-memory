@@ -14,11 +14,18 @@ const chatQuery: DomainSkill = {
   scope: 'external',
 }
 
-const chatProcessing: DomainSkill = {
-  id: 'chat-processing',
-  name: 'Internal chat processing schedules',
-  description: 'Documents the promotion, consolidation, and pruning schedules that manage the working → episodic → semantic lifecycle',
+const chatPromoteWorkingMemory: DomainSkill = {
+  id: 'chat-promote-working-memory',
+  name: 'Promote working memory to episodic',
+  description: 'System prompt for the LLM that extracts key facts from working memory messages during promotion to episodic memory',
   scope: 'internal',
 }
 
-export const chatSkills: DomainSkill[] = [chatIngest, chatQuery, chatProcessing]
+const chatConsolidateEpisodic: DomainSkill = {
+  id: 'chat-consolidate-episodic',
+  name: 'Consolidate episodic to semantic',
+  description: 'System prompt for the LLM that summarizes clusters of episodic memories into long-term semantic memories',
+  scope: 'internal',
+}
+
+export const chatSkills: DomainSkill[] = [chatIngest, chatQuery, chatPromoteWorkingMemory, chatConsolidateEpisodic]
