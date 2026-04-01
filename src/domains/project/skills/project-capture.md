@@ -14,7 +14,7 @@ Do NOT capture: implementation details visible in code, commit messages, or exis
 ## Ingesting Project Knowledge
 
 ```sh
-active-memory ingest --domains project \
+node active-memory ingest --domains project \
   --meta classification=decision \
   --meta audience=technical,business \
   --text "We chose event sourcing for the order pipeline because we need full audit trail for compliance"
