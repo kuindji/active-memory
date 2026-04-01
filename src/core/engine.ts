@@ -7,7 +7,6 @@ import { InboxProcessor } from './inbox-processor.ts'
 import { DomainRegistry } from './domain-registry.ts'
 import { Scheduler, MetaScheduleStateStore } from './scheduler.ts'
 import { EventEmitter } from './events.ts'
-import { logDomain } from '../domains/log-domain.ts'
 import { countTokens, applyTokenBudget } from './scoring.ts'
 import type {
   EngineConfig,
@@ -97,9 +96,6 @@ class MemoryEngine {
     )
 
     this.defaultContext = config.context ?? {}
-
-    // Register built-in log domain
-    await this.registerDomain(logDomain)
   }
 
   async registerDomain(domain: DomainConfig, options?: DomainRegistrationOptions): Promise<void> {
@@ -564,10 +560,7 @@ class MemoryEngine {
 
   private resolveVisibleDomains(domainId: string): string[] {
     const domain = this.domainRegistry.get(domainId)
-    // Exclude the built-in log domain from visibility resolution since it
-    // auto-owns every memory and would bypass domain filtering.
-    // But always include the domain itself so it can see its own data.
-    const allIds = this.domainRegistry.getAllDomainIds().filter(id => id !== 'log')
+    const allIds = this.domainRegistry.getAllDomainIds()
     const ensureSelf = (ids: string[]) =>
       ids.includes(domainId) ? ids : [domainId, ...ids]
 

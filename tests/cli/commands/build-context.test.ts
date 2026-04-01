@@ -24,6 +24,11 @@ describe('buildContextCommand', () => {
       database: `test_build_context_${Date.now()}`,
       llm: new MockLLMAdapter(),
     })
+    await engine.registerDomain({
+      id: 'test',
+      name: 'Test',
+      async processInboxItem() {},
+    })
 
     await engine.ingest('The quick brown fox jumps over the lazy dog')
     await engine.ingest('Meeting notes for project kickoff on monday')
@@ -75,7 +80,7 @@ describe('buildContextCommand', () => {
   })
 
   it('passes domains flag to engine', async () => {
-    const result = await buildContextCommand(engine, makeParsed(['fox'], { domains: 'log' }))
+    const result = await buildContextCommand(engine, makeParsed(['fox'], { domains: 'test' }))
     expect(result.exitCode).toBe(0)
     const output = result.output as ContextResult
     expect(Array.isArray(output.memories)).toBe(true)

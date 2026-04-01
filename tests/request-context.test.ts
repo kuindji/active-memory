@@ -101,6 +101,11 @@ describe('getMemoryTags', () => {
       llm: new MockLLMAdapter(),
       embedding: new MockEmbeddingAdapter(),
     })
+    await engine.registerDomain({
+      id: 'test',
+      name: 'Test',
+      async processInboxItem() {},
+    })
   })
 
   afterEach(async () => {
@@ -110,7 +115,7 @@ describe('getMemoryTags', () => {
   test('returns tags for a memory', async () => {
     const result = await engine.ingest('tagged memory', { tags: ['alpha', 'beta'] })
     await engine.processInbox()
-    const ctx = engine.createDomainContext('log')
+    const ctx = engine.createDomainContext('test')
     const tags = await ctx.getMemoryTags(result.id!)
     expect(tags).toContain('alpha')
     expect(tags).toContain('beta')
@@ -118,7 +123,7 @@ describe('getMemoryTags', () => {
   })
 
   test('returns empty array for memory with no tags', async () => {
-    const ctx = engine.createDomainContext('log')
+    const ctx = engine.createDomainContext('test')
     const result = await engine.ingest('plain memory')
     await engine.processInbox()
     const tags = await ctx.getMemoryTags(result.id!)
@@ -138,6 +143,11 @@ describe('getNodeEdges', () => {
       llm: new MockLLMAdapter(),
       embedding: new MockEmbeddingAdapter(),
     })
+    await engine.registerDomain({
+      id: 'test',
+      name: 'Test',
+      async processInboxItem() {},
+    })
   })
 
   afterEach(async () => {
@@ -146,14 +156,14 @@ describe('getNodeEdges', () => {
 
   test('returns outgoing edges for a node', async () => {
     const result = await engine.ingest('test memory', { tags: ['test-tag'] })
-    const ctx = engine.createDomainContext('log')
+    const ctx = engine.createDomainContext('test')
     const edges = await ctx.getNodeEdges(result.id!, 'out')
     expect(edges.length).toBeGreaterThan(0)
   })
 
   test('returns edges in both directions by default', async () => {
     const result = await engine.ingest('test memory')
-    const ctx = engine.createDomainContext('log')
+    const ctx = engine.createDomainContext('test')
     const edges = await ctx.getNodeEdges(result.id!)
     expect(edges.length).toBeGreaterThan(0)
   })

@@ -54,10 +54,7 @@ describe('Domain access enforcement', () => {
     expect(domainIds).not.toContain('domain:ro')
   })
 
-  // TODO: This test will work after Task 6 removes the hardcoded log domain injection.
-  // Currently, even when all explicitly requested domains are read-only, the log domain
-  // (which is writable) gets added to the target list, so no error is thrown.
-  test.skip('ingest errors when all requested domains are read-only', async () => {
+  test('ingest errors when all requested domains are read-only', async () => {
     await engine.registerDomain(makeDomain('ro'), { access: 'read' })
 
     expect(

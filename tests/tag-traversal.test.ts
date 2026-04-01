@@ -14,6 +14,11 @@ describe('getTagDescendants', () => {
       database: `test_${Date.now()}`,
       llm: new MockLLMAdapter(),
     })
+    await engine.registerDomain({
+      id: 'test',
+      name: 'Test',
+      async processInboxItem() {},
+    })
   })
 
   afterEach(async () => {
@@ -21,7 +26,7 @@ describe('getTagDescendants', () => {
   })
 
   test('returns all descendants in a 3-level hierarchy', async () => {
-    const ctx = (engine as { createDomainContext: (id: string) => DomainContext }).createDomainContext('log')
+    const ctx = (engine as { createDomainContext: (id: string) => DomainContext }).createDomainContext('test')
     await ctx.addTag('region/asia/east_asia')
 
     const descendants = await ctx.getTagDescendants('region')
@@ -32,7 +37,7 @@ describe('getTagDescendants', () => {
   })
 
   test('returns empty array for a leaf tag with no children', async () => {
-    const ctx = (engine as { createDomainContext: (id: string) => DomainContext }).createDomainContext('log')
+    const ctx = (engine as { createDomainContext: (id: string) => DomainContext }).createDomainContext('test')
     await ctx.addTag('standalone')
 
     const descendants = await ctx.getTagDescendants('standalone')

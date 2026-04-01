@@ -24,6 +24,11 @@ describe('ingestCommand', () => {
       database: `test_ingest_${Date.now()}`,
       llm: new MockLLMAdapter(),
     })
+    await engine.registerDomain({
+      id: 'test',
+      name: 'Test',
+      async processInboxItem() {},
+    })
   })
 
   afterEach(async () => {

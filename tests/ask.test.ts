@@ -15,6 +15,11 @@ describe('MemoryEngine.ask', () => {
       database: `test_ask_${Date.now()}`,
       llm,
     })
+    await engine.registerDomain({
+      id: 'test',
+      name: 'Test',
+      async processInboxItem() {},
+    })
   })
 
   afterEach(async () => {

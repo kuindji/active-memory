@@ -15,6 +15,11 @@ describe('vector search', () => {
       llm: new MockLLMAdapter(),
       embedding,
     })
+    await engine.registerDomain({
+      id: 'test',
+      name: 'Test',
+      async processInboxItem() {},
+    })
   })
 
   afterEach(async () => {
@@ -54,6 +59,11 @@ describe('vector search', () => {
       namespace: 'test',
       database: `test_novec_${Date.now()}`,
       llm: new MockLLMAdapter(),
+    })
+    await noVecEngine.registerDomain({
+      id: 'test',
+      name: 'Test',
+      async processInboxItem() {},
     })
 
     await noVecEngine.ingest('some text')

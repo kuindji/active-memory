@@ -80,6 +80,11 @@ describe('MemoryEngine.writeMemory', () => {
       database: `test_write_${Date.now()}`,
       llm: new MockLLMAdapter(),
     })
+    await engine.registerDomain({
+      id: 'test',
+      name: 'Test',
+      async processInboxItem() {},
+    })
   })
 
   afterEach(async () => {
@@ -87,7 +92,7 @@ describe('MemoryEngine.writeMemory', () => {
   })
 
   it('creates memory with domain ownership', async () => {
-    const result = await engine.writeMemory('hello world', { domain: 'log' })
+    const result = await engine.writeMemory('hello world', { domain: 'test' })
     expect(result.id).toBeTruthy()
     expect(result.id).toMatch(/^memory:/)
 
@@ -96,7 +101,7 @@ describe('MemoryEngine.writeMemory', () => {
       { id: new StringRecordId(result.id) }
     )
     const ownerIds = (owners ?? []).map(o => String(o.out))
-    expect(ownerIds).toContain('domain:log')
+    expect(ownerIds).toContain('domain:test')
   })
 
   it('assigns tags when provided', async () => {
@@ -116,12 +121,12 @@ describe('MemoryEngine.writeMemory', () => {
 
   it('sets domain attributes when provided', async () => {
     const result = await engine.writeMemory('attributed content', {
-      domain: 'log',
+      domain: 'test',
       attributes: { source: 'test', priority: 1 },
     })
 
     const edges = await engine.getGraph().query<{ attributes: Record<string, unknown> }[]>(
-      'SELECT attributes FROM owned_by WHERE in = $id AND out = domain:log',
+      'SELECT attributes FROM owned_by WHERE in = $id AND out = domain:test',
       { id: new StringRecordId(result.id) }
     )
     expect(edges).toBeTruthy()
@@ -130,7 +135,7 @@ describe('MemoryEngine.writeMemory', () => {
   })
 
   it('does not tag with inbox', async () => {
-    const result = await engine.writeMemory('direct memory', { domain: 'log' })
+    const result = await engine.writeMemory('direct memory', { domain: 'test' })
 
     const tagged = await engine.getGraph().query<{ out: string }[]>(
       'SELECT out FROM tagged WHERE in = $id',
@@ -154,6 +159,11 @@ describe('MemoryEngine CRUD methods', () => {
       database: `test_crud_${Date.now()}`,
       llm: new MockLLMAdapter(),
     })
+    await engine.registerDomain({
+      id: 'test',
+      name: 'Test',
+      async processInboxItem() {},
+    })
   })
 
   afterEach(async () => {
@@ -161,7 +171,7 @@ describe('MemoryEngine CRUD methods', () => {
   })
 
   it('reads an existing memory', async () => {
-    const { id } = await engine.writeMemory('readable content', { domain: 'log' })
+    const { id } = await engine.writeMemory('readable content', { domain: 'test' })
     const entry = await engine.getMemory(id)
     expect(entry).not.toBeNull()
     expect(entry!.id).toBe(id)
@@ -176,14 +186,14 @@ describe('MemoryEngine CRUD methods', () => {
   })
 
   it('updates text of existing memory', async () => {
-    const { id } = await engine.writeMemory('original text', { domain: 'log' })
+    const { id } = await engine.writeMemory('original text', { domain: 'test' })
     await engine.updateMemory(id, { text: 'updated text' })
     const entry = await engine.getMemory(id)
     expect(entry!.content).toBe('updated text')
   })
 
   it('update recalculates token count', async () => {
-    const { id } = await engine.writeMemory('short', { domain: 'log' })
+    const { id } = await engine.writeMemory('short', { domain: 'test' })
     const before = await engine.getMemory(id)
     await engine.updateMemory(id, { text: 'a much longer piece of text with many more tokens than before' })
     const after = await engine.getMemory(id)
@@ -191,7 +201,7 @@ describe('MemoryEngine CRUD methods', () => {
   })
 
   it('deletes a memory', async () => {
-    const { id } = await engine.writeMemory('to be deleted', { domain: 'log' })
+    const { id } = await engine.writeMemory('to be deleted', { domain: 'test' })
     await engine.deleteMemory(id)
     const entry = await engine.getMemory(id)
     expect(entry).toBeNull()
@@ -223,6 +233,11 @@ describe('MemoryEngine tagging methods', () => {
       database: `test_tags_${Date.now()}`,
       llm: new MockLLMAdapter(),
     })
+    await engine.registerDomain({
+      id: 'test',
+      name: 'Test',
+      async processInboxItem() {},
+    })
   })
 
   afterEach(async () => {
@@ -230,14 +245,14 @@ describe('MemoryEngine tagging methods', () => {
   })
 
   it('adds a tag to a memory', async () => {
-    const { id } = await engine.writeMemory('tagme', { domain: 'log' })
+    const { id } = await engine.writeMemory('tagme', { domain: 'test' })
     await engine.tagMemory(id, 'mytag')
     const tags = await engine.getMemoryTags(id)
     expect(tags).toContain('mytag')
   })
 
   it('removes a tag from a memory', async () => {
-    const { id } = await engine.writeMemory('tagme2', { domain: 'log' })
+    const { id } = await engine.writeMemory('tagme2', { domain: 'test' })
     await engine.tagMemory(id, 'removeme')
     await engine.untagMemory(id, 'removeme')
     const tags = await engine.getMemoryTags(id)
@@ -245,7 +260,7 @@ describe('MemoryEngine tagging methods', () => {
   })
 
   it('lists multiple tags', async () => {
-    const { id } = await engine.writeMemory('multi-tagged', { domain: 'log' })
+    const { id } = await engine.writeMemory('multi-tagged', { domain: 'test' })
     await engine.tagMemory(id, 'alpha')
     await engine.tagMemory(id, 'beta')
     await engine.tagMemory(id, 'gamma')
@@ -274,6 +289,11 @@ describe('MemoryEngine graph methods', () => {
       database: `test_graph_${Date.now()}`,
       llm: new MockLLMAdapter(),
     })
+    await engine.registerDomain({
+      id: 'test',
+      name: 'Test',
+      async processInboxItem() {},
+    })
   })
 
   afterEach(async () => {
@@ -281,19 +301,19 @@ describe('MemoryEngine graph methods', () => {
   })
 
   it('relate creates an edge between two memories', async () => {
-    const { id: id1 } = await engine.writeMemory('first memory', { domain: 'log' })
-    const { id: id2 } = await engine.writeMemory('second memory', { domain: 'log' })
+    const { id: id1 } = await engine.writeMemory('first memory', { domain: 'test' })
+    const { id: id2 } = await engine.writeMemory('second memory', { domain: 'test' })
 
-    const edgeId = await engine.relate(id1, id2, 'reinforces', 'log')
+    const edgeId = await engine.relate(id1, id2, 'reinforces', 'test')
     expect(edgeId).toBeTruthy()
     expect(edgeId).toMatch(/^reinforces:/)
   })
 
   it('relate creates an edge with attributes', async () => {
-    const { id: id1 } = await engine.writeMemory('source', { domain: 'log' })
-    const { id: id2 } = await engine.writeMemory('target', { domain: 'log' })
+    const { id: id1 } = await engine.writeMemory('source', { domain: 'test' })
+    const { id: id2 } = await engine.writeMemory('target', { domain: 'test' })
 
-    await engine.relate(id1, id2, 'reinforces', 'log', { strength: 0.9 })
+    await engine.relate(id1, id2, 'reinforces', 'test', { strength: 0.9 })
 
     const edges = await engine.getEdges(id1, 'out')
     const reinforcesEdges = edges.filter(e => String(e.id).startsWith('reinforces:'))
@@ -304,10 +324,10 @@ describe('MemoryEngine graph methods', () => {
   })
 
   it('getEdges returns edges for a node', async () => {
-    const { id: id1 } = await engine.writeMemory('base memory', { domain: 'log' })
-    const { id: id2 } = await engine.writeMemory('related memory', { domain: 'log' })
+    const { id: id1 } = await engine.writeMemory('base memory', { domain: 'test' })
+    const { id: id2 } = await engine.writeMemory('related memory', { domain: 'test' })
 
-    await engine.relate(id1, id2, 'reinforces', 'log')
+    await engine.relate(id1, id2, 'reinforces', 'test')
 
     const edges = await engine.getEdges(id1)
     // Should have at least the reinforces edge and owned_by edge
@@ -317,10 +337,10 @@ describe('MemoryEngine graph methods', () => {
   })
 
   it('getEdges respects direction filter out', async () => {
-    const { id: id1 } = await engine.writeMemory('outgoing memory', { domain: 'log' })
-    const { id: id2 } = await engine.writeMemory('incoming memory', { domain: 'log' })
+    const { id: id1 } = await engine.writeMemory('outgoing memory', { domain: 'test' })
+    const { id: id2 } = await engine.writeMemory('incoming memory', { domain: 'test' })
 
-    await engine.relate(id1, id2, 'reinforces', 'log')
+    await engine.relate(id1, id2, 'reinforces', 'test')
 
     const outEdges = await engine.getEdges(id2, 'out')
     // id2 is target of the reinforces edge, so querying 'out' (outgoing) from id2 should not include it
@@ -338,10 +358,10 @@ describe('MemoryEngine graph methods', () => {
   })
 
   it('unrelate removes an edge', async () => {
-    const { id: id1 } = await engine.writeMemory('source to unrelate', { domain: 'log' })
-    const { id: id2 } = await engine.writeMemory('target to unrelate', { domain: 'log' })
+    const { id: id1 } = await engine.writeMemory('source to unrelate', { domain: 'test' })
+    const { id: id2 } = await engine.writeMemory('target to unrelate', { domain: 'test' })
 
-    await engine.relate(id1, id2, 'reinforces', 'log')
+    await engine.relate(id1, id2, 'reinforces', 'test')
 
     // Confirm edge exists
     const before = await engine.getEdges(id1, 'out')
@@ -354,12 +374,12 @@ describe('MemoryEngine graph methods', () => {
   })
 
   it('traverse follows edges BFS', async () => {
-    const { id: id1 } = await engine.writeMemory('root node', { domain: 'log' })
-    const { id: id2 } = await engine.writeMemory('level 1 node', { domain: 'log' })
-    const { id: id3 } = await engine.writeMemory('level 2 node', { domain: 'log' })
+    const { id: id1 } = await engine.writeMemory('root node', { domain: 'test' })
+    const { id: id2 } = await engine.writeMemory('level 1 node', { domain: 'test' })
+    const { id: id3 } = await engine.writeMemory('level 2 node', { domain: 'test' })
 
-    await engine.relate(id1, id2, 'reinforces', 'log')
-    await engine.relate(id2, id3, 'reinforces', 'log')
+    await engine.relate(id1, id2, 'reinforces', 'test')
+    await engine.relate(id2, id3, 'reinforces', 'test')
 
     const depth1 = await engine.traverse(id1, ['reinforces'], 1)
     expect(depth1.length).toBe(1)

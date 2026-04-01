@@ -13,6 +13,11 @@ describe('MemoryEngine.buildContext', () => {
       database: `test_ctx_${Date.now()}`,
       llm: new MockLLMAdapter(),
     })
+    await engine.registerDomain({
+      id: 'test',
+      name: 'Test',
+      async processInboxItem() {},
+    })
   })
 
   afterEach(async () => {

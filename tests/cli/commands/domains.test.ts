@@ -72,13 +72,12 @@ describe('domainsCommand', () => {
     await engine.close()
   })
 
-  it('returns list of all domains including log domain', async () => {
+  it('returns list of all registered domains', async () => {
     const result = await domainsCommand(engine, makeParsed('domains'))
     expect(result.exitCode).toBe(0)
     const summaries = result.output as { id: string }[]
     expect(Array.isArray(summaries)).toBe(true)
     const ids = summaries.map((s) => s.id)
-    expect(ids).toContain('log')
     expect(ids).toContain('test-domain')
     expect(ids).toContain('minimal')
   })

@@ -14,6 +14,11 @@ describe('MemoryEngine', () => {
       database: `test_${Date.now()}`,
       llm: new MockLLMAdapter(),
     })
+    await engine.registerDomain({
+      id: 'test',
+      name: 'Test',
+      async processInboxItem() {},
+    })
   })
 
   afterEach(async () => {
@@ -21,7 +26,7 @@ describe('MemoryEngine', () => {
   })
 
   describe('initialize', () => {
-    test('creates core schema and log domain', async () => {
+    test('creates core schema', async () => {
       const result = await engine.search({ mode: 'graph', limit: 10 })
       expect(result.entries).toEqual([])
     })
@@ -53,7 +58,6 @@ describe('MemoryEngine', () => {
       )
 
       const domainIds = (owners ?? []).map(o => String(o.out))
-      expect(domainIds).toContain('domain:log')
       expect(domainIds).toContain('domain:test_domain')
     })
 
@@ -146,7 +150,6 @@ describe('MemoryEngine', () => {
 
       // Release all ownership of first memory
       await engine.releaseOwnership(r1.id!, 'edge_test')
-      await engine.releaseOwnership(r1.id!, 'log')
 
       // Memory should be deleted
       const mem = await engine.getGraph().getNode(r1.id!)
@@ -175,6 +178,11 @@ describe('deduplication', () => {
       llm: new MockLLMAdapter(),
       embedding,
       repetition: { duplicateThreshold: 0.95, reinforceThreshold: 0.80 },
+    })
+    await dedupEngine.registerDomain({
+      id: 'test',
+      name: 'Test',
+      async processInboxItem() {},
     })
   })
 
@@ -205,6 +213,11 @@ describe('deduplication', () => {
       database: `test_nodedup_${Date.now()}`,
       llm: new MockLLMAdapter(),
       repetition: { duplicateThreshold: 0.95, reinforceThreshold: 0.80 },
+    })
+    await noEmbedEngine.registerDomain({
+      id: 'test',
+      name: 'Test',
+      async processInboxItem() {},
     })
 
     await noEmbedEngine.ingest('duplicate without embedding')

@@ -1,15 +1,15 @@
-import { fileURLToPath } from 'node:url'
-import { dirname } from 'node:path'
 import type { DomainConfig, OwnedMemory, DomainContext } from '../core/types.ts'
 
 export const logDomain: DomainConfig = {
   id: 'log',
   name: 'Log',
-  baseDir: dirname(fileURLToPath(import.meta.url)),
+  settings: {
+    autoOwn: true,
+  },
   async processInboxItem(_entry: OwnedMemory, _context: DomainContext): Promise<void> {
     // Log domain is a no-op processor — it just keeps the raw memories
   },
   describe() {
-    return 'Built-in chronological log. Keeps all ingested memories with no processing.'
+    return 'Chronological log. Keeps all ingested memories with no processing.'
   },
 }

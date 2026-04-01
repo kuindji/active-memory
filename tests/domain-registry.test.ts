@@ -94,15 +94,6 @@ describe('DomainRegistry', () => {
     expect(registry.get('removable')).toBeUndefined()
   })
 
-  test('unregister log domain throws', () => {
-    const registry = new DomainRegistry()
-    registry.register(makeDomain('log'))
-
-    expect(() => registry.unregister('log')).toThrow(
-      'Cannot unregister the built-in log domain'
-    )
-  })
-
   test('unregister non-existent domain is a no-op', () => {
     const registry = new DomainRegistry()
     // Should not throw

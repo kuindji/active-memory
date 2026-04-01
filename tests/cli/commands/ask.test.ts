@@ -30,6 +30,11 @@ describe('askCommand', () => {
       database: `test_ask_${Date.now()}`,
       llm,
     })
+    await engine.registerDomain({
+      id: 'test',
+      name: 'Test',
+      async processInboxItem() {},
+    })
 
     await engine.ingest('The quick brown fox jumps over the lazy dog')
     await engine.ingest('Meeting notes for project kickoff on monday')

@@ -23,6 +23,11 @@ describe('searchCommand', () => {
       database: `test_search_${Date.now()}`,
       llm: new MockLLMAdapter(),
     })
+    await engine.registerDomain({
+      id: 'test',
+      name: 'Test',
+      async processInboxItem() {},
+    })
 
     await engine.ingest('The quick brown fox jumps over the lazy dog')
     await engine.ingest('Meeting notes for project kickoff on monday')
@@ -72,7 +77,7 @@ describe('searchCommand', () => {
   })
 
   it('passes domains flag to engine', async () => {
-    const result = await searchCommand(engine, makeParsed(['fox'], { domains: 'log' }))
+    const result = await searchCommand(engine, makeParsed(['fox'], { domains: 'test' }))
     expect(result.exitCode).toBe(0)
     const output = result.output as { entries: unknown[]; totalTokens: number; mode: string }
     expect(Array.isArray(output.entries)).toBe(true)

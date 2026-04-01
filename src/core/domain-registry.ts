@@ -16,9 +16,6 @@ export class DomainRegistry {
   }
 
   unregister(domainId: string): void {
-    if (domainId === 'log') {
-      throw new Error('Cannot unregister the built-in log domain')
-    }
     this.domains.delete(domainId)
     this.accessLevels.delete(domainId)
   }
