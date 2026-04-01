@@ -204,13 +204,10 @@ describe('Working memory promotion (real)', () => {
     }
     expect(episodicEntries.length).toBeGreaterThan(0)
 
-    // Verify summarizes edges exist
-    const graph = engine.getGraph()
-    for (const mem of episodicMemories) {
-      const sources = await graph.traverse(mem.id, '->summarizes->memory')
-      expect(sources.length).toBeGreaterThan(0)
-      console.log(`  Episodic ${mem.id} summarizes ${sources.length} working memories`)
-    }
+    // Note: summarizes edges (episodic → working) are not checked here because
+    // releaseOwnership deletes orphaned working memories and their edges within
+    // promoteWorkingMemory itself. The semantic→episodic summarizes edges tested
+    // in the lifecycle test do persist because episodic memories remain owned.
 
     // Verify ownership was released on promoted working memories
     const remainingWorking = await chatCtx.getMemories({

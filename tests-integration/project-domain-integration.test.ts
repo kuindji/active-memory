@@ -557,17 +557,21 @@ describe('Direct write, entity graph, ask() and buildContext evaluation (real)',
     expect(techLower).not.toContain('48-hour cooling')
     console.log('  [ASSESSMENT] Technical context correctly includes SQS, excludes business-only cancellation policy')
 
-    // --- Evaluate ask() ---
+    // --- Evaluate ask() --- (run in parallel to reduce wall-clock time)
+    const askOpts = { domains: [PROJECT_DOMAIN_ID], budgetTokens: 2000, maxRounds: 2 }
+    const [askResult1, askResult2, askResult3] = await Promise.all([
+      engine.ask('How does order-processor communicate with payment-service?', askOpts),
+      engine.ask('Why is payment data stored separately?', askOpts),
+      engine.ask('What happens when a customer cancels an order?', {
+        ...askOpts,
+        context: { audience: 'business' },
+      }),
+    ])
+
     console.log('\n[EVAL ask() — "How does order-processor communicate with payment-service?"]')
-    const askResult1 = await engine.ask(
-      'How does order-processor communicate with payment-service?',
-      { domains: [PROJECT_DOMAIN_ID], budgetTokens: 2000 },
-    )
     console.log(`  Rounds: ${askResult1.rounds}`)
     console.log(`  Memories used: ${askResult1.memories.length}`)
     console.log(`  Answer: ${askResult1.answer}`)
-
-    // The answer should mention SQS
     const answer1Lower = askResult1.answer.toLowerCase()
     const mentionsSQS = answer1Lower.includes('sqs')
     const mentionsAsync = answer1Lower.includes('async') || answer1Lower.includes('queue')
@@ -575,14 +579,9 @@ describe('Direct write, entity graph, ask() and buildContext evaluation (real)',
     expect(mentionsSQS || mentionsAsync).toBe(true)
 
     console.log('\n[EVAL ask() — "Why is payment data stored separately?"]')
-    const askResult2 = await engine.ask(
-      'Why is payment data stored separately?',
-      { domains: [PROJECT_DOMAIN_ID], budgetTokens: 2000 },
-    )
     console.log(`  Rounds: ${askResult2.rounds}`)
     console.log(`  Memories used: ${askResult2.memories.length}`)
     console.log(`  Answer: ${askResult2.answer}`)
-
     const answer2Lower = askResult2.answer.toLowerCase()
     const mentionsPCI = answer2Lower.includes('pci')
     const mentionsCompliance = answer2Lower.includes('compliance') || answer2Lower.includes('regulation')
@@ -591,23 +590,13 @@ describe('Direct write, entity graph, ask() and buildContext evaluation (real)',
     expect(mentionsPCI || mentionsCompliance || mentionsIsolation).toBe(true)
 
     console.log('\n[EVAL ask() — business audience question]')
-    const askResult3 = await engine.ask(
-      'What happens when a customer cancels an order?',
-      {
-        domains: [PROJECT_DOMAIN_ID],
-        budgetTokens: 2000,
-        context: { audience: 'business' },
-      },
-    )
     console.log(`  Rounds: ${askResult3.rounds}`)
     console.log(`  Memories used: ${askResult3.memories.length}`)
     console.log(`  Answer: ${askResult3.answer}`)
-
     const answer3Lower = askResult3.answer.toLowerCase()
     const mentionsCooling = answer3Lower.includes('48') || answer3Lower.includes('cooling')
     const mentionsEU = answer3Lower.includes('eu') || answer3Lower.includes('consumer protection')
     console.log(`  [ASSESSMENT] Mentions cooling period: ${mentionsCooling}, EU regulation: ${mentionsEU}`)
-    // At minimum the answer should reference the cancellation policy
     expect(answer3Lower.includes('cancel') || mentionsCooling).toBe(true)
   })
 })

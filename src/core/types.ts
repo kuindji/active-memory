@@ -294,6 +294,7 @@ export interface AskOptions {
   tags?: string[]
   budgetTokens?: number
   limit?: number
+  maxRounds?: number
   context?: RequestContext
 }
 

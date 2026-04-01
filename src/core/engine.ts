@@ -947,7 +947,7 @@ class MemoryEngine {
   async ask(question: string, options?: AskOptions): Promise<AskResult> {
     const budgetTokens = options?.budgetTokens ?? 8000
     const limit = options?.limit ?? 30
-    const maxRounds = 3
+    const maxRounds = options?.maxRounds ?? 3
 
     const allMemories = new Map<string, ScoredMemory>()
     let rounds = 0
