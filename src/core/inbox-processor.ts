@@ -74,7 +74,7 @@ class InboxProcessor {
       const memId = String(raw.id)
       const assertTags = await this.store.query<string[]>(
         `SELECT VALUE out.label FROM tagged
-         WHERE in = $memId AND string::starts_with(out.label, 'inbox:assert-claim:')`,
+         WHERE in = $memId AND out.label IS NOT NONE AND string::starts_with(out.label, 'inbox:assert-claim:')`,
         { memId: new StringRecordId(memId) }
       )
       if (assertTags && assertTags.length > 0) {
@@ -192,7 +192,8 @@ class InboxProcessor {
     // Find memories with inbox:<domain> tags (excluding assert-claim)
     const taggedRows = await this.store.query<RawTaggedRow[]>(
       `SELECT in, out.label AS label FROM tagged
-       WHERE string::starts_with(out.label, 'inbox:')
+       WHERE out.label IS NOT NONE
+         AND string::starts_with(out.label, 'inbox:')
          AND !string::starts_with(out.label, 'inbox:assert-claim:')
        LIMIT $limit`,
       { limit: this.batchLimit * 10 } // fetch more since multiple tags per memory

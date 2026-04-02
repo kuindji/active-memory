@@ -36,7 +36,7 @@ describe('ingestCommand', () => {
   })
 
   it('ingests with --text flag and returns stored action', async () => {
-    const parsed = makeParsed({ text: 'Hello world memory' })
+    const parsed = makeParsed({ text: 'Hello world memory', domains: 'test' })
     const result = await ingestCommand(engine, parsed)
 
     expect(result.exitCode).toBe(0)
@@ -46,7 +46,7 @@ describe('ingestCommand', () => {
   })
 
   it('returns stored memory that can be retrieved from the graph', async () => {
-    const parsed = makeParsed({ text: 'Verifiable memory content' })
+    const parsed = makeParsed({ text: 'Verifiable memory content', domains: 'test' })
     const result = await ingestCommand(engine, parsed)
 
     expect(result.exitCode).toBe(0)
@@ -74,7 +74,7 @@ describe('ingestCommand', () => {
   })
 
   it('passes tags flag to the engine', async () => {
-    const parsed = makeParsed({ text: 'Tagged memory content', tags: 'shopping,todo' })
+    const parsed = makeParsed({ text: 'Tagged memory content', tags: 'shopping,todo', domains: 'test' })
     const result = await ingestCommand(engine, parsed)
 
     expect(result.exitCode).toBe(0)

@@ -113,7 +113,7 @@ describe('getMemoryTags', () => {
   })
 
   test('returns tags for a memory', async () => {
-    const result = await engine.ingest('tagged memory', { tags: ['alpha', 'beta'] })
+    const result = await engine.ingest('tagged memory', { tags: ['alpha', 'beta'], domains: ['test'] })
     await engine.processInbox()
     const ctx = engine.createDomainContext('test')
     const tags = await ctx.getMemoryTags(result.id!)
@@ -124,7 +124,7 @@ describe('getMemoryTags', () => {
 
   test('returns empty array for memory with no tags', async () => {
     const ctx = engine.createDomainContext('test')
-    const result = await engine.ingest('plain memory')
+    const result = await engine.ingest('plain memory', { domains: ['test'] })
     await engine.processInbox()
     const tags = await ctx.getMemoryTags(result.id!)
     expect(tags).toEqual([])
@@ -155,14 +155,14 @@ describe('getNodeEdges', () => {
   })
 
   test('returns outgoing edges for a node', async () => {
-    const result = await engine.ingest('test memory', { tags: ['test-tag'] })
+    const result = await engine.ingest('test memory', { tags: ['test-tag'], domains: ['test'] })
     const ctx = engine.createDomainContext('test')
     const edges = await ctx.getNodeEdges(result.id!, 'out')
     expect(edges.length).toBeGreaterThan(0)
   })
 
   test('returns edges in both directions by default', async () => {
-    const result = await engine.ingest('test memory')
+    const result = await engine.ingest('test memory', { domains: ['test'] })
     const ctx = engine.createDomainContext('test')
     const edges = await ctx.getNodeEdges(result.id!)
     expect(edges.length).toBeGreaterThan(0)

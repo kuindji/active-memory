@@ -29,9 +29,9 @@ describe('searchCommand', () => {
       async processInboxItem() {},
     })
 
-    await engine.ingest('The quick brown fox jumps over the lazy dog')
-    await engine.ingest('Meeting notes for project kickoff on monday')
-    await engine.ingest('Shopping list: milk, eggs, bread')
+    await engine.ingest('The quick brown fox jumps over the lazy dog', { domains: ['test'] })
+    await engine.ingest('Meeting notes for project kickoff on monday', { domains: ['test'] })
+    await engine.ingest('Shopping list: milk, eggs, bread', { domains: ['test'] })
   })
 
   afterEach(async () => {

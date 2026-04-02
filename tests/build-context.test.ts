@@ -32,8 +32,8 @@ describe('MemoryEngine.buildContext', () => {
   })
 
   test('returns context from ingested memories', async () => {
-    await engine.ingest('The sky is blue')
-    await engine.ingest('Water is wet')
+    await engine.ingest('The sky is blue', { domains: ['test'] })
+    await engine.ingest('Water is wet', { domains: ['test'] })
 
     // Process inbox so memories are searchable
     await engine.processInbox()
@@ -49,7 +49,7 @@ describe('MemoryEngine.buildContext', () => {
   test('respects budgetTokens option', async () => {
     // Ingest several memories
     for (let i = 0; i < 10; i++) {
-      await engine.ingest(`Memory entry number ${i} with some content to take up tokens`)
+      await engine.ingest(`Memory entry number ${i} with some content to take up tokens`, { domains: ['test'] })
     }
 
     const result = await engine.buildContext('memory', { budgetTokens: 50 })
@@ -67,7 +67,7 @@ describe('MemoryEngine.buildContext', () => {
     // Ingest to specific domain
     await engine.ingest('Special content', { domains: ['special'] })
     // Ingest to all domains (log + special)
-    await engine.ingest('General content')
+    await engine.ingest('General content', { domains: ['test', 'special'] })
 
     const result = await engine.buildContext('content', { domains: ['special'] })
     // Should only return memories owned by 'special'
@@ -96,8 +96,8 @@ describe('MemoryEngine.buildContext', () => {
   })
 
   test('formats context as numbered entries', async () => {
-    await engine.ingest('First memory')
-    await engine.ingest('Second memory')
+    await engine.ingest('First memory', { domains: ['test'] })
+    await engine.ingest('Second memory', { domains: ['test'] })
 
     const result = await engine.buildContext('memory')
     if (result.memories.length > 0) {

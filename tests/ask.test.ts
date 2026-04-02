@@ -27,7 +27,7 @@ describe('MemoryEngine.ask', () => {
   })
 
   test('returns answer and memories', async () => {
-    await engine.ingest('TypeScript is a typed superset of JavaScript')
+    await engine.ingest('TypeScript is a typed superset of JavaScript', { domains: ['test'] })
     await engine.processInbox()
 
     // Mock LLM: first call returns a final answer immediately
@@ -43,8 +43,8 @@ describe('MemoryEngine.ask', () => {
   })
 
   test('performs multi-round search when LLM returns query plan', async () => {
-    await engine.ingest('Cats are domestic animals')
-    await engine.ingest('Dogs are loyal pets')
+    await engine.ingest('Cats are domestic animals', { domains: ['test'] })
+    await engine.ingest('Dogs are loyal pets', { domains: ['test'] })
     await engine.processInbox()
     await engine.processInbox()
 
@@ -68,7 +68,7 @@ describe('MemoryEngine.ask', () => {
   })
 
   test('respects max rounds limit', async () => {
-    await engine.ingest('Some data')
+    await engine.ingest('Some data', { domains: ['test'] })
     await engine.processInbox()
 
     // LLM always returns query plans, never a final answer
@@ -82,7 +82,7 @@ describe('MemoryEngine.ask', () => {
   })
 
   test('handles malformed LLM JSON gracefully', async () => {
-    await engine.ingest('Some content')
+    await engine.ingest('Some content', { domains: ['test'] })
     await engine.processInbox()
 
     // Return invalid JSON — regex finds no {}, so parsed = {} and it falls through
@@ -97,7 +97,7 @@ describe('MemoryEngine.ask', () => {
   })
 
   test('deduplicates memories across rounds', async () => {
-    await engine.ingest('Unique fact about planets')
+    await engine.ingest('Unique fact about planets', { domains: ['test'] })
     await engine.processInbox()
 
     let callCount = 0

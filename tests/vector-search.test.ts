@@ -27,15 +27,15 @@ describe('vector search', () => {
   })
 
   test('ingest stores embedding on memory node', async () => {
-    const result = await engine.ingest('vector test content')
+    const result = await engine.ingest('vector test content', { domains: ['test'] })
     const node = await engine.getGraph().getNode(result.id!)
     expect(node?.embedding).toBeDefined()
     expect((node?.embedding as number[]).length).toBe(4)
   })
 
   test('vector search returns results by similarity', async () => {
-    await engine.ingest('the cat sat on the mat')
-    await engine.ingest('completely different topic about databases')
+    await engine.ingest('the cat sat on the mat', { domains: ['test'] })
+    await engine.ingest('completely different topic about databases', { domains: ['test'] })
 
     const result = await engine.search({
       mode: 'vector',
@@ -66,7 +66,7 @@ describe('vector search', () => {
       async processInboxItem() {},
     })
 
-    await noVecEngine.ingest('some text')
+    await noVecEngine.ingest('some text', { domains: ['test'] })
     const result = await noVecEngine.search({
       mode: 'vector',
       text: 'some text',
@@ -77,7 +77,7 @@ describe('vector search', () => {
   })
 
   test('hybrid search includes vector component when adapter present', async () => {
-    await engine.ingest('hybrid vector test memory')
+    await engine.ingest('hybrid vector test memory', { domains: ['test'] })
 
     const result = await engine.search({
       mode: 'hybrid',
