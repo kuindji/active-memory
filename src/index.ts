@@ -50,6 +50,8 @@ export type {
   AskResult,
   LLMAdapter,
   EmbeddingAdapter,
+  DebugConfig,
+  DebugTools,
   MemoryEventName,
   RequestContext,
   WriteOptions,

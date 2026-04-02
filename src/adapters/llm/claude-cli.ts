@@ -15,6 +15,20 @@ interface ClaudeCliConfig {
 
 const DEFAULT_COMMAND = 'claude'
 const DEFAULT_TIMEOUT = 120_000
+const ERROR_OUTPUT_PREVIEW_LIMIT = 500
+
+function compactOutput(text: string): string {
+  return text.replace(/\s+/g, ' ').trim()
+}
+
+function previewOutput(text: string): string {
+  const compacted = compactOutput(text)
+  if (!compacted) return ''
+  if (compacted.length <= ERROR_OUTPUT_PREVIEW_LIMIT) {
+    return compacted
+  }
+  return `${compacted.slice(0, ERROR_OUTPUT_PREVIEW_LIMIT)}...`
+}
 
 class ClaudeCliAdapter implements LLMAdapter {
   private command: string
@@ -53,18 +67,44 @@ class ClaudeCliAdapter implements LLMAdapter {
       stderr: 'pipe',
     })
 
+    let timedOut = false
     const timeoutId = setTimeout(() => {
+      timedOut = true
       proc.kill()
     }, this.timeout)
 
     try {
-      const output = await new Response(proc.stdout).text()
-      const exitCode = await proc.exited
+      const [output, stderr, exitCode] = await Promise.all([
+        new Response(proc.stdout).text(),
+        new Response(proc.stderr).text(),
+        proc.exited,
+      ])
       clearTimeout(timeoutId)
 
+      if (timedOut) {
+        const stderrPreview = previewOutput(stderr)
+        const stdoutPreview = previewOutput(output)
+        const details = [
+          `Claude CLI timed out after ${this.timeout}ms`,
+          this.model ? `model=${this.model}` : undefined,
+          `promptChars=${prompt.length}`,
+          stderrPreview ? `stderr=${JSON.stringify(stderrPreview)}` : undefined,
+          stdoutPreview ? `stdout=${JSON.stringify(stdoutPreview)}` : undefined,
+        ].filter((value): value is string => value !== undefined)
+        throw new Error(details.join(' '))
+      }
+
       if (exitCode !== 0) {
-        const stderr = await new Response(proc.stderr).text()
-        throw new Error(`Claude CLI exited with code ${exitCode}: ${stderr}`)
+        const stderrPreview = previewOutput(stderr)
+        const stdoutPreview = previewOutput(output)
+        const details = [
+          `Claude CLI exited with code ${exitCode}`,
+          this.model ? `model=${this.model}` : undefined,
+          `promptChars=${prompt.length}`,
+          stderrPreview ? `stderr=${JSON.stringify(stderrPreview)}` : undefined,
+          stdoutPreview ? `stdout=${JSON.stringify(stdoutPreview)}` : undefined,
+        ].filter((value): value is string => value !== undefined)
+        throw new Error(details.join(' '))
       }
 
       return output.trim()

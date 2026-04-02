@@ -156,6 +156,16 @@ export interface ScoredMemory {
 
 export type ModelLevel = 'low' | 'medium' | 'high'
 
+export interface DebugConfig {
+  timing?: boolean
+}
+
+export interface DebugTools {
+  timingEnabled: boolean
+  log(label: string, details?: Record<string, unknown>): void
+  time<T>(label: string, fn: () => Promise<T>, details?: Record<string, unknown>): Promise<T>
+}
+
 // --- Domain types ---
 
 export interface OwnedMemory {
@@ -180,6 +190,7 @@ export interface DomainContext {
   graph: GraphApi
   llm: LLMAdapter
   llmAt(level: ModelLevel): LLMAdapter
+  debug: DebugTools
   getVisibleDomains(): string[]
   getMemory(id: string): Promise<MemoryEntry | null>
   getMemories(filter?: MemoryFilter): Promise<MemoryEntry[]>
@@ -342,6 +353,7 @@ export interface EngineConfig {
     defaultEf?: number
   }
   context?: RequestContext
+  debug?: DebugConfig
 }
 
 // --- Event types ---

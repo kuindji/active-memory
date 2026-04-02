@@ -3,6 +3,11 @@ import { TOPIC_TAG, TOPIC_DOMAIN_ID } from '../topic/types.ts'
 import type { MemoryClassification } from './types.ts'
 import { CLASSIFICATION_TAGS } from './types.ts'
 
+function logProjectWarning(scope: string, error: unknown): void {
+  const errorMessage = error instanceof Error ? error.message : String(error)
+  console.warn(`[memory-domain warning] ${scope}: ${errorMessage}`)
+}
+
 /**
  * Ensures a tag node exists in the graph with the given label.
  */
@@ -120,7 +125,8 @@ async function batchExtractTopics(
         }
       }
       return result
-    } catch {
+    } catch (error) {
+      logProjectWarning('project.inbox.topicExtraction.extractStructured', error)
       // Fall through to sequential fallback
     }
   }
@@ -130,7 +136,8 @@ async function batchExtractTopics(
     try {
       const topics = await llm.extract(entry.memory.content)
       result.set(entry.memory.id, topics)
-    } catch {
+    } catch (error) {
+      logProjectWarning('project.inbox.topicExtraction.extract', error)
       result.set(entry.memory.id, [])
     }
   }

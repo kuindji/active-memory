@@ -1,9 +1,10 @@
 import { createHash } from 'node:crypto'
 import { StringRecordId } from 'surrealdb'
+import { createDebugTools } from './debug.ts'
 import type { GraphStore } from './graph-store.ts'
 import type { DomainRegistry } from './domain-registry.ts'
 import type { EventEmitter } from './events.ts'
-import type { DomainContext, OwnedMemory, MemoryEntry, Node } from './types.ts'
+import type { DebugConfig, DebugTools, DomainContext, OwnedMemory, MemoryEntry, Node } from './types.ts'
 
 interface RecordIdLike {
   tb: string
@@ -82,13 +83,17 @@ class InboxProcessor {
   private staleAfterMs = 30_000
   private similarityThreshold = 0
   private maxTransientAttempts = 2
+  private debug: DebugTools
 
   constructor(
     private store: GraphStore,
     private domainRegistry: DomainRegistry,
     private events: EventEmitter,
-    private contextFactory: (domainId: string, requestContext?: Record<string, unknown>) => DomainContext
-  ) {}
+    private contextFactory: (domainId: string, requestContext?: Record<string, unknown>) => DomainContext,
+    debugConfig?: DebugConfig,
+  ) {
+    this.debug = createDebugTools('inbox', debugConfig)
+  }
 
   // --- Stale Batch Recovery ---
 
@@ -562,206 +567,209 @@ class InboxProcessor {
   // --- Phase 1: Claim Assertion ---
 
   private async processAssertionBatch(): Promise<number> {
-    const batch = await this.buildSimilarityBatch({ type: 'assert-claim' })
-    if (!batch) return 0
+    return this.debug.time('assertBatch.total', async () => {
+      const batch = await this.buildSimilarityBatch({ type: 'assert-claim' })
+      if (!batch) return 0
 
-    const { batchId, entries, memoryIds, requestContext } = batch
+      const { batchId, entries, memoryIds, requestContext } = batch
 
-    try {
-      // Collect assert-claim tags for each memory to know which domains to call
-      const memoryDomainMap = new Map<string, string[]>()
-      const allDomainIds = new Set<string>()
+      try {
+        // Collect assert-claim tags for each memory to know which domains to call
+        const memoryDomainMap = new Map<string, string[]>()
+        const allDomainIds = new Set<string>()
 
-      for (const memId of memoryIds) {
-        const assertTags = await this.store.query<string[]>(
-          `SELECT VALUE out.label FROM tagged
-           WHERE in = $memId AND out.label IS NOT NONE AND string::starts_with(out.label, 'inbox:assert-claim:')`,
-          { memId: new StringRecordId(memId) }
-        )
-        const domainIds = (assertTags ?? []).map(label => label.slice('inbox:assert-claim:'.length))
-        memoryDomainMap.set(memId, domainIds)
-        for (const d of domainIds) allDomainIds.add(d)
-      }
-
-      // Call each domain's assertInboxClaimBatch
-      for (const domainId of allDomainIds) {
-        const domain = this.domainRegistry.get(domainId)
-        if (!domain?.assertInboxClaimBatch) continue
-
-        // Filter entries to only those that have this domain's assert-claim tag
-        const domainEntries = entries.filter(e =>
-          memoryDomainMap.get(e.memory.id)?.includes(domainId)
-        )
-        if (domainEntries.length === 0) continue
-
-        const domainMemoryIds = domainEntries.map(entry => entry.memory.id)
-        const assertTagId = `tag:\`inbox:assert-claim:${domainId}\``
-
-        const ctx = this.contextFactory(domainId, requestContext)
-        try {
-          const claimedIds = await domain.assertInboxClaimBatch(domainEntries, ctx)
-          await this.clearBatchFailureRecord('assert', domainId, domainMemoryIds, requestContext)
-
-          for (const memId of claimedIds) {
-            // Create ownership
-            const fullDomainId = `domain:${domainId}`
-            await this.store.relate(memId, 'owned_by', fullDomainId, {
-              attributes: {},
-              owned_at: Date.now(),
-            })
-            // Add inbox processing tag
-            const inboxTagId = `tag:\`inbox:${domainId}\``
-            try {
-              await this.store.createNodeWithId(inboxTagId, {
-                label: `inbox:${domainId}`,
-                created_at: Date.now(),
-              })
-            } catch { /* already exists */ }
-            await this.store.relate(memId, 'tagged', inboxTagId)
-          }
-
-          for (const memId of domainMemoryIds) {
-            await this.store.unrelate(memId, 'tagged', assertTagId)
-          }
-        } catch (err) {
-          this.events.emit('error', {
-            source: 'inbox-assertion',
-            domainId,
-            error: err,
-          })
-
-          const failure = await this.recordBatchFailure(
-            'assert',
-            domainId,
-            domainMemoryIds,
-            requestContext,
-            err,
+        for (const memId of memoryIds) {
+          const assertTags = await this.store.query<string[]>(
+            `SELECT VALUE out.label FROM tagged
+             WHERE in = $memId AND out.label IS NOT NONE AND string::starts_with(out.label, 'inbox:assert-claim:')`,
+            { memId: new StringRecordId(memId) }
           )
+          const domainIds = (assertTags ?? []).map(label => label.slice('inbox:assert-claim:'.length))
+          memoryDomainMap.set(memId, domainIds)
+          for (const d of domainIds) allDomainIds.add(d)
+        }
 
-          if (failure.status === 'quarantined') {
-            const failedTagId = await this.ensureTag(`inbox:failed-assert-claim:${domainId}`)
+        for (const domainId of allDomainIds) {
+          const domain = this.domainRegistry.get(domainId)
+          if (!domain?.assertInboxClaimBatch) continue
+
+          const domainEntries = entries.filter(e =>
+            memoryDomainMap.get(e.memory.id)?.includes(domainId)
+          )
+          if (domainEntries.length === 0) continue
+
+          const domainMemoryIds = domainEntries.map(entry => entry.memory.id)
+          const assertTagId = `tag:\`inbox:assert-claim:${domainId}\``
+
+          const ctx = this.contextFactory(domainId, requestContext)
+          try {
+            const claimedIds = await this.debug.time(
+              'assertBatch.domain',
+              () => domain.assertInboxClaimBatch!(domainEntries, ctx),
+              { domainId, entries: domainEntries.length },
+            )
+            await this.clearBatchFailureRecord('assert', domainId, domainMemoryIds, requestContext)
+
+            for (const memId of claimedIds) {
+              const fullDomainId = `domain:${domainId}`
+              await this.store.relate(memId, 'owned_by', fullDomainId, {
+                attributes: {},
+                owned_at: Date.now(),
+              })
+              const inboxTagId = `tag:\`inbox:${domainId}\``
+              try {
+                await this.store.createNodeWithId(inboxTagId, {
+                  label: `inbox:${domainId}`,
+                  created_at: Date.now(),
+                })
+              } catch { /* already exists */ }
+              await this.store.relate(memId, 'tagged', inboxTagId)
+            }
+
             for (const memId of domainMemoryIds) {
               await this.store.unrelate(memId, 'tagged', assertTagId)
-              await this.store.relate(memId, 'tagged', failedTagId)
+            }
+          } catch (err) {
+            this.events.emit('error', {
+              source: 'inbox-assertion',
+              domainId,
+              error: err,
+            })
+
+            const failure = await this.recordBatchFailure(
+              'assert',
+              domainId,
+              domainMemoryIds,
+              requestContext,
+              err,
+            )
+
+            if (failure.status === 'quarantined') {
+              const failedTagId = await this.ensureTag(`inbox:failed-assert-claim:${domainId}`)
+              for (const memId of domainMemoryIds) {
+                await this.store.unrelate(memId, 'tagged', assertTagId)
+                await this.store.relate(memId, 'tagged', failedTagId)
+              }
             }
           }
         }
-      }
 
-      // Clean up unclaimed memories
-      for (const memId of memoryIds) {
-        const owners = await this.store.query<{ count: number }[]>(
-          'SELECT count() AS count FROM owned_by WHERE in = $memId GROUP ALL',
-          { memId: new StringRecordId(memId) }
-        )
-        const ownerCount = (owners && owners.length > 0) ? owners[0].count : 0
-        const activeAssertCount = await this.countTagsByPrefix(memId, 'inbox:assert-claim:')
-        const failedAssertCount = await this.countTagsByPrefix(memId, 'inbox:failed-assert-claim:')
+        for (const memId of memoryIds) {
+          const owners = await this.store.query<{ count: number }[]>(
+            'SELECT count() AS count FROM owned_by WHERE in = $memId GROUP ALL',
+            { memId: new StringRecordId(memId) }
+          )
+          const ownerCount = (owners && owners.length > 0) ? owners[0].count : 0
+          const activeAssertCount = await this.countTagsByPrefix(memId, 'inbox:assert-claim:')
+          const failedAssertCount = await this.countTagsByPrefix(memId, 'inbox:failed-assert-claim:')
 
-        if (ownerCount === 0 && activeAssertCount === 0 && failedAssertCount === 0) {
-          await this.removeOrphanedMemory(memId)
-        } else {
-          await this.clearRootInboxIfNoActiveTags(memId)
+          if (ownerCount === 0 && activeAssertCount === 0 && failedAssertCount === 0) {
+            await this.removeOrphanedMemory(memId)
+          } else {
+            await this.clearRootInboxIfNoActiveTags(memId)
+          }
+
+          this.events.emit('inboxClaimAsserted', {
+            memoryId: memId,
+            claimed: ownerCount > 0,
+          })
         }
-
-        this.events.emit('inboxClaimAsserted', {
-          memoryId: memId,
-          claimed: ownerCount > 0,
-        })
+      } finally {
+        await this.removeBatchProcessingTag(batchId)
       }
-    } finally {
-      await this.removeBatchProcessingTag(batchId)
-    }
 
-    return memoryIds.length
+      return memoryIds.length
+    })
   }
 
   // --- Phase 2: Inbox Processing ---
 
   private async processInboxBatch(): Promise<number> {
-    // Find distinct domain IDs with pending inbox items
-    const taggedRows = await this.store.query<RawTaggedRow[]>(
-      `SELECT in, out.label AS label FROM tagged
-       WHERE out.label IS NOT NONE
-         AND string::starts_with(out.label, 'inbox:')
-         AND !string::starts_with(out.label, 'inbox:assert-claim:')
-         AND !string::starts_with(out.label, 'inbox:failed')
-         AND !string::starts_with(out.label, 'inbox:processing:')
-       LIMIT $limit`,
-      { limit: this.batchLimit * 10 }
-    )
+    return this.debug.time('processBatch.total', async () => {
+      const taggedRows = await this.store.query<RawTaggedRow[]>(
+        `SELECT in, out.label AS label FROM tagged
+         WHERE out.label IS NOT NONE
+           AND string::starts_with(out.label, 'inbox:')
+           AND !string::starts_with(out.label, 'inbox:assert-claim:')
+           AND !string::starts_with(out.label, 'inbox:failed')
+           AND !string::starts_with(out.label, 'inbox:processing:')
+         LIMIT $limit`,
+        { limit: this.batchLimit * 10 }
+      )
 
-    if (!taggedRows || taggedRows.length === 0) return 0
+      if (!taggedRows || taggedRows.length === 0) return 0
 
-    // Collect distinct domain IDs
-    const domainIds = new Set<string>()
-    for (const row of taggedRows) {
-      domainIds.add(row.label.slice('inbox:'.length))
-    }
+      const domainIds = new Set<string>()
+      for (const row of taggedRows) {
+        domainIds.add(row.label.slice('inbox:'.length))
+      }
 
-    let totalProcessed = 0
+      let totalProcessed = 0
 
-    for (const domainId of domainIds) {
-      const domain = this.domainRegistry.get(domainId)
-      if (!domain) continue
+      for (const domainId of domainIds) {
+        const domain = this.domainRegistry.get(domainId)
+        if (!domain) continue
 
-      const batch = await this.buildSimilarityBatch({ type: 'domain', domainId }, domainId)
-      if (!batch) continue
+        const batch = await this.buildSimilarityBatch({ type: 'domain', domainId }, domainId)
+        if (!batch) continue
 
-      const { batchId, entries, memoryIds, requestContext } = batch
-
-      try {
-        const ctx = this.contextFactory(domainId, requestContext)
-        const inboxTagId = `tag:\`inbox:${domainId}\``
+        const { batchId, entries, memoryIds, requestContext } = batch
 
         try {
-          await domain.processInboxBatch(entries, ctx)
-          await this.clearBatchFailureRecord('process', domainId, memoryIds, requestContext)
-        } catch (err) {
-          this.events.emit('error', {
-            source: 'inbox',
-            domainId,
-            error: err,
-          })
+          const ctx = this.contextFactory(domainId, requestContext)
+          const inboxTagId = `tag:\`inbox:${domainId}\``
 
-          const failure = await this.recordBatchFailure(
-            'process',
-            domainId,
-            memoryIds,
-            requestContext,
-            err,
-          )
+          try {
+            await this.debug.time(
+              'processBatch.domain',
+              () => domain.processInboxBatch(entries, ctx),
+              { domainId, entries: entries.length },
+            )
+            await this.clearBatchFailureRecord('process', domainId, memoryIds, requestContext)
+          } catch (err) {
+            this.events.emit('error', {
+              source: 'inbox',
+              domainId,
+              error: err,
+            })
 
-          if (failure.status === 'quarantined') {
-            const failedTagId = await this.ensureTag(`inbox:failed:${domainId}`)
-            for (const memId of memoryIds) {
-              await this.store.unrelate(memId, 'tagged', inboxTagId)
-              await this.store.relate(memId, 'tagged', failedTagId)
-              await this.clearRootInboxIfNoActiveTags(memId)
+            const failure = await this.recordBatchFailure(
+              'process',
+              domainId,
+              memoryIds,
+              requestContext,
+              err,
+            )
+
+            if (failure.status === 'quarantined') {
+              const failedTagId = await this.ensureTag(`inbox:failed:${domainId}`)
+              for (const memId of memoryIds) {
+                await this.store.unrelate(memId, 'tagged', inboxTagId)
+                await this.store.relate(memId, 'tagged', failedTagId)
+                await this.clearRootInboxIfNoActiveTags(memId)
+              }
             }
+
+            continue
           }
 
-          continue
-        }
+          for (const memId of memoryIds) {
+            await this.store.unrelate(memId, 'tagged', inboxTagId)
+            this.events.emit('inboxDomainProcessed', { memoryId: memId, domainId })
+          }
 
-        // Remove this domain's inbox tag from all batch members
-        for (const memId of memoryIds) {
-          await this.store.unrelate(memId, 'tagged', inboxTagId)
-          this.events.emit('inboxDomainProcessed', { memoryId: memId, domainId })
-        }
+          for (const memId of memoryIds) {
+            await this.clearRootInboxIfNoActiveTags(memId)
+          }
 
-        // Check if any inbox: tags remain for each memory
-        for (const memId of memoryIds) {
-          await this.clearRootInboxIfNoActiveTags(memId)
+          totalProcessed += memoryIds.length
+        } finally {
+          await this.removeBatchProcessingTag(batchId)
         }
-
-        totalProcessed += memoryIds.length
-      } finally {
-        await this.removeBatchProcessingTag(batchId)
       }
-    }
 
-    return totalProcessed
+      return totalProcessed
+    })
   }
 
   // --- Cleanup ---
@@ -778,23 +786,25 @@ class InboxProcessor {
   // --- Tick & Lifecycle ---
 
   async tick(): Promise<boolean> {
-    try {
-      const acquired = await this.acquireLock()
-      if (!acquired) return false
-
+    return this.debug.time('tick', async () => {
       try {
-        await this.recoverStaleBatches()
-        const asserted = await this.processAssertionBatch()
-        const processed = await this.processInboxBatch()
-        return asserted > 0 || processed > 0
-      } catch (err) {
-        this.events.emit('error', { source: 'inbox', error: err })
-        return false
+        const acquired = await this.acquireLock()
+        if (!acquired) return false
+
+        try {
+          await this.recoverStaleBatches()
+          const asserted = await this.processAssertionBatch()
+          const processed = await this.processInboxBatch()
+          return asserted > 0 || processed > 0
+        } catch (err) {
+          this.events.emit('error', { source: 'inbox', error: err })
+          return false
+        }
+      } finally {
+        await this.releaseLock()
+        this.scheduleNext()
       }
-    } finally {
-      await this.releaseLock()
-      this.scheduleNext()
-    }
+    })
   }
 
   start(options?: InboxProcessorOptions): void {

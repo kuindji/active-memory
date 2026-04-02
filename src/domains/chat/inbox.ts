@@ -3,6 +3,11 @@ import { CHAT_TAG, CHAT_MESSAGE_TAG } from './types.ts'
 import { TOPIC_TAG, TOPIC_DOMAIN_ID } from '../topic/types.ts'
 import { ensureTag } from './utils.ts'
 
+function logInboxWarning(scope: string, error: unknown): void {
+  const errorMessage = error instanceof Error ? error.message : String(error)
+  console.warn(`[memory-domain warning] ${scope}: ${errorMessage}`)
+}
+
 const BATCH_TOPIC_EXTRACTION_SCHEMA = JSON.stringify({
   type: 'array',
   items: {
@@ -30,45 +35,52 @@ export async function processInboxBatch(entries: OwnedMemory[], context: DomainC
 
   if (!userId || !chatSessionId) return
 
-  // Phase 1: Per-item metadata and tagging (no LLM)
-  const chatTagId = await ensureTag(context, CHAT_TAG)
-  const chatMessageTagId = await ensureTag(context, CHAT_MESSAGE_TAG)
-  try {
-    await context.graph.relate(chatMessageTagId, 'child_of', chatTagId)
-  } catch { /* already related */ }
+  await context.debug.time('chat.inbox.total', async () => {
+    const chatTagId = await ensureTag(context, CHAT_TAG)
+    const chatMessageTagId = await ensureTag(context, CHAT_MESSAGE_TAG)
+    try {
+      await context.graph.relate(chatMessageTagId, 'child_of', chatTagId)
+    } catch { /* already related */ }
 
-  const existing = await context.getMemories({
-    tags: [CHAT_MESSAGE_TAG],
-    attributes: { chatSessionId, userId },
-  })
-  let messageIndex = existing.length
-
-  for (const entry of entries) {
-    const role = (entry.domainAttributes.role as string | undefined) ?? 'user'
-
-    await context.updateAttributes(entry.memory.id, {
-      role,
-      layer: 'working',
-      chatSessionId,
-      userId,
-      messageIndex,
+    const existing = await context.getMemories({
+      tags: [CHAT_MESSAGE_TAG],
+      attributes: { chatSessionId, userId },
     })
-    messageIndex++
+    let messageIndex = existing.length
 
-    await context.tagMemory(entry.memory.id, chatTagId)
-    await context.tagMemory(entry.memory.id, chatMessageTagId)
-  }
+    await context.debug.time('chat.inbox.tagAndAttribute', async () => {
+      for (const entry of entries) {
+        const role = (entry.domainAttributes.role as string | undefined) ?? 'user'
 
-  // Phase 2: Batch topic extraction (single LLM call)
-  const topicsMap = await batchExtractTopics(entries, context)
+        await context.updateAttributes(entry.memory.id, {
+          role,
+          layer: 'working',
+          chatSessionId,
+          userId,
+          messageIndex,
+        })
+        messageIndex++
 
-  // Phase 3: Per-item topic linking
-  for (const entry of entries) {
-    const topicNames = topicsMap.get(entry.memory.id) ?? []
-    for (const topicName of topicNames) {
-      await linkTopic(context, entry.memory.id, topicName)
-    }
-  }
+        await context.tagMemory(entry.memory.id, chatTagId)
+        await context.tagMemory(entry.memory.id, chatMessageTagId)
+      }
+    }, { entries: entries.length })
+
+    const topicsMap = await context.debug.time(
+      'chat.inbox.topicExtraction',
+      () => batchExtractTopics(entries, context),
+      { entries: entries.length },
+    )
+
+    await context.debug.time('chat.inbox.topicLinking', async () => {
+      for (const entry of entries) {
+        const topicNames = topicsMap.get(entry.memory.id) ?? []
+        for (const topicName of topicNames) {
+          await linkTopic(context, entry.memory.id, topicName)
+        }
+      }
+    }, { entries: entries.length })
+  }, { entries: entries.length })
 }
 
 async function batchExtractTopics(
@@ -97,7 +109,8 @@ async function batchExtractTopics(
         }
       }
       return result
-    } catch {
+    } catch (error) {
+      logInboxWarning('chat.inbox.topicExtraction.extractStructured', error)
       // Fall through to sequential fallback
     }
   }
@@ -107,7 +120,8 @@ async function batchExtractTopics(
     try {
       const topics = await llm.extract(entry.memory.content)
       result.set(entry.memory.id, topics)
-    } catch {
+    } catch (error) {
+      logInboxWarning('chat.inbox.topicExtraction.extract', error)
       result.set(entry.memory.id, [])
     }
   }

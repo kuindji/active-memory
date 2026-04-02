@@ -8,6 +8,11 @@ import {
 import type { MemoryClassification, Audience } from './types.ts'
 import { ensureTag, findOrCreateEntity, linkToTopicsBatch, classificationToTag } from './utils.ts'
 
+function logProjectInboxWarning(scope: string, error: unknown): void {
+  const errorMessage = error instanceof Error ? error.message : String(error)
+  console.warn(`[memory-domain warning] ${scope}: ${errorMessage}`)
+}
+
 const VALID_CLASSIFICATIONS = new Set<string>([
   'decision', 'rationale', 'clarification', 'direction', 'observation', 'question',
 ])
@@ -85,87 +90,102 @@ interface EntityResult {
 }
 
 export async function processInboxBatch(entries: OwnedMemory[], context: DomainContext): Promise<void> {
-  // Phase 1: Resolve audiences (no LLM)
-  const audienceMap = new Map<string, string[]>()
-  for (const entry of entries) {
-    let audience = entry.domainAttributes.audience as string[] | undefined
-    if (!audience || !Array.isArray(audience)) {
-      audience = ['technical']
-    } else {
-      audience = audience.filter(a => VALID_AUDIENCES.has(a))
-      if (audience.length === 0) audience = ['technical']
+  await context.debug.time('project.inbox.total', async () => {
+    const audienceMap = new Map<string, string[]>()
+    for (const entry of entries) {
+      let audience = entry.domainAttributes.audience as string[] | undefined
+      if (!audience || !Array.isArray(audience)) {
+        audience = ['technical']
+      } else {
+        audience = audience.filter(a => VALID_AUDIENCES.has(a))
+        if (audience.length === 0) audience = ['technical']
+      }
+      audienceMap.set(entry.memory.id, audience)
     }
-    audienceMap.set(entry.memory.id, audience)
-  }
 
-  // Phase 2: Batch classification (single LLM call)
-  const classificationMap = await batchClassify(entries, context)
+    const classificationMap = await context.debug.time(
+      'project.inbox.classify',
+      () => batchClassify(entries, context),
+      { entries: entries.length },
+    )
 
-  // Phase 3: Per-item attributes + tagging (no LLM)
-  const projectTagId = await ensureTag(context, PROJECT_TAG)
+    const projectTagId = await ensureTag(context, PROJECT_TAG)
 
-  for (const entry of entries) {
-    const classification = classificationMap.get(entry.memory.id) ?? 'observation'
-    const audience = audienceMap.get(entry.memory.id) ?? ['technical']
+    await context.debug.time('project.inbox.tagAndAttribute', async () => {
+      for (const entry of entries) {
+        const classification = classificationMap.get(entry.memory.id) ?? 'observation'
+        const audience = audienceMap.get(entry.memory.id) ?? ['technical']
 
-    await context.updateAttributes(entry.memory.id, {
-      classification,
-      audience,
-      superseded: false,
-    })
+        await context.updateAttributes(entry.memory.id, {
+          classification,
+          audience,
+          superseded: false,
+        })
 
-    await context.tagMemory(entry.memory.id, projectTagId)
+        await context.tagMemory(entry.memory.id, projectTagId)
 
-    const classTag = classificationToTag(classification as MemoryClassification)
-    const classTagId = await ensureTag(context, classTag)
-    try {
-      await context.graph.relate(classTagId, 'child_of', projectTagId)
-    } catch { /* already related */ }
-    await context.tagMemory(entry.memory.id, classTagId)
-
-    for (const aud of audience) {
-      const audTag = AUDIENCE_TAGS[aud as Audience]
-      if (audTag) {
-        const audTagId = await ensureTag(context, audTag)
+        const classTag = classificationToTag(classification as MemoryClassification)
+        const classTagId = await ensureTag(context, classTag)
         try {
-          await context.graph.relate(audTagId, 'child_of', projectTagId)
+          await context.graph.relate(classTagId, 'child_of', projectTagId)
         } catch { /* already related */ }
-        await context.tagMemory(entry.memory.id, audTagId)
+        await context.tagMemory(entry.memory.id, classTagId)
+
+        for (const aud of audience) {
+          const audTag = AUDIENCE_TAGS[aud as Audience]
+          if (audTag) {
+            const audTagId = await ensureTag(context, audTag)
+            try {
+              await context.graph.relate(audTagId, 'child_of', projectTagId)
+            } catch { /* already related */ }
+            await context.tagMemory(entry.memory.id, audTagId)
+          }
+        }
       }
-    }
-  }
+    }, { entries: entries.length })
 
-  // Phase 4: Batch entity extraction (single LLM call)
-  const entitiesMap = await batchExtractEntities(entries, context)
+    const entitiesMap = await context.debug.time(
+      'project.inbox.entityExtraction',
+      () => batchExtractEntities(entries, context),
+      { entries: entries.length },
+    )
 
-  // Phase 5: Per-item entity linking (no LLM)
-  for (const entry of entries) {
-    const entities = entitiesMap.get(entry.memory.id) ?? []
-    for (const entity of entities) {
-      if (!entity.name || !entity.type) continue
-      const fields: Record<string, unknown> = {}
-      if (entity.path) fields.path = entity.path
-      if (entity.kind) fields.kind = entity.kind
+    await context.debug.time('project.inbox.entityLinking', async () => {
+      for (const entry of entries) {
+        const entities = entitiesMap.get(entry.memory.id) ?? []
+        for (const entity of entities) {
+          if (!entity.name || !entity.type) continue
+          const fields: Record<string, unknown> = {}
+          if (entity.path) fields.path = entity.path
+          if (entity.kind) fields.kind = entity.kind
 
-      try {
-        const entityId = await findOrCreateEntity(context, entity.type, entity.name, fields)
-        await context.graph.relate(entry.memory.id, 'about_entity', entityId, { relevance: 1.0 })
-      } catch {
-        // Entity linking is best-effort
+          try {
+            const entityId = await findOrCreateEntity(context, entity.type, entity.name, fields)
+            await context.graph.relate(entry.memory.id, 'about_entity', entityId, { relevance: 1.0 })
+          } catch {
+            // Entity linking is best-effort
+          }
+        }
       }
+    }, { entries: entries.length })
+
+    await context.debug.time(
+      'project.inbox.topicLinking',
+      () => linkToTopicsBatch(context, entries),
+      { entries: entries.length },
+    )
+
+    const decisions = entries.filter(e =>
+      classificationMap.get(e.memory.id) === 'decision'
+    )
+    if (decisions.length > 0) {
+      await context.debug.time(
+        'project.inbox.contradictionDetection',
+        () => batchDetectContradictions(decisions, context),
+        { decisions: decisions.length },
+      )
     }
-  }
-
-  // Phase 6 + 7: Batch topic extraction and linking (single LLM call + per-item linking)
-  await linkToTopicsBatch(context, entries)
-
-  // Phase 8: Batch contradiction detection for decisions
-  const decisions = entries.filter(e =>
-    classificationMap.get(e.memory.id) === 'decision'
-  )
-  if (decisions.length > 0) {
-    await batchDetectContradictions(decisions, context)
-  }
+  }, { entries: entries.length })
 }
 
 async function batchClassify(
@@ -218,7 +238,8 @@ async function batchClassify(
       const classification = VALID_CLASSIFICATIONS.has(normalized) ? normalized : 'observation'
       result.set(needsClassification[i].entry.memory.id, classification)
     }
-  } catch {
+  } catch (error) {
+    logProjectInboxWarning('project.inbox.classify', error)
     // Fallback: default to observation
     for (const { entry } of needsClassification) {
       result.set(entry.memory.id, 'observation')
@@ -253,7 +274,8 @@ async function batchExtractEntities(
         result.set(entries[item.index].memory.id, item.entities)
       }
     }
-  } catch {
+  } catch (error) {
+    logProjectInboxWarning('project.inbox.entityExtraction', error)
     // Entity extraction is best-effort
   }
 
@@ -380,7 +402,8 @@ async function processContradictionBatch(
         superseded: true,
       })
     }
-  } catch {
+  } catch (error) {
+    logProjectInboxWarning('project.inbox.contradictionDetection', error)
     // Contradiction detection is best-effort
   }
 }

@@ -8,6 +8,7 @@ import type { InboxProcessorOptions } from './inbox-processor.ts'
 import { DomainRegistry } from './domain-registry.ts'
 import { Scheduler, MetaScheduleStateStore } from './scheduler.ts'
 import { EventEmitter } from './events.ts'
+import { createDebugTools, wrapLLMAdapter } from './debug.ts'
 import { countTokens, applyTokenBudget } from './scoring.ts'
 import type {
   EngineConfig,
@@ -37,6 +38,8 @@ import type {
   TraversalNode,
   ModelLevel,
   DomainRegistrationOptions,
+  DebugConfig,
+  DebugTools,
 } from './types.ts'
 
 class MemoryEngine {
@@ -52,6 +55,8 @@ class MemoryEngine {
   private embedding?: EmbeddingAdapter
   private repetitionConfig?: RepetitionConfig
   private defaultContext: RequestContext = {}
+  private debugConfig: DebugConfig = {}
+  private debug!: DebugTools
 
   async initialize(config: EngineConfig): Promise<void> {
     const db = new Surreal({ engines: createNodeEngines() })
@@ -65,6 +70,10 @@ class MemoryEngine {
     this.llm = config.llm
     this.embedding = config.embedding
     this.repetitionConfig = config.repetition
+    this.debugConfig = {
+      timing: config.debug?.timing ?? process.env.MEMORY_DOMAIN_DEBUG_TIMING === '1',
+    }
+    this.debug = createDebugTools('engine', this.debugConfig)
 
     // Set up schema
     this.schema = new SchemaRegistry(db)
@@ -93,7 +102,8 @@ class MemoryEngine {
       this.graph,
       this.domainRegistry,
       this.events,
-      (domainId: string, requestContext?: RequestContext) => this.createDomainContext(domainId, requestContext)
+      (domainId: string, requestContext?: RequestContext) => this.createDomainContext(domainId, requestContext),
+      this.debugConfig,
     )
 
     this.defaultContext = config.context ?? {}
@@ -344,49 +354,71 @@ class MemoryEngine {
   }
 
   async ingest(text: string, options?: IngestOptions): Promise<IngestResult> {
-    const now = Date.now()
-    const tokens = countTokens(text)
+    return this.debug.time('ingest.total', async () => {
+      const now = Date.now()
+      const tokens = countTokens(text)
 
-    // Generate embedding early (needed for dedup and storage)
-    let embeddingVec: number[] | undefined
-    if (this.embedding) {
-      embeddingVec = await this.embedding.embed(text)
-    }
+      // Generate embedding early (needed for dedup and storage)
+      let embeddingVec: number[] | undefined
+      if (this.embedding) {
+        embeddingVec = await this.debug.time(
+          'ingest.embed',
+          () => this.embedding!.embed(text),
+          { chars: text.length },
+        )
+      }
 
-    // Dedup check
-    if (!options?.skipDedup && embeddingVec && this.repetitionConfig) {
-      const similar = await this.graph.query<(Record<string, unknown> & { score: number })[]>(
-        `SELECT *, vector::similarity::cosine(embedding, $queryVec) AS score
-         FROM memory
-         WHERE embedding IS NOT NONE
-         ORDER BY score DESC
-         LIMIT 5`,
-        { queryVec: embeddingVec }
-      )
+      // Dedup check
+      if (!options?.skipDedup && embeddingVec && this.repetitionConfig) {
+        const similar = await this.debug.time(
+          'ingest.dedupQuery',
+          () => this.graph.query<(Record<string, unknown> & { score: number })[]>(
+            `SELECT *, vector::similarity::cosine(embedding, $queryVec) AS score
+             FROM memory
+             WHERE embedding IS NOT NONE
+             ORDER BY score DESC
+             LIMIT 5`,
+            { queryVec: embeddingVec }
+          ),
+          { chars: text.length },
+        )
 
-      if (similar && similar.length > 0) {
-        const top = similar[0]
-        const existingId = String(top.id)
+        if (similar && similar.length > 0) {
+          const top = similar[0]
+          const existingId = String(top.id)
 
-        if (top.score >= this.repetitionConfig.duplicateThreshold) {
-          return { action: 'skipped', existingId }
-        }
+          if (top.score >= this.repetitionConfig.duplicateThreshold) {
+            this.debug.log('ingest.skippedDuplicate', { existingId })
+            return { action: 'skipped', existingId }
+          }
 
-        if (top.score >= this.repetitionConfig.reinforceThreshold) {
-          const memId = await this.createMemoryNode(text, tokens, embeddingVec, options, now)
-          await this.graph.relate(memId, 'reinforces', existingId, {
-            strength: top.score,
-            detected_at: now,
-          })
-          this.events.emit('reinforced', { id: memId, existingId, similarity: top.score })
-          return { action: 'reinforced', id: memId, existingId }
+          if (top.score >= this.repetitionConfig.reinforceThreshold) {
+            const memId = await this.debug.time(
+              'ingest.createMemoryNode',
+              () => this.createMemoryNode(text, tokens, embeddingVec, options, now),
+              { mode: 'reinforced' },
+            )
+            await this.graph.relate(memId, 'reinforces', existingId, {
+              strength: top.score,
+              detected_at: now,
+            })
+            this.events.emit('reinforced', { id: memId, existingId, similarity: top.score })
+            return { action: 'reinforced', id: memId, existingId }
+          }
         }
       }
-    }
 
-    // Normal storage
-    const memId = await this.createMemoryNode(text, tokens, embeddingVec, options, now)
-    return { action: 'stored', id: memId }
+      const memId = await this.debug.time(
+        'ingest.createMemoryNode',
+        () => this.createMemoryNode(text, tokens, embeddingVec, options, now),
+        { mode: 'stored' },
+      )
+      return { action: 'stored', id: memId }
+    }, {
+      chars: text.length,
+      domains: options?.domains?.length ?? 0,
+      skipDedup: options?.skipDedup === true,
+    })
   }
 
   private async createMemoryNode(
@@ -642,7 +674,7 @@ class MemoryEngine {
 
   createDomainContext(domainId: string, requestContext?: RequestContext): DomainContext {
     const graph = this.graph
-    const llm = this.llm
+    const baseLlm = this.llm
     const embedding = this.embedding
     const events = this.events
     const visibleDomains = this.resolveVisibleDomains(domainId)
@@ -651,6 +683,8 @@ class MemoryEngine {
     const mergedContext = this.mergeContext(requestContext)
     const schema = this.schema
     const domainRegistry = this.domainRegistry
+    const debug = createDebugTools(`domain:${domainId}`, this.debugConfig)
+    const llm = wrapLLMAdapter(baseLlm, debug, 'llm')
 
     async function isMemoryVisible(memoryId: string): Promise<boolean> {
       const owners = await graph.query<{ out: unknown }[]>(
@@ -669,8 +703,10 @@ class MemoryEngine {
       graph,
       llm,
       llmAt(level: ModelLevel): LLMAdapter {
-        return llm.withLevel?.(level) ?? llm
+        const leveled = baseLlm.withLevel?.(level) ?? baseLlm
+        return wrapLLMAdapter(leveled, debug, `llm:${level}`)
       },
+      debug,
       requestContext: mergedContext,
 
       getVisibleDomains(): string[] {
