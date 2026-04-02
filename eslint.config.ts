@@ -1,43 +1,43 @@
-import eslint from '@eslint/js'
-import eslintConfigPrettier from 'eslint-config-prettier'
-import tseslint from 'typescript-eslint'
+import eslint from "@eslint/js";
+import eslintConfigPrettier from "eslint-config-prettier";
+import tseslint from "typescript-eslint";
 
 export default tseslint.config(
-  {
-    ignores: ['node_modules/', 'dist/', '*.js'],
-  },
-
-  eslint.configs.recommended,
-
-  ...tseslint.configs.recommendedTypeChecked,
-
-  {
-    languageOptions: {
-      parserOptions: {
-        projectService: true,
-        tsconfigRootDir: import.meta.dirname,
-      },
+    {
+        ignores: ["node_modules/", "dist/", "*.js"],
     },
-  },
 
-  {
-    rules: {
-      '@typescript-eslint/no-unused-vars': [
-        'error',
-        {
-          argsIgnorePattern: '^_',
-          varsIgnorePattern: '^_',
+    eslint.configs.recommended,
+
+    ...tseslint.configs.recommendedTypeChecked,
+
+    {
+        languageOptions: {
+            parserOptions: {
+                projectService: true,
+                tsconfigRootDir: import.meta.dirname,
+            },
         },
-      ],
     },
-  },
 
-  {
-    files: ['tests/**/*.ts'],
-    rules: {
-      '@typescript-eslint/no-floating-promises': 'off',
+    {
+        rules: {
+            "@typescript-eslint/no-unused-vars": [
+                "error",
+                {
+                    argsIgnorePattern: "^_",
+                    varsIgnorePattern: "^_",
+                },
+            ],
+        },
     },
-  },
 
-  eslintConfigPrettier,
-)
+    {
+        files: ["tests/**/*.ts"],
+        rules: {
+            "@typescript-eslint/no-floating-promises": "off",
+        },
+    },
+
+    eslintConfigPrettier,
+);

@@ -1,1057 +1,1120 @@
-import { Surreal, StringRecordId } from 'surrealdb'
-import { createNodeEngines } from '@surrealdb/node'
-import { GraphStore } from './graph-store.ts'
-import { SchemaRegistry } from './schema-registry.ts'
-import { SearchEngine } from './search-engine.ts'
-import { InboxProcessor } from './inbox-processor.ts'
-import type { InboxProcessorOptions } from './inbox-processor.ts'
-import { DomainRegistry } from './domain-registry.ts'
-import { Scheduler, MetaScheduleStateStore } from './scheduler.ts'
-import { EventEmitter } from './events.ts'
-import { createDebugTools, wrapLLMAdapter } from './debug.ts'
-import { countTokens, applyTokenBudget } from './scoring.ts'
+import { Surreal, StringRecordId } from "surrealdb";
+import { createNodeEngines } from "@surrealdb/node";
+import { GraphStore } from "./graph-store.ts";
+import { SchemaRegistry } from "./schema-registry.ts";
+import { SearchEngine } from "./search-engine.ts";
+import { InboxProcessor } from "./inbox-processor.ts";
+import type { InboxProcessorOptions } from "./inbox-processor.ts";
+import { DomainRegistry } from "./domain-registry.ts";
+import { Scheduler, MetaScheduleStateStore } from "./scheduler.ts";
+import { EventEmitter } from "./events.ts";
+import { createDebugTools, wrapLLMAdapter } from "./debug.ts";
+import { countTokens, applyTokenBudget } from "./scoring.ts";
 import type {
-  EngineConfig,
-  DomainConfig,
-  DomainContext,
-  IngestOptions,
-  IngestResult,
-  SearchQuery,
-  SearchResult,
-  MemoryEntry,
-  LLMAdapter,
-  EmbeddingAdapter,
-  ContextOptions,
-  ContextResult,
-  AskOptions,
-  AskResult,
-  ScoredMemory,
-  MemoryFilter,
-  RepetitionConfig,
-  WriteMemoryEntry,
-  RequestContext,
-  Edge,
-  WriteOptions,
-  WriteResult,
-  UpdateOptions,
-  ScheduleInfo,
-  TraversalNode,
-  ModelLevel,
-  DomainRegistrationOptions,
-  DebugConfig,
-  DebugTools,
-} from './types.ts'
+    EngineConfig,
+    DomainConfig,
+    DomainContext,
+    IngestOptions,
+    IngestResult,
+    SearchQuery,
+    SearchResult,
+    MemoryEntry,
+    LLMAdapter,
+    EmbeddingAdapter,
+    ContextOptions,
+    ContextResult,
+    AskOptions,
+    AskResult,
+    ScoredMemory,
+    MemoryFilter,
+    RepetitionConfig,
+    WriteMemoryEntry,
+    RequestContext,
+    Edge,
+    WriteOptions,
+    WriteResult,
+    UpdateOptions,
+    ScheduleInfo,
+    TraversalNode,
+    ModelLevel,
+    DomainRegistrationOptions,
+    DebugConfig,
+    DebugTools,
+} from "./types.ts";
 
 class MemoryEngine {
-  private db: Surreal | null = null
-  private graph!: GraphStore
-  private schema!: SchemaRegistry
-  private searchEngine!: SearchEngine
-  private inboxProcessor!: InboxProcessor
-  private domainRegistry = new DomainRegistry()
-  private scheduler!: Scheduler
-  private events = new EventEmitter()
-  private llm!: LLMAdapter
-  private embedding?: EmbeddingAdapter
-  private repetitionConfig?: RepetitionConfig
-  private defaultContext: RequestContext = {}
-  private debugConfig: DebugConfig = {}
-  private debug!: DebugTools
+    private db: Surreal | null = null;
+    private graph!: GraphStore;
+    private schema!: SchemaRegistry;
+    private searchEngine!: SearchEngine;
+    private inboxProcessor!: InboxProcessor;
+    private domainRegistry = new DomainRegistry();
+    private scheduler!: Scheduler;
+    private events = new EventEmitter();
+    private llm!: LLMAdapter;
+    private embedding?: EmbeddingAdapter;
+    private repetitionConfig?: RepetitionConfig;
+    private defaultContext: RequestContext = {};
+    private debugConfig: DebugConfig = {};
+    private debug!: DebugTools;
 
-  async initialize(config: EngineConfig): Promise<void> {
-    const db = new Surreal({ engines: createNodeEngines() })
-    await db.connect(config.connection)
-    await db.use({
-      namespace: config.namespace ?? 'default',
-      database: config.database ?? 'memory',
-    })
+    async initialize(config: EngineConfig): Promise<void> {
+        const db = new Surreal({ engines: createNodeEngines() });
+        await db.connect(config.connection);
+        await db.use({
+            namespace: config.namespace ?? "default",
+            database: config.database ?? "memory",
+        });
 
-    this.db = db
-    this.llm = config.llm
-    this.embedding = config.embedding
-    this.repetitionConfig = config.repetition
-    this.debugConfig = {
-      timing: config.debug?.timing ?? process.env.MEMORY_DOMAIN_DEBUG_TIMING === '1',
-    }
-    this.debug = createDebugTools('engine', this.debugConfig)
+        this.db = db;
+        this.llm = config.llm;
+        this.embedding = config.embedding;
+        this.repetitionConfig = config.repetition;
+        this.debugConfig = {
+            timing: config.debug?.timing ?? process.env.MEMORY_DOMAIN_DEBUG_TIMING === "1",
+        };
+        this.debug = createDebugTools("engine", this.debugConfig);
 
-    // Set up schema
-    this.schema = new SchemaRegistry(db)
-    await this.schema.registerCore(config.embedding?.dimension)
+        // Set up schema
+        this.schema = new SchemaRegistry(db);
+        await this.schema.registerCore(config.embedding?.dimension);
 
-    // Create inbox tag
-    this.graph = new GraphStore(db)
-    try {
-      await this.graph.createNodeWithId('tag:inbox', {
-        label: 'inbox',
-        created_at: Date.now(),
-      })
-    } catch {
-      // Already exists — that's fine
-    }
-
-    // Initialize subsystems
-    this.searchEngine = new SearchEngine(this.graph, config.search, config.embedding)
-    const stateStore = new MetaScheduleStateStore(this.graph)
-    this.scheduler = new Scheduler(
-      (domainId: string) => this.createDomainContext(domainId),
-      this.events,
-      stateStore
-    )
-    this.inboxProcessor = new InboxProcessor(
-      this.graph,
-      this.domainRegistry,
-      this.events,
-      (domainId: string, requestContext?: RequestContext) => this.createDomainContext(domainId, requestContext),
-      this.debugConfig,
-    )
-
-    this.defaultContext = config.context ?? {}
-  }
-
-  async registerDomain(domain: DomainConfig, options?: DomainRegistrationOptions): Promise<void> {
-    // Register schema if provided
-    if (domain.schema) {
-      await this.schema.registerDomain(domain.id, domain.schema)
-    }
-
-    // Create domain node in SurrealDB
-    const domainData: Record<string, unknown> = { name: domain.name }
-    if (domain.settings) {
-      domainData.settings = domain.settings
-    }
-    try {
-      await this.graph.createNodeWithId(`domain:${domain.id}`, domainData)
-    } catch {
-      // Already exists — update settings if provided
-      if (domain.settings) {
-        await this.graph.updateNode(`domain:${domain.id}`, { settings: domain.settings })
-      }
-    }
-
-    // Register in DomainRegistry
-    this.domainRegistry.register(domain, options)
-
-    // Register schedules
-    if (domain.schedules) {
-      for (const schedule of domain.schedules) {
-        this.scheduler.registerSchedule(domain.id, schedule)
-      }
-    }
-  }
-
-  private assertWriteAccess(domainId: string): void {
-    if (this.domainRegistry.has(domainId) && this.domainRegistry.getAccess(domainId) === 'read') {
-      throw new Error(`Domain "${domainId}" is registered as read-only`)
-    }
-  }
-
-  async writeMemory(text: string, options: WriteOptions): Promise<WriteResult> {
-    this.assertWriteAccess(options.domain)
-    const ctx = this.createDomainContext(options.domain, options.context)
-    const id = await ctx.writeMemory({
-      content: text,
-      tags: options.tags,
-      ownership: {
-        domain: options.domain,
-        attributes: options.attributes,
-      },
-    })
-    // Remove inbox tag — writeMemory is direct, not inbox-processed
-    await this.graph.unrelate(id, 'tagged', 'tag:inbox')
-    return { id }
-  }
-
-  async getMemory(id: string): Promise<MemoryEntry | null> {
-    const node = await this.graph.getNode(id)
-    if (!node) return null
-    return {
-      id: node.id,
-      content: node.content as string,
-      eventTime: (node.event_time as number | null) ?? null,
-      createdAt: node.created_at as number,
-      tokenCount: node.token_count as number,
-    }
-  }
-
-  async updateMemory(id: string, options: UpdateOptions): Promise<void> {
-    const node = await this.graph.getNode(id)
-    if (!node) throw new Error(`Memory not found: ${id}`)
-
-    if (options.text !== undefined) {
-      const tokens = countTokens(options.text)
-      const updates: Record<string, unknown> = {
-        content: options.text,
-        token_count: tokens,
-      }
-      if (this.embedding) {
-        updates.embedding = await this.embedding.embed(options.text)
-      }
-      await this.graph.updateNode(id, updates)
-    }
-
-    if (options.attributes !== undefined) {
-      // Merge attributes into owned_by edge for all owners
-      const owners = await this.graph.query<{ out: unknown; attributes: unknown }[]>(
-        'SELECT out, attributes FROM owned_by WHERE in = $memId',
-        { memId: new StringRecordId(id) }
-      )
-      if (owners) {
-        for (const owner of owners) {
-          const existing = (owner.attributes as Record<string, unknown>) ?? {}
-          const merged = { ...existing, ...options.attributes }
-          const fullDomainId = String(owner.out)
-          await this.graph.query(
-            'UPDATE owned_by SET attributes = $attrs WHERE in = $memId AND out = $domainId',
-            {
-              memId: new StringRecordId(id),
-              domainId: new StringRecordId(fullDomainId),
-              attrs: merged,
-            }
-          )
+        // Create inbox tag
+        this.graph = new GraphStore(db);
+        try {
+            await this.graph.createNodeWithId("tag:inbox", {
+                label: "inbox",
+                created_at: Date.now(),
+            });
+        } catch {
+            // Already exists — that's fine
         }
-      }
-    }
-  }
 
-  async deleteMemory(id: string): Promise<void> {
-    const node = await this.graph.getNode(id)
-    if (!node) throw new Error(`Memory not found: ${id}`)
+        // Initialize subsystems
+        this.searchEngine = new SearchEngine(this.graph, config.search, config.embedding);
+        const stateStore = new MetaScheduleStateStore(this.graph);
+        this.scheduler = new Scheduler(
+            (domainId: string) => this.createDomainContext(domainId),
+            this.events,
+            stateStore,
+        );
+        this.inboxProcessor = new InboxProcessor(
+            this.graph,
+            this.domainRegistry,
+            this.events,
+            (domainId: string, requestContext?: RequestContext) =>
+                this.createDomainContext(domainId, requestContext),
+            this.debugConfig,
+        );
 
-    // Get all owners and release ownership (cascades to delete when no owners remain)
-    const owners = await this.graph.query<{ out: unknown }[]>(
-      'SELECT out FROM owned_by WHERE in = $memId',
-      { memId: new StringRecordId(id) }
-    )
-    if (owners && owners.length > 0) {
-      for (const owner of owners) {
-        const domainId = String(owner.out).replace(/^domain:/, '')
-        await this.releaseOwnership(id, domainId)
-      }
-    } else {
-      // No owners — delete directly
-      await this.graph.deleteNode(id)
-    }
-  }
-
-  async tagMemory(id: string, tag: string): Promise<void> {
-    const now = Date.now()
-    const tagId = tag.startsWith('tag:') ? tag : `tag:${tag}`
-    const label = tag.startsWith('tag:') ? tag.slice(4) : tag
-    try {
-      await this.graph.createNodeWithId(tagId, { label, created_at: now })
-    } catch {
-      // Already exists
-    }
-    await this.graph.relate(id, 'tagged', tagId)
-  }
-
-  async untagMemory(id: string, tag: string): Promise<void> {
-    const tagId = tag.startsWith('tag:') ? tag : `tag:${tag}`
-    await this.graph.unrelate(id, 'tagged', tagId)
-  }
-
-  async getMemoryTags(id: string): Promise<string[]> {
-    const rows = await this.graph.query<string[]>(
-      'SELECT VALUE out.label FROM tagged WHERE in = $memId',
-      { memId: new StringRecordId(id) }
-    )
-    return (rows ?? []).filter((label): label is string => typeof label === 'string')
-  }
-
-  async getEdges(nodeId: string, direction?: 'in' | 'out' | 'both', domainId?: string): Promise<Edge[]> {
-    if (domainId) {
-      return this.createDomainContext(domainId).getNodeEdges(nodeId, direction)
+        this.defaultContext = config.context ?? {};
     }
 
-    const dir = direction ?? 'both'
-    const conditions: string[] = []
-    if (dir === 'out' || dir === 'both') conditions.push('in = $nodeId')
-    if (dir === 'in' || dir === 'both') conditions.push('out = $nodeId')
-    const where = conditions.join(' OR ')
-
-    const coreEdges = ['tagged', 'owned_by', 'reinforces', 'contradicts', 'summarizes', 'refines', 'child_of', 'has_rule']
-    const registeredEdges = this.schema.getRegisteredEdgeNames()
-    const allEdges = [...new Set([...coreEdges, ...registeredEdges])]
-
-    const results: Edge[] = []
-    const nodeRef = new StringRecordId(nodeId)
-    for (const edgeName of allEdges) {
-      const rows = await this.graph.query<Edge[]>(
-        `SELECT * FROM ${edgeName} WHERE ${where}`,
-        { nodeId: nodeRef }
-      )
-      if (rows) results.push(...rows)
-    }
-    return results
-  }
-
-  // domainId is required by the CLI contract for audit/authorization context.
-  // Access is enforced — read-only domains may not create edges.
-  async relate(from: string, to: string, edgeType: string, domainId: string, attrs?: Record<string, unknown>): Promise<string> {
-    this.assertWriteAccess(domainId)
-    return this.graph.relate(from, edgeType, to, attrs)
-  }
-
-  async unrelate(from: string, to: string, edgeType: string): Promise<void> {
-    await this.graph.unrelate(from, edgeType, to)
-  }
-
-  async traverse(startId: string, edgeTypes: string[], depth?: number, domainId?: string): Promise<TraversalNode[]> {
-    const maxDepth = depth ?? 1
-    const visited = new Set<string>()
-    visited.add(startId)
-
-    const results: TraversalNode[] = []
-    let frontier: string[] = [startId]
-
-    for (let d = 1; d <= maxDepth && frontier.length > 0; d++) {
-      const nextFrontier: string[] = []
-
-      for (const nodeId of frontier) {
-        const nodeRef = new StringRecordId(nodeId)
-
-        for (const edgeType of edgeTypes) {
-          const querySource = domainId ? this.createDomainContext(domainId).graph : this.graph
-          const rows = await querySource.query<{ out: unknown }[]>(
-            `SELECT out FROM ${edgeType} WHERE in = $nodeId`,
-            { nodeId: nodeRef }
-          )
-
-          if (!rows) continue
-          for (const row of rows) {
-            const outId = String(row.out)
-            if (!visited.has(outId)) {
-              visited.add(outId)
-              nextFrontier.push(outId)
-              results.push({ id: outId, depth: d, edge: edgeType, direction: 'out' })
-            }
-          }
+    async registerDomain(domain: DomainConfig, options?: DomainRegistrationOptions): Promise<void> {
+        // Register schema if provided
+        if (domain.schema) {
+            await this.schema.registerDomain(domain.id, domain.schema);
         }
-      }
 
-      frontier = nextFrontier
+        // Create domain node in SurrealDB
+        const domainData: Record<string, unknown> = { name: domain.name };
+        if (domain.settings) {
+            domainData.settings = domain.settings;
+        }
+        try {
+            await this.graph.createNodeWithId(`domain:${domain.id}`, domainData);
+        } catch {
+            // Already exists — update settings if provided
+            if (domain.settings) {
+                await this.graph.updateNode(`domain:${domain.id}`, { settings: domain.settings });
+            }
+        }
+
+        // Register in DomainRegistry
+        this.domainRegistry.register(domain, options);
+
+        // Register schedules
+        if (domain.schedules) {
+            for (const schedule of domain.schedules) {
+                this.scheduler.registerSchedule(domain.id, schedule);
+            }
+        }
     }
 
-    return results
-  }
-
-  listSchedules(domainId?: string): ScheduleInfo[] {
-    return this.scheduler.listSchedules(domainId)
-  }
-
-  async triggerSchedule(domainId: string, scheduleId: string): Promise<void> {
-    const schedules = this.scheduler.listSchedules(domainId)
-    const found = schedules.find(s => s.id === scheduleId)
-    if (!found) {
-      throw new Error(`Schedule not found: ${scheduleId} in domain ${domainId}`)
+    private assertWriteAccess(domainId: string): void {
+        if (
+            this.domainRegistry.has(domainId) &&
+            this.domainRegistry.getAccess(domainId) === "read"
+        ) {
+            throw new Error(`Domain "${domainId}" is registered as read-only`);
+        }
     }
-    await this.scheduler.runNow(domainId, scheduleId)
-  }
 
-  async runDueSchedules(): Promise<{ ran: string[] }> {
-    return this.scheduler.tickPersisted()
-  }
+    async writeMemory(text: string, options: WriteOptions): Promise<WriteResult> {
+        this.assertWriteAccess(options.domain);
+        const ctx = this.createDomainContext(options.domain, options.context);
+        const id = await ctx.writeMemory({
+            content: text,
+            tags: options.tags,
+            ownership: {
+                domain: options.domain,
+                attributes: options.attributes,
+            },
+        });
+        // Remove inbox tag — writeMemory is direct, not inbox-processed
+        await this.graph.unrelate(id, "tagged", "tag:inbox");
+        return { id };
+    }
 
-  async ingest(text: string, options?: IngestOptions): Promise<IngestResult> {
-    return this.debug.time('ingest.total', async () => {
-      const now = Date.now()
-      const tokens = countTokens(text)
+    async getMemory(id: string): Promise<MemoryEntry | null> {
+        const node = await this.graph.getNode(id);
+        if (!node) return null;
+        return {
+            id: node.id,
+            content: node.content as string,
+            eventTime: (node.event_time as number | null) ?? null,
+            createdAt: node.created_at as number,
+            tokenCount: node.token_count as number,
+        };
+    }
 
-      // Generate embedding early (needed for dedup and storage)
-      let embeddingVec: number[] | undefined
-      if (this.embedding) {
-        embeddingVec = await this.debug.time(
-          'ingest.embed',
-          () => this.embedding!.embed(text),
-          { chars: text.length },
-        )
-      }
+    async updateMemory(id: string, options: UpdateOptions): Promise<void> {
+        const node = await this.graph.getNode(id);
+        if (!node) throw new Error(`Memory not found: ${id}`);
 
-      // Dedup check
-      if (!options?.skipDedup && embeddingVec && this.repetitionConfig) {
-        const similar = await this.debug.time(
-          'ingest.dedupQuery',
-          () => this.graph.query<(Record<string, unknown> & { score: number })[]>(
-            `SELECT *, vector::similarity::cosine(embedding, $queryVec) AS score
+        if (options.text !== undefined) {
+            const tokens = countTokens(options.text);
+            const updates: Record<string, unknown> = {
+                content: options.text,
+                token_count: tokens,
+            };
+            if (this.embedding) {
+                updates.embedding = await this.embedding.embed(options.text);
+            }
+            await this.graph.updateNode(id, updates);
+        }
+
+        if (options.attributes !== undefined) {
+            // Merge attributes into owned_by edge for all owners
+            const owners = await this.graph.query<{ out: unknown; attributes: unknown }[]>(
+                "SELECT out, attributes FROM owned_by WHERE in = $memId",
+                { memId: new StringRecordId(id) },
+            );
+            if (owners) {
+                for (const owner of owners) {
+                    const existing = (owner.attributes as Record<string, unknown>) ?? {};
+                    const merged = { ...existing, ...options.attributes };
+                    const fullDomainId = String(owner.out);
+                    await this.graph.query(
+                        "UPDATE owned_by SET attributes = $attrs WHERE in = $memId AND out = $domainId",
+                        {
+                            memId: new StringRecordId(id),
+                            domainId: new StringRecordId(fullDomainId),
+                            attrs: merged,
+                        },
+                    );
+                }
+            }
+        }
+    }
+
+    async deleteMemory(id: string): Promise<void> {
+        const node = await this.graph.getNode(id);
+        if (!node) throw new Error(`Memory not found: ${id}`);
+
+        // Get all owners and release ownership (cascades to delete when no owners remain)
+        const owners = await this.graph.query<{ out: unknown }[]>(
+            "SELECT out FROM owned_by WHERE in = $memId",
+            { memId: new StringRecordId(id) },
+        );
+        if (owners && owners.length > 0) {
+            for (const owner of owners) {
+                const domainId = String(owner.out).replace(/^domain:/, "");
+                await this.releaseOwnership(id, domainId);
+            }
+        } else {
+            // No owners — delete directly
+            await this.graph.deleteNode(id);
+        }
+    }
+
+    async tagMemory(id: string, tag: string): Promise<void> {
+        const now = Date.now();
+        const tagId = tag.startsWith("tag:") ? tag : `tag:${tag}`;
+        const label = tag.startsWith("tag:") ? tag.slice(4) : tag;
+        try {
+            await this.graph.createNodeWithId(tagId, { label, created_at: now });
+        } catch {
+            // Already exists
+        }
+        await this.graph.relate(id, "tagged", tagId);
+    }
+
+    async untagMemory(id: string, tag: string): Promise<void> {
+        const tagId = tag.startsWith("tag:") ? tag : `tag:${tag}`;
+        await this.graph.unrelate(id, "tagged", tagId);
+    }
+
+    async getMemoryTags(id: string): Promise<string[]> {
+        const rows = await this.graph.query<string[]>(
+            "SELECT VALUE out.label FROM tagged WHERE in = $memId",
+            { memId: new StringRecordId(id) },
+        );
+        return (rows ?? []).filter((label): label is string => typeof label === "string");
+    }
+
+    async getEdges(
+        nodeId: string,
+        direction?: "in" | "out" | "both",
+        domainId?: string,
+    ): Promise<Edge[]> {
+        if (domainId) {
+            return this.createDomainContext(domainId).getNodeEdges(nodeId, direction);
+        }
+
+        const dir = direction ?? "both";
+        const conditions: string[] = [];
+        if (dir === "out" || dir === "both") conditions.push("in = $nodeId");
+        if (dir === "in" || dir === "both") conditions.push("out = $nodeId");
+        const where = conditions.join(" OR ");
+
+        const coreEdges = [
+            "tagged",
+            "owned_by",
+            "reinforces",
+            "contradicts",
+            "summarizes",
+            "refines",
+            "child_of",
+            "has_rule",
+        ];
+        const registeredEdges = this.schema.getRegisteredEdgeNames();
+        const allEdges = [...new Set([...coreEdges, ...registeredEdges])];
+
+        const results: Edge[] = [];
+        const nodeRef = new StringRecordId(nodeId);
+        for (const edgeName of allEdges) {
+            const rows = await this.graph.query<Edge[]>(
+                `SELECT * FROM ${edgeName} WHERE ${where}`,
+                { nodeId: nodeRef },
+            );
+            if (rows) results.push(...rows);
+        }
+        return results;
+    }
+
+    // domainId is required by the CLI contract for audit/authorization context.
+    // Access is enforced — read-only domains may not create edges.
+    async relate(
+        from: string,
+        to: string,
+        edgeType: string,
+        domainId: string,
+        attrs?: Record<string, unknown>,
+    ): Promise<string> {
+        this.assertWriteAccess(domainId);
+        return this.graph.relate(from, edgeType, to, attrs);
+    }
+
+    async unrelate(from: string, to: string, edgeType: string): Promise<void> {
+        await this.graph.unrelate(from, edgeType, to);
+    }
+
+    async traverse(
+        startId: string,
+        edgeTypes: string[],
+        depth?: number,
+        domainId?: string,
+    ): Promise<TraversalNode[]> {
+        const maxDepth = depth ?? 1;
+        const visited = new Set<string>();
+        visited.add(startId);
+
+        const results: TraversalNode[] = [];
+        let frontier: string[] = [startId];
+
+        for (let d = 1; d <= maxDepth && frontier.length > 0; d++) {
+            const nextFrontier: string[] = [];
+
+            for (const nodeId of frontier) {
+                const nodeRef = new StringRecordId(nodeId);
+
+                for (const edgeType of edgeTypes) {
+                    const querySource = domainId
+                        ? this.createDomainContext(domainId).graph
+                        : this.graph;
+                    const rows = await querySource.query<{ out: unknown }[]>(
+                        `SELECT out FROM ${edgeType} WHERE in = $nodeId`,
+                        { nodeId: nodeRef },
+                    );
+
+                    if (!rows) continue;
+                    for (const row of rows) {
+                        const outId = String(row.out);
+                        if (!visited.has(outId)) {
+                            visited.add(outId);
+                            nextFrontier.push(outId);
+                            results.push({ id: outId, depth: d, edge: edgeType, direction: "out" });
+                        }
+                    }
+                }
+            }
+
+            frontier = nextFrontier;
+        }
+
+        return results;
+    }
+
+    listSchedules(domainId?: string): ScheduleInfo[] {
+        return this.scheduler.listSchedules(domainId);
+    }
+
+    async triggerSchedule(domainId: string, scheduleId: string): Promise<void> {
+        const schedules = this.scheduler.listSchedules(domainId);
+        const found = schedules.find((s) => s.id === scheduleId);
+        if (!found) {
+            throw new Error(`Schedule not found: ${scheduleId} in domain ${domainId}`);
+        }
+        await this.scheduler.runNow(domainId, scheduleId);
+    }
+
+    async runDueSchedules(): Promise<{ ran: string[] }> {
+        return this.scheduler.tickPersisted();
+    }
+
+    async ingest(text: string, options?: IngestOptions): Promise<IngestResult> {
+        return this.debug.time(
+            "ingest.total",
+            async () => {
+                const now = Date.now();
+                const tokens = countTokens(text);
+
+                // Generate embedding early (needed for dedup and storage)
+                let embeddingVec: number[] | undefined;
+                if (this.embedding) {
+                    embeddingVec = await this.debug.time(
+                        "ingest.embed",
+                        () => this.embedding!.embed(text),
+                        { chars: text.length },
+                    );
+                }
+
+                // Dedup check
+                if (!options?.skipDedup && embeddingVec && this.repetitionConfig) {
+                    const similar = await this.debug.time(
+                        "ingest.dedupQuery",
+                        () =>
+                            this.graph.query<(Record<string, unknown> & { score: number })[]>(
+                                `SELECT *, vector::similarity::cosine(embedding, $queryVec) AS score
              FROM memory
              WHERE embedding IS NOT NONE
              ORDER BY score DESC
              LIMIT 5`,
-            { queryVec: embeddingVec }
-          ),
-          { chars: text.length },
-        )
+                                { queryVec: embeddingVec },
+                            ),
+                        { chars: text.length },
+                    );
 
-        if (similar && similar.length > 0) {
-          const top = similar[0]
-          const existingId = String(top.id)
+                    if (similar && similar.length > 0) {
+                        const top = similar[0];
+                        const existingId = String(top.id);
 
-          if (top.score >= this.repetitionConfig.duplicateThreshold) {
-            this.debug.log('ingest.skippedDuplicate', { existingId })
-            return { action: 'skipped', existingId }
-          }
+                        if (top.score >= this.repetitionConfig.duplicateThreshold) {
+                            this.debug.log("ingest.skippedDuplicate", { existingId });
+                            return { action: "skipped", existingId };
+                        }
 
-          if (top.score >= this.repetitionConfig.reinforceThreshold) {
-            const memId = await this.debug.time(
-              'ingest.createMemoryNode',
-              () => this.createMemoryNode(text, tokens, embeddingVec, options, now),
-              { mode: 'reinforced' },
-            )
-            await this.graph.relate(memId, 'reinforces', existingId, {
-              strength: top.score,
-              detected_at: now,
-            })
-            this.events.emit('reinforced', { id: memId, existingId, similarity: top.score })
-            return { action: 'reinforced', id: memId, existingId }
-          }
-        }
-      }
+                        if (top.score >= this.repetitionConfig.reinforceThreshold) {
+                            const memId = await this.debug.time(
+                                "ingest.createMemoryNode",
+                                () =>
+                                    this.createMemoryNode(text, tokens, embeddingVec, options, now),
+                                { mode: "reinforced" },
+                            );
+                            await this.graph.relate(memId, "reinforces", existingId, {
+                                strength: top.score,
+                                detected_at: now,
+                            });
+                            this.events.emit("reinforced", {
+                                id: memId,
+                                existingId,
+                                similarity: top.score,
+                            });
+                            return { action: "reinforced", id: memId, existingId };
+                        }
+                    }
+                }
 
-      const memId = await this.debug.time(
-        'ingest.createMemoryNode',
-        () => this.createMemoryNode(text, tokens, embeddingVec, options, now),
-        { mode: 'stored' },
-      )
-      return { action: 'stored', id: memId }
-    }, {
-      chars: text.length,
-      domains: options?.domains?.length ?? 0,
-      skipDedup: options?.skipDedup === true,
-    })
-  }
-
-  private async createMemoryNode(
-    text: string,
-    tokens: number,
-    embeddingVec: number[] | undefined,
-    options: IngestOptions | undefined,
-    now: number
-  ): Promise<string> {
-    const memData: Record<string, unknown> = {
-      content: text,
-      created_at: now,
-      token_count: tokens,
-    }
-    if (options?.eventTime !== undefined) {
-      memData.event_time = options.eventTime
-    }
-    const requestContext = this.mergeContext(options?.context)
-    if (Object.keys(requestContext).length > 0) {
-      memData.request_context = requestContext
-    }
-    if (embeddingVec) {
-      memData.embedding = embeddingVec
-    }
-    const memId = await this.graph.createNode('memory', memData)
-
-    // Tag with inbox
-    await this.graph.relate(memId, 'tagged', 'tag:inbox')
-
-    // Add extra tags
-    if (options?.tags) {
-      for (const tag of options.tags) {
-        const tagId = tag.startsWith('tag:') ? tag : `tag:${tag}`
-        try {
-          await this.graph.createNodeWithId(tagId, {
-            label: tag.startsWith('tag:') ? tag.slice(4) : tag,
-            created_at: now,
-          })
-        } catch {
-          // Already exists
-        }
-        await this.graph.relate(memId, 'tagged', tagId)
-      }
+                const memId = await this.debug.time(
+                    "ingest.createMemoryNode",
+                    () => this.createMemoryNode(text, tokens, embeddingVec, options, now),
+                    { mode: "stored" },
+                );
+                return { action: "stored", id: memId };
+            },
+            {
+                chars: text.length,
+                domains: options?.domains?.length ?? 0,
+                skipDedup: options?.skipDedup === true,
+            },
+        );
     }
 
-    // Path A: Explicit domains specified — direct ownership + inbox processing tags
-    if (options?.domains && options.domains.length > 0) {
-      const targetDomainIds = options.domains.filter(id => {
-        if (!this.domainRegistry.has(id)) return true
-        return this.domainRegistry.getAccess(id) === 'write'
-      })
-
-      // Add autoOwn domains not already in the list
-      for (const domain of this.domainRegistry.list()) {
-        if (
-          domain.settings?.autoOwn &&
-          !targetDomainIds.includes(domain.id) &&
-          this.domainRegistry.getAccess(domain.id) === 'write'
-        ) {
-          targetDomainIds.push(domain.id)
-        }
-      }
-
-      if (targetDomainIds.length === 0) {
-        throw new Error('Cannot ingest: all target domains are read-only')
-      }
-
-      for (const domainId of targetDomainIds) {
-        const fullDomainId = domainId.startsWith('domain:') ? domainId : `domain:${domainId}`
-        await this.graph.relate(memId, 'owned_by', fullDomainId, {
-          attributes: options?.metadata ?? {},
-          owned_at: now,
-        })
-        // Add inbox processing tag for this domain
-        const inboxTagId = await this.ensureInboxTag(`inbox:${domainId}`, now)
-        await this.graph.relate(memId, 'tagged', inboxTagId)
-      }
-    }
-    // Path B: No explicit domains — assertion-based ownership
-    else {
-      let hasAnyTarget = false
-
-      // autoOwn domains get direct ownership + inbox processing tags
-      for (const domain of this.domainRegistry.list()) {
-        if (
-          domain.settings?.autoOwn &&
-          this.domainRegistry.getAccess(domain.id) === 'write'
-        ) {
-          const fullDomainId = `domain:${domain.id}`
-          await this.graph.relate(memId, 'owned_by', fullDomainId, {
-            attributes: options?.metadata ?? {},
-            owned_at: now,
-          })
-          const inboxTagId = await this.ensureInboxTag(`inbox:${domain.id}`, now)
-          await this.graph.relate(memId, 'tagged', inboxTagId)
-          hasAnyTarget = true
-        }
-      }
-
-      // Domains with assertInboxClaimBatch get assertion tags
-      for (const domain of this.domainRegistry.list()) {
-        if (
-          domain.assertInboxClaimBatch &&
-          !domain.settings?.autoOwn &&
-          this.domainRegistry.getAccess(domain.id) === 'write'
-        ) {
-          const assertTagId = await this.ensureInboxTag(`inbox:assert-claim:${domain.id}`, now)
-          await this.graph.relate(memId, 'tagged', assertTagId)
-          hasAnyTarget = true
-        }
-      }
-
-      if (!hasAnyTarget) {
-        throw new Error('Cannot ingest: no domains available (no explicit domain, no autoOwn, no assertInboxClaimBatch)')
-      }
-    }
-
-    // Emit event
-    this.events.emit('ingested', { id: memId, content: text, tokenCount: tokens })
-
-    return memId
-  }
-
-  private async ensureInboxTag(label: string, now: number): Promise<string> {
-    const tagId = `tag:\`${label}\``
-    try {
-      await this.graph.createNodeWithId(tagId, { label, created_at: now })
-    } catch {
-      // Already exists
-    }
-    return tagId
-  }
-
-  async search(query: SearchQuery): Promise<SearchResult> {
-    // Let domains expand/rank the query
-    let expandedQuery = query
-    const targetDomains = query.domains ?? this.domainRegistry.getAllDomainIds()
-
-    for (const domainId of targetDomains) {
-      const domain = this.domainRegistry.get(domainId)
-      if (domain?.search?.expand) {
-        const ctx = this.createDomainContext(domainId, query.context)
-        expandedQuery = await domain.search.expand(expandedQuery, ctx)
-      }
-    }
-
-    let result = await this.searchEngine.search(expandedQuery)
-
-    // Let domains rank results
-    for (const domainId of targetDomains) {
-      const domain = this.domainRegistry.get(domainId)
-      if (domain?.search?.rank) {
-        result = {
-          ...result,
-          entries: domain.search.rank(expandedQuery, result.entries),
-        }
-      }
-    }
-
-    return result
-  }
-
-  async releaseOwnership(memoryId: string, domainId: string): Promise<void> {
-    this.assertWriteAccess(domainId)
-    const fullDomainId = domainId.startsWith('domain:') ? domainId : `domain:${domainId}`
-
-    // Remove owned_by edge
-    await this.graph.unrelate(memoryId, 'owned_by', fullDomainId)
-
-    this.events.emit('ownershipRemoved', { memoryId, domainId })
-
-    // Count remaining owners
-    const remaining = await this.graph.query<{ count: number }[]>(
-      'SELECT count() AS count FROM owned_by WHERE in = $memId GROUP ALL',
-      { memId: new StringRecordId(memoryId) }
-    )
-
-    const count = (remaining && remaining.length > 0) ? remaining[0].count : 0
-
-    // Delete memory if no owners remain
-    if (count === 0) {
-      // Remove all edges first
-      await this.graph.query(
-        'DELETE tagged WHERE in = $memId',
-        { memId: new StringRecordId(memoryId) }
-      )
-      await this.graph.query(
-        'DELETE reinforces WHERE in = $memId OR out = $memId',
-        { memId: new StringRecordId(memoryId) }
-      )
-      await this.graph.query(
-        'DELETE contradicts WHERE in = $memId OR out = $memId',
-        { memId: new StringRecordId(memoryId) }
-      )
-      await this.graph.query(
-        'DELETE summarizes WHERE in = $memId OR out = $memId',
-        { memId: new StringRecordId(memoryId) }
-      )
-      await this.graph.query(
-        'DELETE refines WHERE in = $memId OR out = $memId',
-        { memId: new StringRecordId(memoryId) }
-      )
-
-      // Clean domain-registered edges
-      const coreEdges = new Set([
-        'tagged', 'owned_by', 'reinforces', 'contradicts',
-        'summarizes', 'refines', 'child_of', 'has_rule',
-      ])
-      for (const edgeName of this.schema.getRegisteredEdgeNames()) {
-        if (!coreEdges.has(edgeName)) {
-          await this.graph.query(
-            `DELETE ${edgeName} WHERE in = $memId OR out = $memId`,
-            { memId: new StringRecordId(memoryId) }
-          )
-        }
-      }
-
-      await this.graph.deleteNode(memoryId)
-
-      this.events.emit('deleted', { memoryId })
-    }
-  }
-
-  private resolveVisibleDomains(domainId: string): string[] {
-    const domain = this.domainRegistry.get(domainId)
-    const allIds = this.domainRegistry.getAllDomainIds()
-    const ensureSelf = (ids: string[]) =>
-      ids.includes(domainId) ? ids : [domainId, ...ids]
-
-    if (!domain?.settings?.includeDomains && !domain?.settings?.excludeDomains) {
-      return ensureSelf(allIds)
-    }
-
-    if (domain.settings.includeDomains) {
-      const allowed = new Set(domain.settings.includeDomains)
-      allowed.add(domainId)
-      return allIds.filter(id => allowed.has(id))
-    }
-
-    if (domain.settings.excludeDomains) {
-      const blocked = new Set(domain.settings.excludeDomains)
-      blocked.delete(domainId)
-      return ensureSelf(allIds.filter(id => !blocked.has(id)))
-    }
-
-    return ensureSelf(allIds)
-  }
-
-  private mergeContext(requestContext?: RequestContext): RequestContext {
-    if (!requestContext) return { ...this.defaultContext }
-    return { ...this.defaultContext, ...requestContext }
-  }
-
-  createDomainContext(domainId: string, requestContext?: RequestContext): DomainContext {
-    const graph = this.graph
-    const baseLlm = this.llm
-    const embedding = this.embedding
-    const events = this.events
-    const visibleDomains = this.resolveVisibleDomains(domainId)
-    const releaseOwnership = this.releaseOwnership.bind(this)
-    const search = this.search.bind(this)
-    const mergedContext = this.mergeContext(requestContext)
-    const schema = this.schema
-    const domainRegistry = this.domainRegistry
-    const debug = createDebugTools(`domain:${domainId}`, this.debugConfig)
-    const llm = wrapLLMAdapter(baseLlm, debug, 'llm')
-
-    async function isMemoryVisible(memoryId: string): Promise<boolean> {
-      const owners = await graph.query<{ out: unknown }[]>(
-        'SELECT out FROM owned_by WHERE in = $memId',
-        { memId: new StringRecordId(memoryId) }
-      )
-      if (!owners || owners.length === 0) return false
-      return owners.some(o => {
-        const ownerDomainId = String(o.out).replace(/^domain:/, '')
-        return visibleDomains.includes(ownerDomainId)
-      })
-    }
-
-    return {
-      domain: domainId,
-      graph,
-      llm,
-      llmAt(level: ModelLevel): LLMAdapter {
-        const leveled = baseLlm.withLevel?.(level) ?? baseLlm
-        return wrapLLMAdapter(leveled, debug, `llm:${level}`)
-      },
-      debug,
-      requestContext: mergedContext,
-
-      getVisibleDomains(): string[] {
-        return [...visibleDomains]
-      },
-
-      async getMemory(id: string): Promise<MemoryEntry | null> {
-        const node = await graph.getNode(id)
-        if (!node) return null
-        if (!await isMemoryVisible(id)) return null
-        return {
-          id: node.id,
-          content: node.content as string,
-          eventTime: (node.event_time as number | null) ?? null,
-          createdAt: node.created_at as number,
-          tokenCount: node.token_count as number,
-        }
-      },
-
-      async getMemories(filter?: MemoryFilter): Promise<MemoryEntry[]> {
-        // Short-circuit: batch fetch by IDs
-        if (filter?.ids) {
-          const results: MemoryEntry[] = []
-          for (const id of filter.ids) {
-            const entry = await this.getMemory(id)
-            if (entry) results.push(entry)
-          }
-          return results
-        }
-
-        // Build composable query for owned memories
-        const requestedDomains = filter?.domains ?? visibleDomains
-        const targetDomains = requestedDomains.filter(d => visibleDomains.includes(d))
-        const domainRefs = targetDomains.map(d =>
-          new StringRecordId(d.startsWith('domain:') ? d : `domain:${d}`)
-        )
-
-        const conditions: string[] = ['out IN $domainRefs']
-        const vars: Record<string, unknown> = { domainRefs }
-
-        if (filter?.since != null) {
-          conditions.push('owned_at >= $since')
-          vars.since = filter.since
-        }
-
-        if (filter?.attributes) {
-          for (const [key, value] of Object.entries(filter.attributes)) {
-            const paramName = `attr_${key}`
-            conditions.push(`attributes.${key} = $${paramName}`)
-            vars[paramName] = value
-          }
-        }
-
-        const where = conditions.join(' AND ')
-        const limitClause = filter?.limit != null ? ' LIMIT $limit' : ''
-        if (filter?.limit != null) vars.limit = filter.limit
-
-        const surql = `SELECT in FROM owned_by WHERE ${where}${limitClause}`
-        const rows = await graph.query<{ in: unknown }[]>(surql, vars)
-        if (!rows) return []
-
-        let memoryIds = rows.map(r => String(r.in))
-
-        // Apply tag filter if specified
-        if (filter?.tags && filter.tags.length > 0) {
-          const tagRefs = filter.tags.map(t =>
-            new StringRecordId(t.startsWith('tag:') ? t : `tag:${t}`)
-          )
-          const taggedRows = await graph.query<{ in: unknown }[]>(
-            `SELECT in FROM tagged WHERE in IN $memIds AND out IN $tagRefs`,
-            { memIds: memoryIds.map(id => new StringRecordId(id)), tagRefs }
-          )
-          if (taggedRows) {
-            const taggedIds = new Set(taggedRows.map(r => String(r.in)))
-            memoryIds = memoryIds.filter(id => taggedIds.has(id))
-          } else {
-            memoryIds = []
-          }
-        }
-
-        const results: MemoryEntry[] = []
-        for (const id of memoryIds) {
-          const entry = await this.getMemory(id)
-          if (entry) results.push(entry)
-        }
-        return results
-      },
-
-      async writeMemory(entry: WriteMemoryEntry): Promise<string> {
-        const tokens = countTokens(entry.content)
-        const now = Date.now()
-
+    private async createMemoryNode(
+        text: string,
+        tokens: number,
+        embeddingVec: number[] | undefined,
+        options: IngestOptions | undefined,
+        now: number,
+    ): Promise<string> {
         const memData: Record<string, unknown> = {
-          content: entry.content,
-          created_at: now,
-          token_count: tokens,
+            content: text,
+            created_at: now,
+            token_count: tokens,
+        };
+        if (options?.eventTime !== undefined) {
+            memData.event_time = options.eventTime;
         }
-        if (entry.eventTime !== undefined) {
-          memData.event_time = entry.eventTime
+        const requestContext = this.mergeContext(options?.context);
+        if (Object.keys(requestContext).length > 0) {
+            memData.request_context = requestContext;
         }
-        if (embedding) {
-          memData.embedding = await embedding.embed(entry.content)
+        if (embeddingVec) {
+            memData.embedding = embeddingVec;
         }
+        const memId = await this.graph.createNode("memory", memData);
 
-        const memId = await graph.createNode('memory', memData)
+        // Tag with inbox
+        await this.graph.relate(memId, "tagged", "tag:inbox");
 
-        if (entry.tags) {
-          for (const tag of entry.tags) {
-            await this.tagMemory(memId, tag)
-          }
-        }
-
-        if (entry.references) {
-          for (const ref of entry.references) {
-            await graph.relate(memId, ref.type, ref.targetId)
-          }
-        }
-
-        const ownerDomain = entry.ownership?.domain ?? domainId
-        await this.addOwnership(memId, ownerDomain, entry.ownership?.attributes)
-
-        return memId
-      },
-
-      async addTag(path: string): Promise<void> {
-        const parts = path.split('/')
-        let parentId: string | null = null
-        for (const part of parts) {
-          const tagId = `tag:${part}`
-          try {
-            await graph.createNodeWithId(tagId, {
-              label: part,
-              created_at: Date.now(),
-            })
-          } catch {
-            // Already exists
-          }
-          if (parentId) {
-            await graph.relate(tagId, 'child_of', parentId)
-          }
-          parentId = tagId
-        }
-      },
-
-      async tagMemory(memoryId: string, tagId: string): Promise<void> {
-        const fullTagId = tagId.startsWith('tag:') ? tagId : `tag:${tagId}`
-        await graph.relate(memoryId, 'tagged', fullTagId)
-        events.emit('tagAssigned', { memoryId, tagId: fullTagId })
-      },
-
-      async untagMemory(memoryId: string, tagId: string): Promise<void> {
-        const fullTagId = tagId.startsWith('tag:') ? tagId : `tag:${tagId}`
-        await graph.unrelate(memoryId, 'tagged', fullTagId)
-        events.emit('tagRemoved', { memoryId, tagId: fullTagId })
-      },
-
-      async getTagDescendants(tagPath: string): Promise<string[]> {
-        const tagId = tagPath.startsWith('tag:') ? tagPath : `tag:${tagPath}`
-        const allDescendants = new Set<string>()
-        let frontier = [tagId]
-
-        for (let depth = 0; depth < 10 && frontier.length > 0; depth++) {
-          const refs = frontier.map(id => new StringRecordId(id))
-          const children = await graph.query<string[]>(
-            'SELECT VALUE id FROM tag WHERE ->child_of->tag CONTAINSANY $parentIds',
-            { parentIds: refs }
-          )
-          if (!children || children.length === 0) break
-          frontier = []
-          for (const child of children) {
-            const childStr = String(child)
-            if (!allDescendants.has(childStr) && childStr !== tagId) {
-              allDescendants.add(childStr)
-              frontier.push(childStr)
+        // Add extra tags
+        if (options?.tags) {
+            for (const tag of options.tags) {
+                const tagId = tag.startsWith("tag:") ? tag : `tag:${tag}`;
+                try {
+                    await this.graph.createNodeWithId(tagId, {
+                        label: tag.startsWith("tag:") ? tag.slice(4) : tag,
+                        created_at: now,
+                    });
+                } catch {
+                    // Already exists
+                }
+                await this.graph.relate(memId, "tagged", tagId);
             }
-          }
         }
-        return [...allDescendants]
-      },
 
-      async addOwnership(
-        memoryId: string,
-        targetDomainId: string,
-        attributes?: Record<string, unknown>
-      ): Promise<void> {
-        if (domainRegistry.has(targetDomainId) && domainRegistry.getAccess(targetDomainId) === 'read') {
-          throw new Error(`Domain "${targetDomainId}" is registered as read-only`)
+        // Path A: Explicit domains specified — direct ownership + inbox processing tags
+        if (options?.domains && options.domains.length > 0) {
+            const targetDomainIds = options.domains.filter((id) => {
+                if (!this.domainRegistry.has(id)) return true;
+                return this.domainRegistry.getAccess(id) === "write";
+            });
+
+            // Add autoOwn domains not already in the list
+            for (const domain of this.domainRegistry.list()) {
+                if (
+                    domain.settings?.autoOwn &&
+                    !targetDomainIds.includes(domain.id) &&
+                    this.domainRegistry.getAccess(domain.id) === "write"
+                ) {
+                    targetDomainIds.push(domain.id);
+                }
+            }
+
+            if (targetDomainIds.length === 0) {
+                throw new Error("Cannot ingest: all target domains are read-only");
+            }
+
+            for (const domainId of targetDomainIds) {
+                const fullDomainId = domainId.startsWith("domain:")
+                    ? domainId
+                    : `domain:${domainId}`;
+                await this.graph.relate(memId, "owned_by", fullDomainId, {
+                    attributes: options?.metadata ?? {},
+                    owned_at: now,
+                });
+                // Add inbox processing tag for this domain
+                const inboxTagId = await this.ensureInboxTag(`inbox:${domainId}`, now);
+                await this.graph.relate(memId, "tagged", inboxTagId);
+            }
         }
-        const fullDomainId = targetDomainId.startsWith('domain:') ? targetDomainId : `domain:${targetDomainId}`
-        await graph.relate(memoryId, 'owned_by', fullDomainId, {
-          attributes: attributes ?? {},
-          owned_at: Date.now(),
-        })
-        events.emit('ownershipAdded', { memoryId, domainId: targetDomainId })
-      },
+        // Path B: No explicit domains — assertion-based ownership
+        else {
+            let hasAnyTarget = false;
 
-      async releaseOwnership(memoryId: string, targetDomainId: string): Promise<void> {
-        await releaseOwnership(memoryId, targetDomainId)
-      },
+            // autoOwn domains get direct ownership + inbox processing tags
+            for (const domain of this.domainRegistry.list()) {
+                if (
+                    domain.settings?.autoOwn &&
+                    this.domainRegistry.getAccess(domain.id) === "write"
+                ) {
+                    const fullDomainId = `domain:${domain.id}`;
+                    await this.graph.relate(memId, "owned_by", fullDomainId, {
+                        attributes: options?.metadata ?? {},
+                        owned_at: now,
+                    });
+                    const inboxTagId = await this.ensureInboxTag(`inbox:${domain.id}`, now);
+                    await this.graph.relate(memId, "tagged", inboxTagId);
+                    hasAnyTarget = true;
+                }
+            }
 
-      async updateAttributes(memoryId: string, attributes: Record<string, unknown>): Promise<void> {
-        const fullDomainId = domainId.startsWith('domain:') ? domainId : `domain:${domainId}`
-        await graph.query(
-          'UPDATE owned_by SET attributes = $attrs WHERE in = $memId AND out = $domainId',
-          {
-            memId: new StringRecordId(memoryId),
-            domainId: new StringRecordId(fullDomainId),
-            attrs: attributes,
-          }
-        )
-      },
+            // Domains with assertInboxClaimBatch get assertion tags
+            for (const domain of this.domainRegistry.list()) {
+                if (
+                    domain.assertInboxClaimBatch &&
+                    !domain.settings?.autoOwn &&
+                    this.domainRegistry.getAccess(domain.id) === "write"
+                ) {
+                    const assertTagId = await this.ensureInboxTag(
+                        `inbox:assert-claim:${domain.id}`,
+                        now,
+                    );
+                    await this.graph.relate(memId, "tagged", assertTagId);
+                    hasAnyTarget = true;
+                }
+            }
 
-      async search(query: Omit<SearchQuery, 'domains'>): Promise<SearchResult> {
-        return search({ ...query, domains: visibleDomains })
-      },
+            if (!hasAnyTarget) {
+                throw new Error(
+                    "Cannot ingest: no domains available (no explicit domain, no autoOwn, no assertInboxClaimBatch)",
+                );
+            }
+        }
 
-      async getMeta(key: string): Promise<string | null> {
-        const metaId = `meta:${domainId}_${key}`
-        const node = await graph.getNode(metaId)
-        if (!node) return null
-        return (node.value as string) ?? null
-      },
+        // Emit event
+        this.events.emit("ingested", { id: memId, content: text, tokenCount: tokens });
 
-      async setMeta(key: string, value: string): Promise<void> {
-        const metaId = `meta:${domainId}_${key}`
+        return memId;
+    }
+
+    private async ensureInboxTag(label: string, now: number): Promise<string> {
+        const tagId = `tag:\`${label}\``;
         try {
-          await graph.createNodeWithId(metaId, { value })
+            await this.graph.createNodeWithId(tagId, { label, created_at: now });
         } catch {
-          await graph.updateNode(metaId, { value })
+            // Already exists
         }
-      },
+        return tagId;
+    }
 
-      async getMemoryTags(memoryId: string): Promise<string[]> {
-        if (!await isMemoryVisible(memoryId)) return []
-        const rows = await graph.query<string[]>(
-          'SELECT VALUE out.label FROM tagged WHERE in = $memId',
-          { memId: new StringRecordId(memoryId) }
-        )
-        return (rows ?? []).filter((label): label is string => typeof label === 'string')
-      },
+    async search(query: SearchQuery): Promise<SearchResult> {
+        // Let domains expand/rank the query
+        let expandedQuery = query;
+        const targetDomains = query.domains ?? this.domainRegistry.getAllDomainIds();
 
-      async getNodeEdges(nodeId: string, direction?: 'in' | 'out' | 'both'): Promise<Edge[]> {
-        const dir = direction ?? 'both'
-        const conditions: string[] = []
-        // SurrealDB edge.in = source, edge.out = target
-        // direction 'out' = edges going out from this node (node is source → in = nodeId)
-        // direction 'in' = edges coming into this node (node is target → out = nodeId)
-        if (dir === 'out' || dir === 'both') conditions.push('in = $nodeId')
-        if (dir === 'in' || dir === 'both') conditions.push('out = $nodeId')
-        const where = conditions.join(' OR ')
-
-        const edgeNames = schema.getRegisteredEdgeNames()
-        const coreEdges = ['tagged', 'owned_by', 'reinforces', 'contradicts', 'summarizes', 'refines', 'child_of', 'has_rule']
-        const allEdges = [...new Set([...coreEdges, ...edgeNames])]
-
-        const results: Edge[] = []
-        const nodeRef = new StringRecordId(nodeId)
-        for (const edgeName of allEdges) {
-          const rows = await graph.query<Edge[]>(
-            `SELECT * FROM ${edgeName} WHERE ${where}`,
-            { nodeId: nodeRef }
-          )
-          if (rows) results.push(...rows)
-        }
-
-        // Filter edges that connect to memory nodes from non-visible domains
-        const filtered: Edge[] = []
-        for (const edge of results) {
-          const inId = String(edge.in)
-          const outId = String(edge.out)
-          // Determine the "other" node — the one that isn't the queried node
-          const otherId = inId === nodeId ? outId : inId
-
-          // Only check visibility for memory nodes
-          if (otherId.startsWith('memory:')) {
-            if (await isMemoryVisible(otherId)) {
-              filtered.push(edge)
+        for (const domainId of targetDomains) {
+            const domain = this.domainRegistry.get(domainId);
+            if (domain?.search?.expand) {
+                const ctx = this.createDomainContext(domainId, query.context);
+                expandedQuery = await domain.search.expand(expandedQuery, ctx);
             }
-          } else {
-            // Non-memory nodes (tags, domains, user nodes, etc.) pass through
-            filtered.push(edge)
-          }
         }
 
-        return filtered
-      },
-    }
-  }
+        let result = await this.searchEngine.search(expandedQuery);
 
-  async buildContext(text: string, options?: ContextOptions): Promise<ContextResult> {
-    const budgetTokens = options?.budgetTokens ?? 4000
-    const limit = options?.maxMemories ?? 50
+        // Let domains rank results
+        for (const domainId of targetDomains) {
+            const domain = this.domainRegistry.get(domainId);
+            if (domain?.search?.rank) {
+                result = {
+                    ...result,
+                    entries: domain.search.rank(expandedQuery, result.entries),
+                };
+            }
+        }
 
-    // Check if a target domain has custom buildContext
-    if (options?.domains?.length === 1) {
-      const domain = this.domainRegistry.get(options.domains[0])
-      if (domain?.buildContext) {
-        const ctx = this.createDomainContext(options.domains[0], options?.context)
-        return domain.buildContext(text, budgetTokens, ctx)
-      }
+        return result;
     }
 
-    // Search with hybrid mode
-    const result = await this.search({
-      text,
-      limit,
-      domains: options?.domains,
-    })
+    async releaseOwnership(memoryId: string, domainId: string): Promise<void> {
+        this.assertWriteAccess(domainId);
+        const fullDomainId = domainId.startsWith("domain:") ? domainId : `domain:${domainId}`;
 
-    // Apply token budget
-    const fitted = applyTokenBudget(
-      result.entries.map(e => ({ ...e, tokenCount: countTokens(e.content) })),
-      budgetTokens
-    )
+        // Remove owned_by edge
+        await this.graph.unrelate(memoryId, "owned_by", fullDomainId);
 
-    // Format as numbered plain text
-    const context = fitted
-      .map((m, i) => `[${i + 1}] ${m.content}`)
-      .join('\n\n')
+        this.events.emit("ownershipRemoved", { memoryId, domainId });
 
-    const totalTokens = countTokens(context)
+        // Count remaining owners
+        const remaining = await this.graph.query<{ count: number }[]>(
+            "SELECT count() AS count FROM owned_by WHERE in = $memId GROUP ALL",
+            { memId: new StringRecordId(memoryId) },
+        );
 
-    return { context, memories: fitted, totalTokens }
-  }
+        const count = remaining && remaining.length > 0 ? remaining[0].count : 0;
 
-  async ask(question: string, options?: AskOptions): Promise<AskResult> {
-    const budgetTokens = options?.budgetTokens ?? 8000
-    const limit = options?.limit ?? 30
-    const maxRounds = options?.maxRounds ?? 3
+        // Delete memory if no owners remain
+        if (count === 0) {
+            // Remove all edges first
+            await this.graph.query("DELETE tagged WHERE in = $memId", {
+                memId: new StringRecordId(memoryId),
+            });
+            await this.graph.query("DELETE reinforces WHERE in = $memId OR out = $memId", {
+                memId: new StringRecordId(memoryId),
+            });
+            await this.graph.query("DELETE contradicts WHERE in = $memId OR out = $memId", {
+                memId: new StringRecordId(memoryId),
+            });
+            await this.graph.query("DELETE summarizes WHERE in = $memId OR out = $memId", {
+                memId: new StringRecordId(memoryId),
+            });
+            await this.graph.query("DELETE refines WHERE in = $memId OR out = $memId", {
+                memId: new StringRecordId(memoryId),
+            });
 
-    const allMemories = new Map<string, ScoredMemory>()
-    let rounds = 0
+            // Clean domain-registered edges
+            const coreEdges = new Set([
+                "tagged",
+                "owned_by",
+                "reinforces",
+                "contradicts",
+                "summarizes",
+                "refines",
+                "child_of",
+                "has_rule",
+            ]);
+            for (const edgeName of this.schema.getRegisteredEdgeNames()) {
+                if (!coreEdges.has(edgeName)) {
+                    await this.graph.query(`DELETE ${edgeName} WHERE in = $memId OR out = $memId`, {
+                        memId: new StringRecordId(memoryId),
+                    });
+                }
+            }
 
-    // Get available top-level tags for the system prompt
-    const topTags = await this.graph.query<{ label: string }[]>(
-      'SELECT label FROM tag WHERE ->child_of->tag IS NONE OR array::len(->child_of->tag) = 0'
-    )
-    const tagList = topTags
-      ? topTags
-          .map(t => t.label)
-          .filter(l => l !== 'inbox')
-          .join(', ')
-      : ''
+            await this.graph.deleteNode(memoryId);
 
-    const systemPrompt = `You are a search assistant. Given a question, decide how to search a memory database.
+            this.events.emit("deleted", { memoryId });
+        }
+    }
+
+    private resolveVisibleDomains(domainId: string): string[] {
+        const domain = this.domainRegistry.get(domainId);
+        const allIds = this.domainRegistry.getAllDomainIds();
+        const ensureSelf = (ids: string[]) => (ids.includes(domainId) ? ids : [domainId, ...ids]);
+
+        if (!domain?.settings?.includeDomains && !domain?.settings?.excludeDomains) {
+            return ensureSelf(allIds);
+        }
+
+        if (domain.settings.includeDomains) {
+            const allowed = new Set(domain.settings.includeDomains);
+            allowed.add(domainId);
+            return allIds.filter((id) => allowed.has(id));
+        }
+
+        if (domain.settings.excludeDomains) {
+            const blocked = new Set(domain.settings.excludeDomains);
+            blocked.delete(domainId);
+            return ensureSelf(allIds.filter((id) => !blocked.has(id)));
+        }
+
+        return ensureSelf(allIds);
+    }
+
+    private mergeContext(requestContext?: RequestContext): RequestContext {
+        if (!requestContext) return { ...this.defaultContext };
+        return { ...this.defaultContext, ...requestContext };
+    }
+
+    createDomainContext(domainId: string, requestContext?: RequestContext): DomainContext {
+        const graph = this.graph;
+        const baseLlm = this.llm;
+        const embedding = this.embedding;
+        const events = this.events;
+        const visibleDomains = this.resolveVisibleDomains(domainId);
+        const releaseOwnership = this.releaseOwnership.bind(this);
+        const search = this.search.bind(this);
+        const mergedContext = this.mergeContext(requestContext);
+        const schema = this.schema;
+        const domainRegistry = this.domainRegistry;
+        const debug = createDebugTools(`domain:${domainId}`, this.debugConfig);
+        const llm = wrapLLMAdapter(baseLlm, debug, "llm");
+
+        async function isMemoryVisible(memoryId: string): Promise<boolean> {
+            const owners = await graph.query<{ out: unknown }[]>(
+                "SELECT out FROM owned_by WHERE in = $memId",
+                { memId: new StringRecordId(memoryId) },
+            );
+            if (!owners || owners.length === 0) return false;
+            return owners.some((o) => {
+                const ownerDomainId = String(o.out).replace(/^domain:/, "");
+                return visibleDomains.includes(ownerDomainId);
+            });
+        }
+
+        return {
+            domain: domainId,
+            graph,
+            llm,
+            llmAt(level: ModelLevel): LLMAdapter {
+                const leveled = baseLlm.withLevel?.(level) ?? baseLlm;
+                return wrapLLMAdapter(leveled, debug, `llm:${level}`);
+            },
+            debug,
+            requestContext: mergedContext,
+
+            getVisibleDomains(): string[] {
+                return [...visibleDomains];
+            },
+
+            async getMemory(id: string): Promise<MemoryEntry | null> {
+                const node = await graph.getNode(id);
+                if (!node) return null;
+                if (!(await isMemoryVisible(id))) return null;
+                return {
+                    id: node.id,
+                    content: node.content as string,
+                    eventTime: (node.event_time as number | null) ?? null,
+                    createdAt: node.created_at as number,
+                    tokenCount: node.token_count as number,
+                };
+            },
+
+            async getMemories(filter?: MemoryFilter): Promise<MemoryEntry[]> {
+                // Short-circuit: batch fetch by IDs
+                if (filter?.ids) {
+                    const results: MemoryEntry[] = [];
+                    for (const id of filter.ids) {
+                        const entry = await this.getMemory(id);
+                        if (entry) results.push(entry);
+                    }
+                    return results;
+                }
+
+                // Build composable query for owned memories
+                const requestedDomains = filter?.domains ?? visibleDomains;
+                const targetDomains = requestedDomains.filter((d) => visibleDomains.includes(d));
+                const domainRefs = targetDomains.map(
+                    (d) => new StringRecordId(d.startsWith("domain:") ? d : `domain:${d}`),
+                );
+
+                const conditions: string[] = ["out IN $domainRefs"];
+                const vars: Record<string, unknown> = { domainRefs };
+
+                if (filter?.since != null) {
+                    conditions.push("owned_at >= $since");
+                    vars.since = filter.since;
+                }
+
+                if (filter?.attributes) {
+                    for (const [key, value] of Object.entries(filter.attributes)) {
+                        const paramName = `attr_${key}`;
+                        conditions.push(`attributes.${key} = $${paramName}`);
+                        vars[paramName] = value;
+                    }
+                }
+
+                const where = conditions.join(" AND ");
+                const limitClause = filter?.limit != null ? " LIMIT $limit" : "";
+                if (filter?.limit != null) vars.limit = filter.limit;
+
+                const surql = `SELECT in FROM owned_by WHERE ${where}${limitClause}`;
+                const rows = await graph.query<{ in: unknown }[]>(surql, vars);
+                if (!rows) return [];
+
+                let memoryIds = rows.map((r) => String(r.in));
+
+                // Apply tag filter if specified
+                if (filter?.tags && filter.tags.length > 0) {
+                    const tagRefs = filter.tags.map(
+                        (t) => new StringRecordId(t.startsWith("tag:") ? t : `tag:${t}`),
+                    );
+                    const taggedRows = await graph.query<{ in: unknown }[]>(
+                        `SELECT in FROM tagged WHERE in IN $memIds AND out IN $tagRefs`,
+                        { memIds: memoryIds.map((id) => new StringRecordId(id)), tagRefs },
+                    );
+                    if (taggedRows) {
+                        const taggedIds = new Set(taggedRows.map((r) => String(r.in)));
+                        memoryIds = memoryIds.filter((id) => taggedIds.has(id));
+                    } else {
+                        memoryIds = [];
+                    }
+                }
+
+                const results: MemoryEntry[] = [];
+                for (const id of memoryIds) {
+                    const entry = await this.getMemory(id);
+                    if (entry) results.push(entry);
+                }
+                return results;
+            },
+
+            async writeMemory(entry: WriteMemoryEntry): Promise<string> {
+                const tokens = countTokens(entry.content);
+                const now = Date.now();
+
+                const memData: Record<string, unknown> = {
+                    content: entry.content,
+                    created_at: now,
+                    token_count: tokens,
+                };
+                if (entry.eventTime !== undefined) {
+                    memData.event_time = entry.eventTime;
+                }
+                if (embedding) {
+                    memData.embedding = await embedding.embed(entry.content);
+                }
+
+                const memId = await graph.createNode("memory", memData);
+
+                if (entry.tags) {
+                    for (const tag of entry.tags) {
+                        await this.tagMemory(memId, tag);
+                    }
+                }
+
+                if (entry.references) {
+                    for (const ref of entry.references) {
+                        await graph.relate(memId, ref.type, ref.targetId);
+                    }
+                }
+
+                const ownerDomain = entry.ownership?.domain ?? domainId;
+                await this.addOwnership(memId, ownerDomain, entry.ownership?.attributes);
+
+                return memId;
+            },
+
+            async addTag(path: string): Promise<void> {
+                const parts = path.split("/");
+                let parentId: string | null = null;
+                for (const part of parts) {
+                    const tagId = `tag:${part}`;
+                    try {
+                        await graph.createNodeWithId(tagId, {
+                            label: part,
+                            created_at: Date.now(),
+                        });
+                    } catch {
+                        // Already exists
+                    }
+                    if (parentId) {
+                        await graph.relate(tagId, "child_of", parentId);
+                    }
+                    parentId = tagId;
+                }
+            },
+
+            async tagMemory(memoryId: string, tagId: string): Promise<void> {
+                const fullTagId = tagId.startsWith("tag:") ? tagId : `tag:${tagId}`;
+                await graph.relate(memoryId, "tagged", fullTagId);
+                events.emit("tagAssigned", { memoryId, tagId: fullTagId });
+            },
+
+            async untagMemory(memoryId: string, tagId: string): Promise<void> {
+                const fullTagId = tagId.startsWith("tag:") ? tagId : `tag:${tagId}`;
+                await graph.unrelate(memoryId, "tagged", fullTagId);
+                events.emit("tagRemoved", { memoryId, tagId: fullTagId });
+            },
+
+            async getTagDescendants(tagPath: string): Promise<string[]> {
+                const tagId = tagPath.startsWith("tag:") ? tagPath : `tag:${tagPath}`;
+                const allDescendants = new Set<string>();
+                let frontier = [tagId];
+
+                for (let depth = 0; depth < 10 && frontier.length > 0; depth++) {
+                    const refs = frontier.map((id) => new StringRecordId(id));
+                    const children = await graph.query<string[]>(
+                        "SELECT VALUE id FROM tag WHERE ->child_of->tag CONTAINSANY $parentIds",
+                        { parentIds: refs },
+                    );
+                    if (!children || children.length === 0) break;
+                    frontier = [];
+                    for (const child of children) {
+                        const childStr = String(child);
+                        if (!allDescendants.has(childStr) && childStr !== tagId) {
+                            allDescendants.add(childStr);
+                            frontier.push(childStr);
+                        }
+                    }
+                }
+                return [...allDescendants];
+            },
+
+            async addOwnership(
+                memoryId: string,
+                targetDomainId: string,
+                attributes?: Record<string, unknown>,
+            ): Promise<void> {
+                if (
+                    domainRegistry.has(targetDomainId) &&
+                    domainRegistry.getAccess(targetDomainId) === "read"
+                ) {
+                    throw new Error(`Domain "${targetDomainId}" is registered as read-only`);
+                }
+                const fullDomainId = targetDomainId.startsWith("domain:")
+                    ? targetDomainId
+                    : `domain:${targetDomainId}`;
+                await graph.relate(memoryId, "owned_by", fullDomainId, {
+                    attributes: attributes ?? {},
+                    owned_at: Date.now(),
+                });
+                events.emit("ownershipAdded", { memoryId, domainId: targetDomainId });
+            },
+
+            async releaseOwnership(memoryId: string, targetDomainId: string): Promise<void> {
+                await releaseOwnership(memoryId, targetDomainId);
+            },
+
+            async updateAttributes(
+                memoryId: string,
+                attributes: Record<string, unknown>,
+            ): Promise<void> {
+                const fullDomainId = domainId.startsWith("domain:")
+                    ? domainId
+                    : `domain:${domainId}`;
+                await graph.query(
+                    "UPDATE owned_by SET attributes = $attrs WHERE in = $memId AND out = $domainId",
+                    {
+                        memId: new StringRecordId(memoryId),
+                        domainId: new StringRecordId(fullDomainId),
+                        attrs: attributes,
+                    },
+                );
+            },
+
+            async search(query: Omit<SearchQuery, "domains">): Promise<SearchResult> {
+                return search({ ...query, domains: visibleDomains });
+            },
+
+            async getMeta(key: string): Promise<string | null> {
+                const metaId = `meta:${domainId}_${key}`;
+                const node = await graph.getNode(metaId);
+                if (!node) return null;
+                return (node.value as string) ?? null;
+            },
+
+            async setMeta(key: string, value: string): Promise<void> {
+                const metaId = `meta:${domainId}_${key}`;
+                try {
+                    await graph.createNodeWithId(metaId, { value });
+                } catch {
+                    await graph.updateNode(metaId, { value });
+                }
+            },
+
+            async getMemoryTags(memoryId: string): Promise<string[]> {
+                if (!(await isMemoryVisible(memoryId))) return [];
+                const rows = await graph.query<string[]>(
+                    "SELECT VALUE out.label FROM tagged WHERE in = $memId",
+                    { memId: new StringRecordId(memoryId) },
+                );
+                return (rows ?? []).filter((label): label is string => typeof label === "string");
+            },
+
+            async getNodeEdges(nodeId: string, direction?: "in" | "out" | "both"): Promise<Edge[]> {
+                const dir = direction ?? "both";
+                const conditions: string[] = [];
+                // SurrealDB edge.in = source, edge.out = target
+                // direction 'out' = edges going out from this node (node is source → in = nodeId)
+                // direction 'in' = edges coming into this node (node is target → out = nodeId)
+                if (dir === "out" || dir === "both") conditions.push("in = $nodeId");
+                if (dir === "in" || dir === "both") conditions.push("out = $nodeId");
+                const where = conditions.join(" OR ");
+
+                const edgeNames = schema.getRegisteredEdgeNames();
+                const coreEdges = [
+                    "tagged",
+                    "owned_by",
+                    "reinforces",
+                    "contradicts",
+                    "summarizes",
+                    "refines",
+                    "child_of",
+                    "has_rule",
+                ];
+                const allEdges = [...new Set([...coreEdges, ...edgeNames])];
+
+                const results: Edge[] = [];
+                const nodeRef = new StringRecordId(nodeId);
+                for (const edgeName of allEdges) {
+                    const rows = await graph.query<Edge[]>(
+                        `SELECT * FROM ${edgeName} WHERE ${where}`,
+                        { nodeId: nodeRef },
+                    );
+                    if (rows) results.push(...rows);
+                }
+
+                // Filter edges that connect to memory nodes from non-visible domains
+                const filtered: Edge[] = [];
+                for (const edge of results) {
+                    const inId = String(edge.in);
+                    const outId = String(edge.out);
+                    // Determine the "other" node — the one that isn't the queried node
+                    const otherId = inId === nodeId ? outId : inId;
+
+                    // Only check visibility for memory nodes
+                    if (otherId.startsWith("memory:")) {
+                        if (await isMemoryVisible(otherId)) {
+                            filtered.push(edge);
+                        }
+                    } else {
+                        // Non-memory nodes (tags, domains, user nodes, etc.) pass through
+                        filtered.push(edge);
+                    }
+                }
+
+                return filtered;
+            },
+        };
+    }
+
+    async buildContext(text: string, options?: ContextOptions): Promise<ContextResult> {
+        const budgetTokens = options?.budgetTokens ?? 4000;
+        const limit = options?.maxMemories ?? 50;
+
+        // Check if a target domain has custom buildContext
+        if (options?.domains?.length === 1) {
+            const domain = this.domainRegistry.get(options.domains[0]);
+            if (domain?.buildContext) {
+                const ctx = this.createDomainContext(options.domains[0], options?.context);
+                return domain.buildContext(text, budgetTokens, ctx);
+            }
+        }
+
+        // Search with hybrid mode
+        const result = await this.search({
+            text,
+            limit,
+            domains: options?.domains,
+        });
+
+        // Apply token budget
+        const fitted = applyTokenBudget(
+            result.entries.map((e) => ({ ...e, tokenCount: countTokens(e.content) })),
+            budgetTokens,
+        );
+
+        // Format as numbered plain text
+        const context = fitted.map((m, i) => `[${i + 1}] ${m.content}`).join("\n\n");
+
+        const totalTokens = countTokens(context);
+
+        return { context, memories: fitted, totalTokens };
+    }
+
+    async ask(question: string, options?: AskOptions): Promise<AskResult> {
+        const budgetTokens = options?.budgetTokens ?? 8000;
+        const limit = options?.limit ?? 30;
+        const maxRounds = options?.maxRounds ?? 3;
+
+        const allMemories = new Map<string, ScoredMemory>();
+        let rounds = 0;
+
+        // Get available top-level tags for the system prompt
+        const topTags = await this.graph.query<{ label: string }[]>(
+            "SELECT label FROM tag WHERE ->child_of->tag IS NONE OR array::len(->child_of->tag) = 0",
+        );
+        const tagList = topTags
+            ? topTags
+                  .map((t) => t.label)
+                  .filter((l) => l !== "inbox")
+                  .join(", ")
+            : "";
+
+        const systemPrompt = `You are a search assistant. Given a question, decide how to search a memory database.
 
 Available search capabilities:
 - "text": fulltext search terms (keywords or phrases)
@@ -1062,132 +1125,137 @@ Respond with JSON only. Either:
 2. A final answer: { "answer": "your analytical response" }
 
 If you have enough information from previous search results, respond with an answer.
-Otherwise, respond with a query plan to find more relevant information.`
+Otherwise, respond with a query plan to find more relevant information.`;
 
-    const history: string[] = [`Question: ${question}`]
+        const history: string[] = [`Question: ${question}`];
 
-    for (let round = 0; round < maxRounds; round++) {
-      rounds = round + 1
+        for (let round = 0; round < maxRounds; round++) {
+            rounds = round + 1;
 
-      const prompt = `${systemPrompt}\n\n${history.join('\n\n')}`
-      if (!this.llm.generate) {
-        throw new Error('LLM adapter must implement generate() to use ask()')
-      }
-      const response = await this.llm.generate(prompt)
+            const prompt = `${systemPrompt}\n\n${history.join("\n\n")}`;
+            if (!this.llm.generate) {
+                throw new Error("LLM adapter must implement generate() to use ask()");
+            }
+            const response = await this.llm.generate(prompt);
 
-      // Parse LLM response
-      let parsed: Record<string, unknown>
-      try {
-        const jsonMatch = response.match(/\{[\s\S]*\}/)
-        parsed = jsonMatch ? JSON.parse(jsonMatch[0]) as Record<string, unknown> : {}
-      } catch {
-        // If parsing fails, treat as final answer
-        parsed = { answer: response }
-      }
+            // Parse LLM response
+            let parsed: Record<string, unknown>;
+            try {
+                const jsonMatch = response.match(/\{[\s\S]*\}/);
+                parsed = jsonMatch ? (JSON.parse(jsonMatch[0]) as Record<string, unknown>) : {};
+            } catch {
+                // If parsing fails, treat as final answer
+                parsed = { answer: response };
+            }
 
-      // Check if LLM gave a final answer
-      if (typeof parsed.answer === 'string') {
-        break
-      }
+            // Check if LLM gave a final answer
+            if (typeof parsed.answer === "string") {
+                break;
+            }
 
-      // Execute query plan
-      const searchQuery: SearchQuery = {
-        text: typeof parsed.text === 'string' ? parsed.text : question,
-        tags: Array.isArray(parsed.tags) ? parsed.tags as string[] : options?.tags,
-        limit,
-        domains: options?.domains,
-      }
+            // Execute query plan
+            const searchQuery: SearchQuery = {
+                text: typeof parsed.text === "string" ? parsed.text : question,
+                tags: Array.isArray(parsed.tags) ? (parsed.tags as string[]) : options?.tags,
+                limit,
+                domains: options?.domains,
+            };
 
-      const result = await this.search(searchQuery)
+            const result = await this.search(searchQuery);
 
-      // Accumulate memories (dedup by ID)
-      for (const entry of result.entries) {
-        if (!allMemories.has(entry.id)) {
-          allMemories.set(entry.id, entry)
+            // Accumulate memories (dedup by ID)
+            for (const entry of result.entries) {
+                if (!allMemories.has(entry.id)) {
+                    allMemories.set(entry.id, entry);
+                }
+            }
+
+            // Add results summary to history for next round
+            const resultSummary = result.entries
+                .slice(0, 10)
+                .map(
+                    (e, i) =>
+                        `  [${i + 1}] (score: ${e.score.toFixed(3)}) ${e.content.slice(0, 200)}`,
+                )
+                .join("\n");
+            history.push(
+                `Round ${rounds} results (${result.entries.length} found):\n${resultSummary}`,
+            );
         }
-      }
 
-      // Add results summary to history for next round
-      const resultSummary = result.entries
-        .slice(0, 10)
-        .map((e, i) => `  [${i + 1}] (score: ${e.score.toFixed(3)}) ${e.content.slice(0, 200)}`)
-        .join('\n')
-      history.push(`Round ${rounds} results (${result.entries.length} found):\n${resultSummary}`)
+        // Apply token budget to accumulated memories
+        const sortedMemories = [...allMemories.values()].sort((a, b) => b.score - a.score);
+
+        const fitted = applyTokenBudget(
+            sortedMemories.map((e) => ({ ...e, tokenCount: countTokens(e.content) })),
+            budgetTokens,
+        );
+
+        // Final synthesis
+        if (!this.llm.synthesize) {
+            throw new Error("LLM adapter must implement synthesize() to use ask()");
+        }
+        const answer = await this.llm.synthesize(question, fitted);
+
+        return { answer, memories: fitted, rounds };
     }
 
-    // Apply token budget to accumulated memories
-    const sortedMemories = [...allMemories.values()]
-      .sort((a, b) => b.score - a.score)
-
-    const fitted = applyTokenBudget(
-      sortedMemories.map(e => ({ ...e, tokenCount: countTokens(e.content) })),
-      budgetTokens
-    )
-
-    // Final synthesis
-    if (!this.llm.synthesize) {
-      throw new Error('LLM adapter must implement synthesize() to use ask()')
+    getGraph(): GraphStore {
+        return this.graph;
     }
-    const answer = await this.llm.synthesize(question, fitted)
 
-    return { answer, memories: fitted, rounds }
-  }
-
-  getGraph(): GraphStore {
-    return this.graph
-  }
-
-  getDomainRegistry(): DomainRegistry {
-    return this.domainRegistry
-  }
-
-  getEvents(): EventEmitter {
-    return this.events
-  }
-
-  startProcessing(options?: InboxProcessorOptions): void {
-    this.inboxProcessor.start(options)
-    this.scheduler.start()
-  }
-
-  stopProcessing(): void {
-    this.inboxProcessor.stop()
-    this.scheduler.stop()
-  }
-
-  async processInbox(): Promise<boolean> {
-    return this.inboxProcessor.tick()
-  }
-
-  getBootstrappableDomains(): string[] {
-    return this.domainRegistry.list()
-      .filter(d => d.bootstrap != null)
-      .map(d => d.id)
-  }
-
-  async runBootstrap(domainId?: string): Promise<string[]> {
-    const domains = domainId
-      ? [this.domainRegistry.getOrThrow(domainId)]
-      : this.domainRegistry.list()
-
-    const bootstrapped: string[] = []
-    for (const domain of domains) {
-      if (domain.bootstrap) {
-        const ctx = this.createDomainContext(domain.id)
-        await domain.bootstrap(ctx)
-        bootstrapped.push(domain.id)
-      }
+    getDomainRegistry(): DomainRegistry {
+        return this.domainRegistry;
     }
-    return bootstrapped
-  }
 
-  async close(): Promise<void> {
-    this.stopProcessing()
-    if (this.db) {
-      await this.db.close()
-      this.db = null
+    getEvents(): EventEmitter {
+        return this.events;
     }
-  }
+
+    startProcessing(options?: InboxProcessorOptions): void {
+        this.inboxProcessor.start(options);
+        this.scheduler.start();
+    }
+
+    stopProcessing(): void {
+        this.inboxProcessor.stop();
+        this.scheduler.stop();
+    }
+
+    async processInbox(): Promise<boolean> {
+        return this.inboxProcessor.tick();
+    }
+
+    getBootstrappableDomains(): string[] {
+        return this.domainRegistry
+            .list()
+            .filter((d) => d.bootstrap != null)
+            .map((d) => d.id);
+    }
+
+    async runBootstrap(domainId?: string): Promise<string[]> {
+        const domains = domainId
+            ? [this.domainRegistry.getOrThrow(domainId)]
+            : this.domainRegistry.list();
+
+        const bootstrapped: string[] = [];
+        for (const domain of domains) {
+            if (domain.bootstrap) {
+                const ctx = this.createDomainContext(domain.id);
+                await domain.bootstrap(ctx);
+                bootstrapped.push(domain.id);
+            }
+        }
+        return bootstrapped;
+    }
+
+    async close(): Promise<void> {
+        this.stopProcessing();
+        if (this.db) {
+            await this.db.close();
+            this.db = null;
+        }
+    }
 }
 
-export { MemoryEngine }
+export { MemoryEngine };

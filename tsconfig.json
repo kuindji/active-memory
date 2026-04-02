@@ -1,14 +1,14 @@
 {
-  "compilerOptions": {
-    "target": "ES2022",
-    "module": "Preserve",
-    "moduleDetection": "force",
-    "moduleResolution": "bundler",
-    "lib": ["ES2022"],
-    "strict": true,
-    "skipLibCheck": true,
-    "declaration": true,
-    "sourceMap": true,
-    "allowImportingTsExtensions": true
-  }
+    "compilerOptions": {
+        "target": "ES2022",
+        "module": "Preserve",
+        "moduleDetection": "force",
+        "moduleResolution": "bundler",
+        "lib": ["ES2022"],
+        "strict": true,
+        "skipLibCheck": true,
+        "declaration": true,
+        "sourceMap": true,
+        "allowImportingTsExtensions": true
+    }
 }

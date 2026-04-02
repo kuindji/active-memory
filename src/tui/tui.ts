@@ -1,157 +1,155 @@
-import * as p from '@clack/prompts'
-import { loadConfig } from '../config-loader.ts'
-import type { MemoryEngine } from '../core/engine.ts'
-import type { DomainSummary } from '../core/types.ts'
+import * as p from "@clack/prompts";
+import { loadConfig } from "../config-loader.ts";
+import type { MemoryEngine } from "../core/engine.ts";
+import type { DomainSummary } from "../core/types.ts";
 
 function parseArgs(argv: string[]): { config?: string } {
-  const args = argv.slice(2)
-  for (let i = 0; i < args.length; i++) {
-    if (args[i] === '--config' && args[i + 1]) {
-      return { config: args[i + 1] }
+    const args = argv.slice(2);
+    for (let i = 0; i < args.length; i++) {
+        if (args[i] === "--config" && args[i + 1]) {
+            return { config: args[i + 1] };
+        }
+        if (args[i]?.startsWith("--config=")) {
+            return { config: args[i].slice("--config=".length) };
+        }
     }
-    if (args[i]?.startsWith('--config=')) {
-      return { config: args[i].slice('--config='.length) }
-    }
-  }
-  return {}
+    return {};
 }
 
 function isCancel(value: unknown): value is symbol {
-  return p.isCancel(value)
+    return p.isCancel(value);
 }
 
-async function selectMode(): Promise<'ask' | 'build-context' | 'quit' | symbol> {
-  return p.select({
-    message: 'What would you like to do?',
-    options: [
-      { value: 'ask' as const, label: 'Ask', hint: 'multi-round Q&A over memories' },
-      { value: 'build-context' as const, label: 'Build Context', hint: 'generate a context block' },
-      { value: 'quit' as const, label: 'Quit' },
-    ],
-  })
+async function selectMode(): Promise<"ask" | "build-context" | "quit" | symbol> {
+    return p.select({
+        message: "What would you like to do?",
+        options: [
+            { value: "ask" as const, label: "Ask", hint: "multi-round Q&A over memories" },
+            {
+                value: "build-context" as const,
+                label: "Build Context",
+                hint: "generate a context block",
+            },
+            { value: "quit" as const, label: "Quit" },
+        ],
+    });
 }
 
-async function selectDomains(
-  summaries: DomainSummary[],
-): Promise<string[] | symbol> {
-  if (summaries.length === 0) {
-    p.log.warn('No domains registered.')
-    return []
-  }
+async function selectDomains(summaries: DomainSummary[]): Promise<string[] | symbol> {
+    if (summaries.length === 0) {
+        p.log.warn("No domains registered.");
+        return [];
+    }
 
-  if (summaries.length === 1) {
-    p.log.info(`Using domain: ${summaries[0].name}`)
-    return [summaries[0].id]
-  }
+    if (summaries.length === 1) {
+        p.log.info(`Using domain: ${summaries[0].name}`);
+        return [summaries[0].id];
+    }
 
-  const selected = await p.multiselect({
-    message: 'Select domains (space to toggle, enter to confirm)',
-    options: summaries.map(d => ({
-      value: d.id,
-      label: d.name,
-      hint: d.description,
-    })),
-    required: false,
-  })
+    const selected = await p.multiselect({
+        message: "Select domains (space to toggle, enter to confirm)",
+        options: summaries.map((d) => ({
+            value: d.id,
+            label: d.name,
+            hint: d.description,
+        })),
+        required: false,
+    });
 
-  return selected
+    return selected;
 }
 
-async function runAsk(
-  engine: MemoryEngine,
-  domains: string[],
-): Promise<void> {
-  const question = await p.text({
-    message: 'Enter your question',
-    validate: (v) => !v?.trim() ? 'Question is required' : undefined,
-  })
+async function runAsk(engine: MemoryEngine, domains: string[]): Promise<void> {
+    const question = await p.text({
+        message: "Enter your question",
+        validate: (v) => (!v?.trim() ? "Question is required" : undefined),
+    });
 
-  if (isCancel(question)) return
+    if (isCancel(question)) return;
 
-  const spin = p.spinner()
-  spin.start('Thinking...')
+    const spin = p.spinner();
+    spin.start("Thinking...");
 
-  try {
-    const result = await engine.ask(question, {
-      domains: domains.length > 0 ? domains : undefined,
-    })
-    spin.stop('Done')
+    try {
+        const result = await engine.ask(question, {
+            domains: domains.length > 0 ? domains : undefined,
+        });
+        spin.stop("Done");
 
-    p.log.message(result.answer)
-    p.log.info(`${result.memories.length} memories | ${result.rounds} round${result.rounds !== 1 ? 's' : ''}`)
-  } catch (err) {
-    spin.stop('Failed')
-    p.log.error(err instanceof Error ? err.message : String(err))
-  }
+        p.log.message(result.answer);
+        p.log.info(
+            `${result.memories.length} memories | ${result.rounds} round${result.rounds !== 1 ? "s" : ""}`,
+        );
+    } catch (err) {
+        spin.stop("Failed");
+        p.log.error(err instanceof Error ? err.message : String(err));
+    }
 }
 
-async function runBuildContext(
-  engine: MemoryEngine,
-  domains: string[],
-): Promise<void> {
-  const text = await p.text({
-    message: 'Enter text to build context for',
-    validate: (v) => !v?.trim() ? 'Text is required' : undefined,
-  })
+async function runBuildContext(engine: MemoryEngine, domains: string[]): Promise<void> {
+    const text = await p.text({
+        message: "Enter text to build context for",
+        validate: (v) => (!v?.trim() ? "Text is required" : undefined),
+    });
 
-  if (isCancel(text)) return
+    if (isCancel(text)) return;
 
-  const spin = p.spinner()
-  spin.start('Building context...')
+    const spin = p.spinner();
+    spin.start("Building context...");
 
-  try {
-    const result = await engine.buildContext(text, {
-      domains: domains.length > 0 ? domains : undefined,
-    })
-    spin.stop('Done')
+    try {
+        const result = await engine.buildContext(text, {
+            domains: domains.length > 0 ? domains : undefined,
+        });
+        spin.stop("Done");
 
-    p.log.message(result.context)
-    p.log.info(`${result.memories.length} memories | ${result.totalTokens} tokens`)
-  } catch (err) {
-    spin.stop('Failed')
-    p.log.error(err instanceof Error ? err.message : String(err))
-  }
+        p.log.message(result.context);
+        p.log.info(`${result.memories.length} memories | ${result.totalTokens} tokens`);
+    } catch (err) {
+        spin.stop("Failed");
+        p.log.error(err instanceof Error ? err.message : String(err));
+    }
 }
 
 async function main(): Promise<void> {
-  const { config } = parseArgs(Bun.argv)
+    const { config } = parseArgs(Bun.argv);
 
-  p.intro('memory-domain')
+    p.intro("memory-domain");
 
-  let engine: MemoryEngine
-  try {
-    engine = await loadConfig(undefined, config)
-  } catch (err) {
-    p.log.error(err instanceof Error ? err.message : String(err))
-    p.outro('Failed to load config')
-    process.exit(1)
-  }
-
-  const summaries = engine.getDomainRegistry().listSummaries()
-
-  try {
-    while (true) {
-      const mode = await selectMode()
-
-      if (isCancel(mode) || mode === 'quit') break
-
-      const domains = await selectDomains(summaries)
-      if (isCancel(domains)) break
-
-      if (mode === 'ask') {
-        await runAsk(engine, domains)
-      } else {
-        await runBuildContext(engine, domains)
-      }
+    let engine: MemoryEngine;
+    try {
+        engine = await loadConfig(undefined, config);
+    } catch (err) {
+        p.log.error(err instanceof Error ? err.message : String(err));
+        p.outro("Failed to load config");
+        process.exit(1);
     }
-  } finally {
-    await engine.close()
-  }
 
-  p.outro('Goodbye')
+    const summaries = engine.getDomainRegistry().listSummaries();
+
+    try {
+        while (true) {
+            const mode = await selectMode();
+
+            if (isCancel(mode) || mode === "quit") break;
+
+            const domains = await selectDomains(summaries);
+            if (isCancel(domains)) break;
+
+            if (mode === "ask") {
+                await runAsk(engine, domains);
+            } else {
+                await runBuildContext(engine, domains);
+            }
+        }
+    } finally {
+        await engine.close();
+    }
+
+    p.outro("Goodbye");
 }
 
 main().catch((err) => {
-  console.error(err)
-  process.exit(1)
-})
+    console.error(err);
+    process.exit(1);
+});

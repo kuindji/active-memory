@@ -1,42 +1,42 @@
-import type { CommandHandler } from '../types.ts'
-import type { SearchQuery } from '../../core/types.ts'
-import { parseMeta } from '../utils.ts'
+import type { CommandHandler } from "../types.ts";
+import type { SearchQuery } from "../../core/types.ts";
+import { parseMeta } from "../utils.ts";
 
 const searchCommand: CommandHandler = async (engine, parsed) => {
-  const text = parsed.args[0]
+    const text = parsed.args[0];
 
-  if (!text) {
-    return { output: { error: 'Search query is required.' }, exitCode: 1 }
-  }
+    if (!text) {
+        return { output: { error: "Search query is required." }, exitCode: 1 };
+    }
 
-  const query: SearchQuery = { text }
+    const query: SearchQuery = { text };
 
-  if (parsed.flags['mode']) {
-    query.mode = parsed.flags['mode'] as SearchQuery['mode']
-  }
-  if (parsed.flags['domains']) {
-    query.domains = (parsed.flags['domains'] as string).split(',')
-  }
-  if (parsed.flags['tags']) {
-    query.tags = (parsed.flags['tags'] as string).split(',')
-  }
-  if (parsed.flags['limit']) {
-    query.limit = Number(parsed.flags['limit'])
-  }
-  if (parsed.flags['budget']) {
-    query.tokenBudget = Number(parsed.flags['budget'])
-  }
-  if (parsed.flags['min-score']) {
-    query.minScore = Number(parsed.flags['min-score'])
-  }
+    if (parsed.flags["mode"]) {
+        query.mode = parsed.flags["mode"] as SearchQuery["mode"];
+    }
+    if (parsed.flags["domains"]) {
+        query.domains = (parsed.flags["domains"] as string).split(",");
+    }
+    if (parsed.flags["tags"]) {
+        query.tags = (parsed.flags["tags"] as string).split(",");
+    }
+    if (parsed.flags["limit"]) {
+        query.limit = Number(parsed.flags["limit"]);
+    }
+    if (parsed.flags["budget"]) {
+        query.tokenBudget = Number(parsed.flags["budget"]);
+    }
+    if (parsed.flags["min-score"]) {
+        query.minScore = Number(parsed.flags["min-score"]);
+    }
 
-  const meta = parseMeta(parsed.flags)
-  if (meta) {
-    query.context = meta
-  }
+    const meta = parseMeta(parsed.flags);
+    if (meta) {
+        query.context = meta;
+    }
 
-  const result = await engine.search(query)
-  return { output: result, exitCode: 0 }
-}
+    const result = await engine.search(query);
+    return { output: result, exitCode: 0 };
+};
 
-export { searchCommand }
+export { searchCommand };

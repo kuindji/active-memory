@@ -1,38 +1,38 @@
 {
-  "name": "memory-domain",
-  "version": "0.1.0",
-  "type": "module",
-  "main": "src/index.ts",
-  "bin": {
-    "memory-domain": "bin/memory-domain",
-    "memory-domain-tui": "bin/memory-domain-tui"
-  },
-  "scripts": {
-    "test": "bun test",
-    "test:integration": "bun test --timeout 180000 --test-root ./tests-integration",
-    "typecheck": "tsc --noEmit",
-    "lint": "eslint .",
-    "lint:fix": "eslint . --fix",
-    "format": "prettier --write .",
-    "format:check": "prettier --check .",
-    "memory-domain": "bin/memory-domain",
-    "tui": "bin/memory-domain-tui"
-  },
-  "dependencies": {
-    "@clack/prompts": "^1.2.0",
-    "@surrealdb/node": "^3.0.0",
-    "js-tiktoken": "^1.0.21",
-    "onnxruntime-node": "^1.24.1",
-    "surrealdb": "^2.0.0"
-  },
-  "devDependencies": {
-    "@eslint/js": "^10.0.1",
-    "@types/bun": "latest",
-    "eslint": "^10.1.0",
-    "eslint-config-prettier": "^10.1.8",
-    "jiti": "^2.6.1",
-    "prettier": "^3.8.1",
-    "typescript": "^5",
-    "typescript-eslint": "^8.57.2"
-  }
+    "name": "memory-domain",
+    "version": "0.1.0",
+    "type": "module",
+    "main": "src/index.ts",
+    "bin": {
+        "memory-domain": "bin/memory-domain",
+        "memory-domain-tui": "bin/memory-domain-tui"
+    },
+    "scripts": {
+        "test": "bun test",
+        "test:integration": "bun test --timeout 180000 --test-root ./tests-integration",
+        "typecheck": "tsc --noEmit",
+        "lint": "eslint .",
+        "lint:fix": "eslint . --fix",
+        "format": "prettier --write .",
+        "format:check": "prettier --check .",
+        "memory-domain": "bin/memory-domain",
+        "tui": "bin/memory-domain-tui"
+    },
+    "dependencies": {
+        "@clack/prompts": "^1.2.0",
+        "@surrealdb/node": "^3.0.0",
+        "js-tiktoken": "^1.0.21",
+        "onnxruntime-node": "^1.24.1",
+        "surrealdb": "^2.0.0"
+    },
+    "devDependencies": {
+        "@eslint/js": "^10.0.1",
+        "@types/bun": "latest",
+        "eslint": "^10.1.0",
+        "eslint-config-prettier": "^10.1.8",
+        "jiti": "^2.6.1",
+        "prettier": "^3.8.1",
+        "typescript": "^5",
+        "typescript-eslint": "^8.57.2"
+    }
 }

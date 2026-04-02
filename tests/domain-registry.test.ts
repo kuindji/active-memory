@@ -1,259 +1,290 @@
-import { describe, test, expect } from 'bun:test'
-import { join } from 'node:path'
-import { DomainRegistry } from '../src/core/domain-registry.ts'
-import type { DomainConfig } from '../src/core/types.ts'
+import { describe, test, expect } from "bun:test";
+import { join } from "node:path";
+import { DomainRegistry } from "../src/core/domain-registry.ts";
+import type { DomainConfig } from "../src/core/types.ts";
 
-const FIXTURES_DIR = join(import.meta.dir, 'fixtures', 'test-domain')
+const FIXTURES_DIR = join(import.meta.dir, "fixtures", "test-domain");
 
 function makeDomain(id: string, name?: string): DomainConfig {
-  return {
-    id,
-    name: name ?? id,
-    async processInboxBatch() {},
-  }
+    return {
+        id,
+        name: name ?? id,
+        async processInboxBatch() {},
+    };
 }
 
-describe('DomainRegistry', () => {
-  test('register and get a domain', () => {
-    const registry = new DomainRegistry()
-    const domain = makeDomain('test')
-    registry.register(domain)
+describe("DomainRegistry", () => {
+    test("register and get a domain", () => {
+        const registry = new DomainRegistry();
+        const domain = makeDomain("test");
+        registry.register(domain);
 
-    expect(registry.get('test')).toBe(domain)
-  })
+        expect(registry.get("test")).toBe(domain);
+    });
 
-  test('get returns undefined for unknown domain', () => {
-    const registry = new DomainRegistry()
-    expect(registry.get('nonexistent')).toBeUndefined()
-  })
+    test("get returns undefined for unknown domain", () => {
+        const registry = new DomainRegistry();
+        expect(registry.get("nonexistent")).toBeUndefined();
+    });
 
-  test('getOrThrow returns the domain', () => {
-    const registry = new DomainRegistry()
-    const domain = makeDomain('test')
-    registry.register(domain)
+    test("getOrThrow returns the domain", () => {
+        const registry = new DomainRegistry();
+        const domain = makeDomain("test");
+        registry.register(domain);
 
-    expect(registry.getOrThrow('test')).toBe(domain)
-  })
+        expect(registry.getOrThrow("test")).toBe(domain);
+    });
 
-  test('getOrThrow throws for unknown domain', () => {
-    const registry = new DomainRegistry()
-    expect(() => registry.getOrThrow('missing')).toThrow('Domain "missing" not found')
-  })
+    test("getOrThrow throws for unknown domain", () => {
+        const registry = new DomainRegistry();
+        expect(() => registry.getOrThrow("missing")).toThrow('Domain "missing" not found');
+    });
 
-  test('has returns true for registered domain', () => {
-    const registry = new DomainRegistry()
-    registry.register(makeDomain('test'))
-    expect(registry.has('test')).toBe(true)
-  })
+    test("has returns true for registered domain", () => {
+        const registry = new DomainRegistry();
+        registry.register(makeDomain("test"));
+        expect(registry.has("test")).toBe(true);
+    });
 
-  test('has returns false for unknown domain', () => {
-    const registry = new DomainRegistry()
-    expect(registry.has('test')).toBe(false)
-  })
+    test("has returns false for unknown domain", () => {
+        const registry = new DomainRegistry();
+        expect(registry.has("test")).toBe(false);
+    });
 
-  test('list returns all registered domains', () => {
-    const registry = new DomainRegistry()
-    const a = makeDomain('a')
-    const b = makeDomain('b')
-    registry.register(a)
-    registry.register(b)
+    test("list returns all registered domains", () => {
+        const registry = new DomainRegistry();
+        const a = makeDomain("a");
+        const b = makeDomain("b");
+        registry.register(a);
+        registry.register(b);
 
-    const list = registry.list()
-    expect(list).toHaveLength(2)
-    expect(list).toContain(a)
-    expect(list).toContain(b)
-  })
+        const list = registry.list();
+        expect(list).toHaveLength(2);
+        expect(list).toContain(a);
+        expect(list).toContain(b);
+    });
 
-  test('getAllDomainIds returns all ids', () => {
-    const registry = new DomainRegistry()
-    registry.register(makeDomain('x'))
-    registry.register(makeDomain('y'))
+    test("getAllDomainIds returns all ids", () => {
+        const registry = new DomainRegistry();
+        registry.register(makeDomain("x"));
+        registry.register(makeDomain("y"));
 
-    const ids = registry.getAllDomainIds()
-    expect(ids).toContain('x')
-    expect(ids).toContain('y')
-    expect(ids).toHaveLength(2)
-  })
+        const ids = registry.getAllDomainIds();
+        expect(ids).toContain("x");
+        expect(ids).toContain("y");
+        expect(ids).toHaveLength(2);
+    });
 
-  test('duplicate registration throws', () => {
-    const registry = new DomainRegistry()
-    registry.register(makeDomain('dup'))
+    test("duplicate registration throws", () => {
+        const registry = new DomainRegistry();
+        registry.register(makeDomain("dup"));
 
-    expect(() => registry.register(makeDomain('dup'))).toThrow(
-      'Domain "dup" is already registered'
-    )
-  })
+        expect(() => registry.register(makeDomain("dup"))).toThrow(
+            'Domain "dup" is already registered',
+        );
+    });
 
-  test('unregister removes a domain', () => {
-    const registry = new DomainRegistry()
-    registry.register(makeDomain('removable'))
-    expect(registry.has('removable')).toBe(true)
+    test("unregister removes a domain", () => {
+        const registry = new DomainRegistry();
+        registry.register(makeDomain("removable"));
+        expect(registry.has("removable")).toBe(true);
 
-    registry.unregister('removable')
-    expect(registry.has('removable')).toBe(false)
-    expect(registry.get('removable')).toBeUndefined()
-  })
+        registry.unregister("removable");
+        expect(registry.has("removable")).toBe(false);
+        expect(registry.get("removable")).toBeUndefined();
+    });
 
-  test('unregister non-existent domain is a no-op', () => {
-    const registry = new DomainRegistry()
-    // Should not throw
-    registry.unregister('ghost')
-    expect(registry.has('ghost')).toBe(false)
-  })
+    test("unregister non-existent domain is a no-op", () => {
+        const registry = new DomainRegistry();
+        // Should not throw
+        registry.unregister("ghost");
+        expect(registry.has("ghost")).toBe(false);
+    });
 
-  test('domain with baseDir is accepted', () => {
-    const registry = new DomainRegistry()
-    const domain: DomainConfig = {
-      id: 'typed',
-      name: 'Typed Domain',
-      baseDir: '/some/path',
-      async processInboxBatch() {},
-    }
-    registry.register(domain)
-    expect(registry.get('typed')?.baseDir).toBe('/some/path')
-  })
+    test("domain with baseDir is accepted", () => {
+        const registry = new DomainRegistry();
+        const domain: DomainConfig = {
+            id: "typed",
+            name: "Typed Domain",
+            baseDir: "/some/path",
+            async processInboxBatch() {},
+        };
+        registry.register(domain);
+        expect(registry.get("typed")?.baseDir).toBe("/some/path");
+    });
 
-  test('register with access level stores the level', () => {
-    const registry = new DomainRegistry()
-    registry.register(makeDomain('readonly-domain'), { access: 'read' })
+    test("register with access level stores the level", () => {
+        const registry = new DomainRegistry();
+        registry.register(makeDomain("readonly-domain"), { access: "read" });
 
-    expect(registry.getAccess('readonly-domain')).toBe('read')
-  })
+        expect(registry.getAccess("readonly-domain")).toBe("read");
+    });
 
-  test('register without options defaults access to write', () => {
-    const registry = new DomainRegistry()
-    registry.register(makeDomain('default-domain'))
+    test("register without options defaults access to write", () => {
+        const registry = new DomainRegistry();
+        registry.register(makeDomain("default-domain"));
 
-    expect(registry.getAccess('default-domain')).toBe('write')
-  })
+        expect(registry.getAccess("default-domain")).toBe("write");
+    });
 
-  test('getAccess throws for unknown domain', () => {
-    const registry = new DomainRegistry()
-    expect(() => registry.getAccess('missing')).toThrow('Domain "missing" not found')
-  })
-})
+    test("getAccess throws for unknown domain", () => {
+        const registry = new DomainRegistry();
+        expect(() => registry.getAccess("missing")).toThrow('Domain "missing" not found');
+    });
+});
 
-describe('Lazy loading', () => {
-  test('getStructure loads structure.md from baseDir', async () => {
-    const registry = new DomainRegistry()
-    registry.register({
-      id: 'fixtured',
-      name: 'Fixtured',
-      baseDir: FIXTURES_DIR,
-      async processInboxBatch() {},
-    })
-    const structure = await registry.getStructure('fixtured')
-    expect(structure).toContain('## Tags')
-    expect(structure).toContain('test/category')
-  })
+describe("Lazy loading", () => {
+    test("getStructure loads structure.md from baseDir", async () => {
+        const registry = new DomainRegistry();
+        registry.register({
+            id: "fixtured",
+            name: "Fixtured",
+            baseDir: FIXTURES_DIR,
+            async processInboxBatch() {},
+        });
+        const structure = await registry.getStructure("fixtured");
+        expect(structure).toContain("## Tags");
+        expect(structure).toContain("test/category");
+    });
 
-  test('getStructure returns null when no baseDir', async () => {
-    const registry = new DomainRegistry()
-    registry.register({
-      id: 'nobase',
-      name: 'No Base',
-      async processInboxBatch() {},
-    })
-    const structure = await registry.getStructure('nobase')
-    expect(structure).toBeNull()
-  })
+    test("getStructure returns null when no baseDir", async () => {
+        const registry = new DomainRegistry();
+        registry.register({
+            id: "nobase",
+            name: "No Base",
+            async processInboxBatch() {},
+        });
+        const structure = await registry.getStructure("nobase");
+        expect(structure).toBeNull();
+    });
 
-  test('getStructure returns null when structure.md does not exist', async () => {
-    const registry = new DomainRegistry()
-    registry.register({
-      id: 'emptydir',
-      name: 'Empty Dir',
-      baseDir: join(import.meta.dir, 'fixtures'),
-      async processInboxBatch() {},
-    })
-    const structure = await registry.getStructure('emptydir')
-    expect(structure).toBeNull()
-  })
+    test("getStructure returns null when structure.md does not exist", async () => {
+        const registry = new DomainRegistry();
+        registry.register({
+            id: "emptydir",
+            name: "Empty Dir",
+            baseDir: join(import.meta.dir, "fixtures"),
+            async processInboxBatch() {},
+        });
+        const structure = await registry.getStructure("emptydir");
+        expect(structure).toBeNull();
+    });
 
-  test('getSkillContent loads skill md from baseDir/skills/', async () => {
-    const registry = new DomainRegistry()
-    registry.register({
-      id: 'fixtured',
-      name: 'Fixtured',
-      baseDir: FIXTURES_DIR,
-      skills: [
-        { id: 'consumption', name: 'Consumption', description: 'desc', scope: 'external' },
-      ],
-      async processInboxBatch() {},
-    })
-    const content = await registry.getSkillContent('fixtured', 'consumption')
-    expect(content).toContain('test/category')
-  })
+    test("getSkillContent loads skill md from baseDir/skills/", async () => {
+        const registry = new DomainRegistry();
+        registry.register({
+            id: "fixtured",
+            name: "Fixtured",
+            baseDir: FIXTURES_DIR,
+            skills: [
+                { id: "consumption", name: "Consumption", description: "desc", scope: "external" },
+            ],
+            async processInboxBatch() {},
+        });
+        const content = await registry.getSkillContent("fixtured", "consumption");
+        expect(content).toContain("test/category");
+    });
 
-  test('getSkillContent returns null when skill md does not exist', async () => {
-    const registry = new DomainRegistry()
-    registry.register({
-      id: 'fixtured',
-      name: 'Fixtured',
-      baseDir: FIXTURES_DIR,
-      skills: [
-        { id: 'nonexistent', name: 'Missing', description: 'desc', scope: 'external' },
-      ],
-      async processInboxBatch() {},
-    })
-    const content = await registry.getSkillContent('fixtured', 'nonexistent')
-    expect(content).toBeNull()
-  })
+    test("getSkillContent returns null when skill md does not exist", async () => {
+        const registry = new DomainRegistry();
+        registry.register({
+            id: "fixtured",
+            name: "Fixtured",
+            baseDir: FIXTURES_DIR,
+            skills: [
+                { id: "nonexistent", name: "Missing", description: "desc", scope: "external" },
+            ],
+            async processInboxBatch() {},
+        });
+        const content = await registry.getSkillContent("fixtured", "nonexistent");
+        expect(content).toBeNull();
+    });
 
-  test('getSkillContent returns null when no baseDir', async () => {
-    const registry = new DomainRegistry()
-    registry.register({
-      id: 'nobase',
-      name: 'No Base',
-      skills: [
-        { id: 'any', name: 'Any', description: 'desc', scope: 'external' },
-      ],
-      async processInboxBatch() {},
-    })
-    const content = await registry.getSkillContent('nobase', 'any')
-    expect(content).toBeNull()
-  })
+    test("getSkillContent returns null when no baseDir", async () => {
+        const registry = new DomainRegistry();
+        registry.register({
+            id: "nobase",
+            name: "No Base",
+            skills: [{ id: "any", name: "Any", description: "desc", scope: "external" }],
+            async processInboxBatch() {},
+        });
+        const content = await registry.getSkillContent("nobase", "any");
+        expect(content).toBeNull();
+    });
 
-  test('getSkillContent returns null for unknown domain', async () => {
-    const registry = new DomainRegistry()
-    const content = await registry.getSkillContent('unknown', 'any')
-    expect(content).toBeNull()
-  })
-})
+    test("getSkillContent returns null for unknown domain", async () => {
+        const registry = new DomainRegistry();
+        const content = await registry.getSkillContent("unknown", "any");
+        expect(content).toBeNull();
+    });
+});
 
-describe('Skill filtering by access level', () => {
-  test('getExternalSkills excludes write skills for read-only domains', () => {
-    const registry = new DomainRegistry()
-    registry.register({
-      id: 'filtered',
-      name: 'Filtered',
-      skills: [
-        { id: 'read-skill', name: 'Read', description: 'read', scope: 'external' },
-        { id: 'write-skill', name: 'Write', description: 'write', scope: 'external', writes: true },
-        { id: 'both-write', name: 'Both', description: 'both', scope: 'both', writes: true },
-        { id: 'internal-write', name: 'Internal', description: 'internal', scope: 'internal', writes: true },
-      ],
-      async processInboxBatch() {},
-    }, { access: 'read' })
+describe("Skill filtering by access level", () => {
+    test("getExternalSkills excludes write skills for read-only domains", () => {
+        const registry = new DomainRegistry();
+        registry.register(
+            {
+                id: "filtered",
+                name: "Filtered",
+                skills: [
+                    { id: "read-skill", name: "Read", description: "read", scope: "external" },
+                    {
+                        id: "write-skill",
+                        name: "Write",
+                        description: "write",
+                        scope: "external",
+                        writes: true,
+                    },
+                    {
+                        id: "both-write",
+                        name: "Both",
+                        description: "both",
+                        scope: "both",
+                        writes: true,
+                    },
+                    {
+                        id: "internal-write",
+                        name: "Internal",
+                        description: "internal",
+                        scope: "internal",
+                        writes: true,
+                    },
+                ],
+                async processInboxBatch() {},
+            },
+            { access: "read" },
+        );
 
-    const skills = registry.getExternalSkills('filtered')
-    expect(skills.map(s => s.id)).toEqual(['read-skill'])
-  })
+        const skills = registry.getExternalSkills("filtered");
+        expect(skills.map((s) => s.id)).toEqual(["read-skill"]);
+    });
 
-  test('getExternalSkills returns all external skills for write-access domains', () => {
-    const registry = new DomainRegistry()
-    registry.register({
-      id: 'full',
-      name: 'Full',
-      skills: [
-        { id: 'read-skill', name: 'Read', description: 'read', scope: 'external' },
-        { id: 'write-skill', name: 'Write', description: 'write', scope: 'external', writes: true },
-        { id: 'both-write', name: 'Both', description: 'both', scope: 'both', writes: true },
-      ],
-      async processInboxBatch() {},
-    })
+    test("getExternalSkills returns all external skills for write-access domains", () => {
+        const registry = new DomainRegistry();
+        registry.register({
+            id: "full",
+            name: "Full",
+            skills: [
+                { id: "read-skill", name: "Read", description: "read", scope: "external" },
+                {
+                    id: "write-skill",
+                    name: "Write",
+                    description: "write",
+                    scope: "external",
+                    writes: true,
+                },
+                {
+                    id: "both-write",
+                    name: "Both",
+                    description: "both",
+                    scope: "both",
+                    writes: true,
+                },
+            ],
+            async processInboxBatch() {},
+        });
 
-    const skills = registry.getExternalSkills('full')
-    expect(skills).toHaveLength(3)
-  })
-})
+        const skills = registry.getExternalSkills("full");
+        expect(skills).toHaveLength(3);
+    });
+});

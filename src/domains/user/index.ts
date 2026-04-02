@@ -1,1 +1,1 @@
-export { createUserDomain, userDomain } from './user-domain.ts'
+export { createUserDomain, userDomain } from "./user-domain.ts";

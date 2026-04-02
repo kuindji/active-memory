@@ -1,107 +1,101 @@
-import { describe, test, expect } from 'bun:test'
-import { countTokens, mergeScores, applyTokenBudget } from '../src/core/scoring.ts'
+import { describe, test, expect } from "bun:test";
+import { countTokens, mergeScores, applyTokenBudget } from "../src/core/scoring.ts";
 
-describe('countTokens', () => {
-  test('returns token count for a simple string', () => {
-    const count = countTokens('hello world')
-    expect(count).toBeGreaterThan(0)
-    expect(typeof count).toBe('number')
-  })
+describe("countTokens", () => {
+    test("returns token count for a simple string", () => {
+        const count = countTokens("hello world");
+        expect(count).toBeGreaterThan(0);
+        expect(typeof count).toBe("number");
+    });
 
-  test('returns 0 for empty string', () => {
-    expect(countTokens('')).toBe(0)
-  })
+    test("returns 0 for empty string", () => {
+        expect(countTokens("")).toBe(0);
+    });
 
-  test('longer text produces more tokens', () => {
-    const short = countTokens('hello')
-    const long = countTokens('hello world this is a longer sentence with more tokens')
-    expect(long).toBeGreaterThan(short)
-  })
-})
+    test("longer text produces more tokens", () => {
+        const short = countTokens("hello");
+        const long = countTokens("hello world this is a longer sentence with more tokens");
+        expect(long).toBeGreaterThan(short);
+    });
+});
 
-describe('mergeScores', () => {
-  test('computes weighted average of provided scores', () => {
-    const result = mergeScores(
-      { fulltext: 0.8, graph: 0.6 },
-      { vector: 0.5, fulltext: 0.3, graph: 0.2 }
-    )
-    // Only fulltext and graph are provided
-    // (0.8 * 0.3 + 0.6 * 0.2) / (0.3 + 0.2) = (0.24 + 0.12) / 0.5 = 0.72
-    expect(result).toBeCloseTo(0.72)
-  })
+describe("mergeScores", () => {
+    test("computes weighted average of provided scores", () => {
+        const result = mergeScores(
+            { fulltext: 0.8, graph: 0.6 },
+            { vector: 0.5, fulltext: 0.3, graph: 0.2 },
+        );
+        // Only fulltext and graph are provided
+        // (0.8 * 0.3 + 0.6 * 0.2) / (0.3 + 0.2) = (0.24 + 0.12) / 0.5 = 0.72
+        expect(result).toBeCloseTo(0.72);
+    });
 
-  test('returns 0 when no scores are provided', () => {
-    const result = mergeScores({}, { vector: 0.5, fulltext: 0.3, graph: 0.2 })
-    expect(result).toBe(0)
-  })
+    test("returns 0 when no scores are provided", () => {
+        const result = mergeScores({}, { vector: 0.5, fulltext: 0.3, graph: 0.2 });
+        expect(result).toBe(0);
+    });
 
-  test('handles single score correctly', () => {
-    const result = mergeScores(
-      { vector: 0.9 },
-      { vector: 0.5, fulltext: 0.3, graph: 0.2 }
-    )
-    // (0.9 * 0.5) / 0.5 = 0.9
-    expect(result).toBeCloseTo(0.9)
-  })
+    test("handles single score correctly", () => {
+        const result = mergeScores({ vector: 0.9 }, { vector: 0.5, fulltext: 0.3, graph: 0.2 });
+        // (0.9 * 0.5) / 0.5 = 0.9
+        expect(result).toBeCloseTo(0.9);
+    });
 
-  test('handles all three scores', () => {
-    const result = mergeScores(
-      { vector: 1.0, fulltext: 0.5, graph: 0.0 },
-      { vector: 0.5, fulltext: 0.3, graph: 0.2 }
-    )
-    // (1.0*0.5 + 0.5*0.3 + 0.0*0.2) / (0.5+0.3+0.2) = (0.5 + 0.15 + 0) / 1.0 = 0.65
-    expect(result).toBeCloseTo(0.65)
-  })
+    test("handles all three scores", () => {
+        const result = mergeScores(
+            { vector: 1.0, fulltext: 0.5, graph: 0.0 },
+            { vector: 0.5, fulltext: 0.3, graph: 0.2 },
+        );
+        // (1.0*0.5 + 0.5*0.3 + 0.0*0.2) / (0.5+0.3+0.2) = (0.5 + 0.15 + 0) / 1.0 = 0.65
+        expect(result).toBeCloseTo(0.65);
+    });
 
-  test('handles zero weights gracefully', () => {
-    const result = mergeScores(
-      { vector: 0.8 },
-      { vector: 0, fulltext: 0, graph: 0 }
-    )
-    // weightSum = 0, so returns 0
-    expect(result).toBe(0)
-  })
-})
+    test("handles zero weights gracefully", () => {
+        const result = mergeScores({ vector: 0.8 }, { vector: 0, fulltext: 0, graph: 0 });
+        // weightSum = 0, so returns 0
+        expect(result).toBe(0);
+    });
+});
 
-describe('applyTokenBudget', () => {
-  test('returns entries that fit within budget', () => {
-    const entries = [
-      { content: 'short', tokenCount: 10 },
-      { content: 'medium text', tokenCount: 20 },
-      { content: 'long text here', tokenCount: 30 },
-    ]
-    const result = applyTokenBudget(entries, 25)
-    expect(result).toHaveLength(1)
-    expect(result[0].content).toBe('short')
-  })
+describe("applyTokenBudget", () => {
+    test("returns entries that fit within budget", () => {
+        const entries = [
+            { content: "short", tokenCount: 10 },
+            { content: "medium text", tokenCount: 20 },
+            { content: "long text here", tokenCount: 30 },
+        ];
+        const result = applyTokenBudget(entries, 25);
+        expect(result).toHaveLength(1);
+        expect(result[0].content).toBe("short");
+    });
 
-  test('returns all entries when budget is large enough', () => {
-    const entries = [
-      { content: 'a', tokenCount: 10 },
-      { content: 'b', tokenCount: 10 },
-    ]
-    const result = applyTokenBudget(entries, 100)
-    expect(result).toHaveLength(2)
-  })
+    test("returns all entries when budget is large enough", () => {
+        const entries = [
+            { content: "a", tokenCount: 10 },
+            { content: "b", tokenCount: 10 },
+        ];
+        const result = applyTokenBudget(entries, 100);
+        expect(result).toHaveLength(2);
+    });
 
-  test('returns empty array when first entry exceeds budget', () => {
-    const entries = [{ content: 'big', tokenCount: 50 }]
-    const result = applyTokenBudget(entries, 10)
-    expect(result).toHaveLength(0)
-  })
+    test("returns empty array when first entry exceeds budget", () => {
+        const entries = [{ content: "big", tokenCount: 50 }];
+        const result = applyTokenBudget(entries, 10);
+        expect(result).toHaveLength(0);
+    });
 
-  test('returns empty array for empty input', () => {
-    const result = applyTokenBudget([], 100)
-    expect(result).toHaveLength(0)
-  })
+    test("returns empty array for empty input", () => {
+        const result = applyTokenBudget([], 100);
+        expect(result).toHaveLength(0);
+    });
 
-  test('computes token count from content when tokenCount is missing', () => {
-    const entries = [
-      { content: 'hello world' },
-      { content: 'another entry here with more words to use up tokens' },
-    ]
-    // Budget of 5 tokens should limit results
-    const result = applyTokenBudget(entries, 5)
-    expect(result.length).toBeLessThanOrEqual(entries.length)
-  })
-})
+    test("computes token count from content when tokenCount is missing", () => {
+        const entries = [
+            { content: "hello world" },
+            { content: "another entry here with more words to use up tokens" },
+        ];
+        // Budget of 5 tokens should limit results
+        const result = applyTokenBudget(entries, 5);
+        expect(result.length).toBeLessThanOrEqual(entries.length);
+    });
+});

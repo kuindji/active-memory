@@ -23,10 +23,10 @@ Global Flags:
   --meta key=value      Set request context metadata (repeatable)
 
 Run "memory-domain help <command>" for detailed help on a specific command.
-`.trim()
+`.trim();
 
 const COMMAND_HELP: Record<string, string> = {
-  init: `
+    init: `
 Usage: memory-domain init [--yes] [--no-bootstrap]
 
 Initialize the database, register schemas, and optionally run domain bootstrap routines.
@@ -44,7 +44,7 @@ Examples:
   memory-domain init --no-bootstrap
 `.trim(),
 
-  ingest: `
+    ingest: `
 Usage: memory-domain ingest [--text "..."] [--domains d1,d2] [--tags t1,t2] [--event-time <ms>] [--skip-dedup] [--meta key=value]
 
 Store a new memory. Reads from stdin if piped, otherwise requires --text.
@@ -62,7 +62,7 @@ Examples:
   memory-domain ingest --text "Buy milk" --tags shopping --meta user-id=abc
 `.trim(),
 
-  search: `
+    search: `
 Usage: memory-domain search <query> [--mode vector|fulltext|graph|hybrid] [--domains d1,d2] [--tags t1,t2] [--limit N] [--budget N] [--min-score N] [--meta key=value]
 
 Search stored memories by query string.
@@ -84,7 +84,7 @@ Examples:
   memory-domain search "shopping list" --domains personal --meta user-id=abc
 `.trim(),
 
-  ask: `
+    ask: `
 Usage: memory-domain ask <question> [--domains d1,d2] [--tags t1,t2] [--budget N] [--limit N] [--meta key=value]
 
 Ask a natural language question and retrieve relevant memories as an answer.
@@ -104,7 +104,7 @@ Examples:
   memory-domain ask "What are my tasks?" --domains work --meta user-id=abc
 `.trim(),
 
-  'build-context': `
+    "build-context": `
 Usage: memory-domain build-context <text> [--domains d1,d2] [--budget N] [--max-memories N] [--meta key=value]
 
 Build a context block from memories relevant to the provided text.
@@ -123,7 +123,7 @@ Examples:
   memory-domain build-context "Auth flow" --domains codebase --meta session-id=xyz
 `.trim(),
 
-  write: `
+    write: `
 Usage: memory-domain write --domain <id> --text <text> [--tags t1,t2] [--attr key=value] [--meta key=value]
 
 Create a memory with direct domain ownership. No deduplication or inbox processing.
@@ -140,7 +140,7 @@ Examples:
   memory-domain write --domain user --text "Prefers dark mode" --tags preference --meta user-id=abc
 `.trim(),
 
-  memory: `
+    memory: `
 Usage: memory-domain memory <id> [subcommand] [options]
 
 Read, update, tag, or delete a specific memory.
@@ -167,7 +167,7 @@ Examples:
   memory-domain memory memory:abc123 delete
 `.trim(),
 
-  graph: `
+    graph: `
 Usage: memory-domain graph <subcommand> [options]
 
 Manage graph edges and run traversals.
@@ -192,7 +192,7 @@ Examples:
   memory-domain graph traverse topic:ml --edges subtopic_of,related_to --depth 2
 `.trim(),
 
-  schedule: `
+    schedule: `
 Usage: memory-domain schedule <subcommand> [options]
 
 List or manually trigger domain schedules.
@@ -212,7 +212,7 @@ Examples:
   memory-domain schedule run-due
 `.trim(),
 
-  skill: `
+    skill: `
 Usage: memory-domain skill
 
 Output a combined skill guide from all registered domains. Collects all external
@@ -224,7 +224,7 @@ Examples:
   memory-domain skill --pretty
 `.trim(),
 
-  domains: `
+    domains: `
 Usage: memory-domain domains
 
 List all available domains and their descriptions.
@@ -234,7 +234,7 @@ Examples:
   memory-domain domains --pretty
 `.trim(),
 
-  domain: `
+    domain: `
 Usage: memory-domain domain <id> <subcommand>
 
 Inspect a specific domain by its ID.
@@ -253,7 +253,7 @@ Examples:
   memory-domain domain topic skill topic-management
 `.trim(),
 
-  help: `
+    help: `
 Usage: memory-domain help [<command>]
 
 Show help text. Pass a command name to see detailed help for that command.
@@ -263,14 +263,14 @@ Examples:
   memory-domain help write
   memory-domain --help
 `.trim(),
-}
+};
 
 function getHelpText(): string {
-  return USAGE
+    return USAGE;
 }
 
 function getCommandHelp(command: string): string | null {
-  return COMMAND_HELP[command] ?? null
+    return COMMAND_HELP[command] ?? null;
 }
 
-export { getHelpText, getCommandHelp }
+export { getHelpText, getCommandHelp };

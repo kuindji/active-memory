@@ -1,1 +1,1 @@
-export { createTopicDomain, topicDomain } from './topic-domain.ts'
+export { createTopicDomain, topicDomain } from "./topic-domain.ts";
