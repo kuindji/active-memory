@@ -93,7 +93,7 @@ class MemoryEngine {
       this.graph,
       this.domainRegistry,
       this.events,
-      (domainId: string) => this.createDomainContext(domainId)
+      (domainId: string, requestContext?: RequestContext) => this.createDomainContext(domainId, requestContext)
     )
 
     this.defaultContext = config.context ?? {}
@@ -403,6 +403,10 @@ class MemoryEngine {
     }
     if (options?.eventTime !== undefined) {
       memData.event_time = options.eventTime
+    }
+    const requestContext = this.mergeContext(options?.context)
+    if (Object.keys(requestContext).length > 0) {
+      memData.request_context = requestContext
     }
     if (embeddingVec) {
       memData.embedding = embeddingVec

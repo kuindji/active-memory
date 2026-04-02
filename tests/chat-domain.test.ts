@@ -194,6 +194,106 @@ describe('Chat domain - inbox processing', () => {
     expect(third[0].content).toBe('Third message')
   })
 
+  test('uses per-ingest request context when engine default context is empty', async () => {
+    const engine2 = new MemoryEngine()
+    await engine2.initialize({
+      connection: 'mem://',
+      namespace: 'test',
+      database: `test_per_ingest_ctx_${Date.now()}`,
+      llm,
+      embedding: new MockEmbeddingAdapter(),
+    })
+    await engine2.registerDomain(createTopicDomain({ mergeSchedule: { enabled: false } }))
+    await engine2.registerDomain(createChatDomain({
+      promoteSchedule: { enabled: false },
+      consolidateSchedule: { enabled: false },
+      pruneSchedule: { enabled: false },
+    }))
+
+    await engine2.ingest('Scoped message', {
+      domains: ['chat'],
+      metadata: { role: 'assistant' },
+      context: { userId: 'scoped-user', chatSessionId: 'scoped-session' },
+    })
+
+    await engine2.processInbox()
+
+    const ctx = engine2.createDomainContext(CHAT_DOMAIN_ID)
+    const memories = await ctx.getMemories({
+      attributes: {
+        role: 'assistant',
+        layer: 'working',
+        userId: 'scoped-user',
+        chatSessionId: 'scoped-session',
+        messageIndex: 0,
+      },
+    })
+
+    expect(memories).toHaveLength(1)
+    expect(memories[0].content).toBe('Scoped message')
+
+    await engine2.close()
+  })
+
+  test('keeps separate per-ingest contexts in the same inbox drain', async () => {
+    const engine2 = new MemoryEngine()
+    await engine2.initialize({
+      connection: 'mem://',
+      namespace: 'test',
+      database: `test_mixed_ingest_ctx_${Date.now()}`,
+      llm,
+      embedding: new MockEmbeddingAdapter(),
+    })
+    await engine2.registerDomain(createTopicDomain({ mergeSchedule: { enabled: false } }))
+    await engine2.registerDomain(createChatDomain({
+      promoteSchedule: { enabled: false },
+      consolidateSchedule: { enabled: false },
+      pruneSchedule: { enabled: false },
+    }))
+
+    await engine2.ingest('Session one message', {
+      domains: ['chat'],
+      metadata: { role: 'user' },
+      context: { userId: 'user-1', chatSessionId: 'session-1' },
+    })
+    await engine2.ingest('Session two message', {
+      domains: ['chat'],
+      metadata: { role: 'assistant' },
+      context: { userId: 'user-2', chatSessionId: 'session-2' },
+    })
+
+    await engine2.processInbox()
+    await engine2.processInbox()
+
+    const ctx = engine2.createDomainContext(CHAT_DOMAIN_ID)
+
+    const sessionOne = await ctx.getMemories({
+      attributes: {
+        role: 'user',
+        layer: 'working',
+        userId: 'user-1',
+        chatSessionId: 'session-1',
+        messageIndex: 0,
+      },
+    })
+    const sessionTwo = await ctx.getMemories({
+      attributes: {
+        role: 'assistant',
+        layer: 'working',
+        userId: 'user-2',
+        chatSessionId: 'session-2',
+        messageIndex: 0,
+      },
+    })
+
+    expect(sessionOne).toHaveLength(1)
+    expect(sessionOne[0].content).toBe('Session one message')
+    expect(sessionTwo).toHaveLength(1)
+    expect(sessionTwo[0].content).toBe('Session two message')
+
+    await engine2.close()
+  })
+
   test('skips processing when userId is missing from context', async () => {
     // Create engine without userId
     const engine2 = new MemoryEngine()

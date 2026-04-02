@@ -26,6 +26,7 @@ class SchemaRegistry {
       DEFINE FIELD IF NOT EXISTS event_time ON memory TYPE option<int>;
       DEFINE FIELD IF NOT EXISTS created_at ON memory TYPE int;
       DEFINE FIELD IF NOT EXISTS token_count ON memory TYPE int DEFAULT 0;
+      DEFINE FIELD IF NOT EXISTS request_context ON memory TYPE option<object> FLEXIBLE;
     `)
 
     await this.db.query(`
@@ -95,6 +96,7 @@ class SchemaRegistry {
         { name: 'event_time', type: 'option<int>' },
         { name: 'created_at', type: 'int' },
         { name: 'token_count', type: 'int' },
+        { name: 'request_context', type: 'option<object>' },
       ],
       contributors: ['core'],
     })

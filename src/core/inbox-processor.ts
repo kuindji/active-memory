@@ -17,6 +17,7 @@ interface RawMemoryRow {
   event_time: number | null
   created_at: number
   token_count: number
+  request_context?: Record<string, unknown>
 }
 
 interface RawOwnedByEdge {
@@ -45,6 +46,7 @@ interface SimilarityBatch {
   batchId: string
   entries: OwnedMemory[]
   memoryIds: string[]
+  requestContext?: Record<string, unknown>
 }
 
 type TagFilter =
@@ -138,6 +140,7 @@ class InboxProcessor {
           event_time: node.event_time,
           created_at: node.created_at,
           token_count: node.token_count,
+          request_context: this.normalizeRequestContext(node.request_context),
         })
       }
     }
@@ -162,18 +165,23 @@ class InboxProcessor {
     // 3. Pick centroid (oldest)
     const seed = candidateRows[0]
     const seedId = String(seed.id)
+    const requestContext = seed.request_context
+    const requestContextKey = this.getRequestContextKey(requestContext)
+    const sameContextRows = candidateRows.filter(row =>
+      this.getRequestContextKey(row.request_context) === requestContextKey
+    )
 
     // 4. Find neighbors
     let batchIds: string[]
 
-    if (seed.embedding && candidateRows.length > 1) {
+    if (seed.embedding && sameContextRows.length > 1) {
       // Use similarity-based ordering
-      const neighborIds = candidateRows.slice(1).map(r => String(r.id))
+      const neighborIds = sameContextRows.slice(1).map(r => String(r.id))
       batchIds = await this.findSimilarNeighbors(seed, neighborIds)
       batchIds = [seedId, ...batchIds]
     } else {
       // No embedding or single candidate: chronological
-      batchIds = candidateRows.slice(0, this.batchLimit).map(r => String(r.id))
+      batchIds = sameContextRows.slice(0, this.batchLimit).map(r => String(r.id))
     }
 
     // 4. Tag as processing
@@ -182,7 +190,7 @@ class InboxProcessor {
     // 5. Build OwnedMemory entries
     const entries = await this.buildOwnedMemoryEntries(batchIds, domainId)
 
-    return { batchId, entries, memoryIds: batchIds }
+    return { batchId, entries, memoryIds: batchIds, requestContext }
   }
 
   private async findSimilarNeighbors(
@@ -245,6 +253,34 @@ class InboxProcessor {
     }
 
     return similarIds
+  }
+
+  private normalizeRequestContext(value: unknown): Record<string, unknown> | undefined {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined
+    return value as Record<string, unknown>
+  }
+
+  private getRequestContextKey(requestContext: Record<string, unknown> | undefined): string {
+    if (!requestContext) return ''
+    return this.stableStringify(requestContext)
+  }
+
+  private stableStringify(value: unknown): string {
+    if (value === null || typeof value !== 'object') {
+      return JSON.stringify(value)
+    }
+
+    if (Array.isArray(value)) {
+      return `[${value.map(item => this.stableStringify(item)).join(',')}]`
+    }
+
+    const entries = Object.entries(value as Record<string, unknown>)
+      .filter(([, entryValue]) => entryValue !== undefined)
+      .sort(([left], [right]) => left.localeCompare(right))
+
+    return `{${entries
+      .map(([key, entryValue]) => `${JSON.stringify(key)}:${this.stableStringify(entryValue)}`)
+      .join(',')}}`
   }
 
   private async tagBatchAsProcessing(memoryIds: string[]): Promise<string> {
@@ -337,7 +373,7 @@ class InboxProcessor {
     const batch = await this.buildSimilarityBatch({ type: 'assert-claim' })
     if (!batch) return 0
 
-    const { batchId, entries, memoryIds } = batch
+    const { batchId, entries, memoryIds, requestContext } = batch
 
     try {
       // Collect assert-claim tags for each memory to know which domains to call
@@ -366,7 +402,7 @@ class InboxProcessor {
         )
         if (domainEntries.length === 0) continue
 
-        const ctx = this.contextFactory(domainId)
+        const ctx = this.contextFactory(domainId, requestContext)
         try {
           const claimedIds = await domain.assertInboxClaimBatch(domainEntries, ctx)
 
@@ -460,10 +496,10 @@ class InboxProcessor {
       const batch = await this.buildSimilarityBatch({ type: 'domain', domainId }, domainId)
       if (!batch) continue
 
-      const { batchId, entries, memoryIds } = batch
+      const { batchId, entries, memoryIds, requestContext } = batch
 
       try {
-        const ctx = this.contextFactory(domainId)
+        const ctx = this.contextFactory(domainId, requestContext)
         try {
           await domain.processInboxBatch(entries, ctx)
         } catch (err) {

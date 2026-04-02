@@ -26,10 +26,11 @@ describe('InboxProcessor', () => {
     store = new GraphStore(db)
     domainRegistry = new DomainRegistry()
     events = new EventEmitter()
-    processor = new InboxProcessor(store, domainRegistry, events, (domainId: string) => ({
+    processor = new InboxProcessor(store, domainRegistry, events, (domainId: string, requestContext?: Record<string, unknown>) => ({
       domain: domainId,
       graph: store,
       llm: new MockLLMAdapter(),
+      requestContext: requestContext ?? {},
     } as unknown as DomainContext))
   })
 
@@ -38,7 +39,11 @@ describe('InboxProcessor', () => {
   })
 
   // Helper to create a memory with inbox tag
-  async function createInboxMemory(content: string, embedding?: number[]): Promise<string> {
+  async function createInboxMemory(
+    content: string,
+    embedding?: number[],
+    requestContext?: Record<string, unknown>,
+  ): Promise<string> {
     const data: Record<string, unknown> = {
       content,
       created_at: Date.now(),
@@ -46,6 +51,9 @@ describe('InboxProcessor', () => {
     }
     if (embedding) {
       data.embedding = embedding
+    }
+    if (requestContext) {
+      data.request_context = requestContext
     }
     const memId = await store.createNode('memory', data)
     try {
@@ -360,6 +368,55 @@ describe('InboxProcessor', () => {
         { memId: new (await import('surrealdb')).StringRecordId(memId) }
       )
       expect(tags?.length ?? 0).toBe(0)
+    })
+
+    test('batches inbox processing by request context', async () => {
+      const seenContexts: Array<{ contents: string[]; requestContext: Record<string, unknown> }> = []
+
+      const domain: DomainConfig = {
+        id: 'chat-like',
+        name: 'ChatLike',
+        processInboxBatch(entries: OwnedMemory[], context: DomainContext): Promise<void> {
+          seenContexts.push({
+            contents: entries.map(entry => entry.memory.content),
+            requestContext: context.requestContext,
+          })
+          return Promise.resolve()
+        },
+      }
+      domainRegistry.register(domain)
+      await createDomainNode('chat-like')
+
+      const first = await createInboxMemory('message one', undefined, {
+        userId: 'user-1',
+        chatSessionId: 'session-1',
+      })
+      await store.relate(first, 'owned_by', 'domain:chat-like', { attributes: {}, owned_at: Date.now() })
+      await addInboxDomainTag(first, 'chat-like')
+
+      const second = await createInboxMemory('message two', undefined, {
+        userId: 'user-2',
+        chatSessionId: 'session-2',
+      })
+      await store.relate(second, 'owned_by', 'domain:chat-like', { attributes: {}, owned_at: Date.now() })
+      await addInboxDomainTag(second, 'chat-like')
+
+      const firstTick = await processor.tick()
+      const secondTick = await processor.tick()
+
+      expect(firstTick).toBe(true)
+      expect(secondTick).toBe(true)
+      expect(seenContexts).toHaveLength(2)
+      expect(seenContexts).toEqual([
+        {
+          contents: ['message one'],
+          requestContext: { userId: 'user-1', chatSessionId: 'session-1' },
+        },
+        {
+          contents: ['message two'],
+          requestContext: { userId: 'user-2', chatSessionId: 'session-2' },
+        },
+      ])
     })
   })
 
