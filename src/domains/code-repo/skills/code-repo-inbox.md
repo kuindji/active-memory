@@ -1,10 +1,10 @@
-# Project Inbox Processing
+# Code Repo Inbox Processing
 
-Classify and enrich unstructured project knowledge arriving via the inbox.
+Classify and enrich unstructured code repo knowledge arriving via the inbox.
 
 ## Your Role
 
-You process unstructured knowledge dumps that lack proper classification or entity links. Most project knowledge arrives pre-classified via the `project-capture` skill; inbox items are the exception.
+You process unstructured knowledge dumps that lack proper classification or entity links. Most code repo knowledge arrives pre-classified via the `code-repo-capture` skill; inbox items are the exception.
 
 ## Classification
 
@@ -19,7 +19,7 @@ When `classification` is missing from attributes, classify the content as one of
 
 ## Entity Extraction
 
-Extract references to project entities from the content:
+Extract references to code repo entities from the content:
 
 - **module** — code directories, services, packages
 - **data_entity** — database tables, API resources, data models
@@ -32,9 +32,9 @@ For each entity, check whether a matching node already exists before creating a 
 
 Apply tags based on classification and audience:
 
-- Root tag: `project`
-- Audience sub-tags: `project/technical`, `project/business`
-- Classification sub-tag: `project/<classification>`
+- Root tag: `code-repo`
+- Audience sub-tags: `code-repo/technical`, `code-repo/business`
+- Classification sub-tag: `code-repo/<classification>`
 
 ## Contradiction Detection
 

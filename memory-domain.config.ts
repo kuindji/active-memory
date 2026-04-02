@@ -1,7 +1,7 @@
 import { MemoryEngine } from './src/core/engine.ts'
 import { ClaudeCliAdapter } from './src/adapters/llm/claude-cli.ts'
 import { createTopicDomain } from './src/domains/topic/index.ts'
-import { createProjectDomain } from './src/domains/project/index.ts'
+import { createCodeRepoDomain } from './src/domains/code-repo/index.ts'
 
 const engine = new MemoryEngine()
 
@@ -19,7 +19,7 @@ await engine.initialize({
 })
 
 await engine.registerDomain(createTopicDomain())
-await engine.registerDomain(createProjectDomain({
+await engine.registerDomain(createCodeRepoDomain({
   projectRoot: import.meta.dir,
 }))
 

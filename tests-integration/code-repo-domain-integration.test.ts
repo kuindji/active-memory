@@ -1,11 +1,11 @@
 /**
- * Project knowledge domain integration tests with real AI adapters.
+ * Code repo knowledge domain integration tests with real AI adapters.
  *
  * Uses ClaudeCliAdapter (haiku) for LLM and OnnxEmbeddingAdapter for embeddings.
  * Tests inbox processing, entity extraction, contradiction detection,
  * buildContext with audience filtering, commit scanner, and ask().
  *
- * Run with: bun test ./tests-integration/project-domain-integration.test.ts --timeout 300000
+ * Run with: bun test ./tests-integration/code-repo-domain-integration.test.ts --timeout 300000
  */
 
 import { describe, test, expect, beforeAll, afterAll } from 'bun:test'
@@ -13,17 +13,17 @@ import { resolve } from 'node:path'
 import { MemoryEngine } from '../src/core/engine.ts'
 import { ClaudeCliAdapter } from '../src/adapters/llm/claude-cli.ts'
 import { OnnxEmbeddingAdapter } from '../src/adapters/onnx-embedding.ts'
-import { createProjectDomain } from '../src/domains/project/project-domain.ts'
+import { createCodeRepoDomain } from '../src/domains/code-repo/code-repo-domain.ts'
 import { topicDomain } from '../src/domains/topic/index.ts'
 import {
-  PROJECT_DOMAIN_ID,
-  PROJECT_TAG,
-  PROJECT_DECISION_TAG,
-  PROJECT_OBSERVATION_TAG,
-  PROJECT_TECHNICAL_TAG,
-  PROJECT_BUSINESS_TAG,
-} from '../src/domains/project/types.ts'
-import { scanCommits } from '../src/domains/project/schedules.ts'
+  CODE_REPO_DOMAIN_ID,
+  CODE_REPO_TAG,
+  CODE_REPO_DECISION_TAG,
+  CODE_REPO_OBSERVATION_TAG,
+  CODE_REPO_TECHNICAL_TAG,
+  CODE_REPO_BUSINESS_TAG,
+} from '../src/domains/code-repo/types.ts'
+import { scanCommits } from '../src/domains/code-repo/schedules.ts'
 
 const llm = new ClaudeCliAdapter({ model: 'haiku' })
 const embedding = new OnnxEmbeddingAdapter()
@@ -39,7 +39,7 @@ async function drainInbox(engine: MemoryEngine): Promise<void> {
 // ---------------------------------------------------------------------------
 // 1. Inbox processing with classification and entity extraction
 // ---------------------------------------------------------------------------
-describe('Project inbox processing with entity extraction (real)', () => {
+describe('Code repo inbox processing with entity extraction (real)', () => {
   let engine: MemoryEngine
 
   beforeAll(async () => {
@@ -47,12 +47,12 @@ describe('Project inbox processing with entity extraction (real)', () => {
     await engine.initialize({
       connection: 'mem://',
       namespace: 'test',
-      database: `integ_project_inbox_${Date.now()}`,
+      database: `integ_code_repo_inbox_${Date.now()}`,
       llm,
       embedding,
       debug: { timing: true },
     })
-    await engine.registerDomain(createProjectDomain())
+    await engine.registerDomain(createCodeRepoDomain())
     await engine.registerDomain(topicDomain)
   })
 
@@ -61,12 +61,12 @@ describe('Project inbox processing with entity extraction (real)', () => {
   })
 
   test('ingest decision with classification, verify tags and entity linking', async () => {
-    const ctx = engine.createDomainContext(PROJECT_DOMAIN_ID)
+    const ctx = engine.createDomainContext(CODE_REPO_DOMAIN_ID)
 
     const result = await engine.ingest(
       'We chose SQS over direct HTTP for the order-processor to payment-service communication because of retry guarantees and decoupling',
       {
-        domains: [PROJECT_DOMAIN_ID],
+        domains: [CODE_REPO_DOMAIN_ID],
         metadata: {
           classification: 'decision',
           audience: ['technical'],
@@ -79,7 +79,7 @@ describe('Project inbox processing with entity extraction (real)', () => {
 
     // Verify classification attribute was set
     const decisions = await ctx.getMemories({
-      tags: [PROJECT_TAG],
+      tags: [CODE_REPO_TAG],
       attributes: { classification: 'decision' },
     })
     expect(decisions.length).toBe(1)
@@ -113,13 +113,13 @@ describe('Project inbox processing with entity extraction (real)', () => {
   })
 
   test('ingest without classification, verify LLM classifies it', async () => {
-    const ctx = engine.createDomainContext(PROJECT_DOMAIN_ID)
+    const ctx = engine.createDomainContext(CODE_REPO_DOMAIN_ID)
 
     // Ingest without classification — LLM should classify it
     await engine.ingest(
       'We decided to move from REST to gRPC for all internal service-to-service communication starting Q3',
       {
-        domains: [PROJECT_DOMAIN_ID],
+        domains: [CODE_REPO_DOMAIN_ID],
         metadata: {
           audience: ['technical'],
         },
@@ -129,16 +129,16 @@ describe('Project inbox processing with entity extraction (real)', () => {
     await drainInbox(engine)
 
     // The LLM should have classified this — find the gRPC memory
-    const allMemories = await ctx.getMemories({ tags: [PROJECT_TAG] })
+    const allMemories = await ctx.getMemories({ tags: [CODE_REPO_TAG] })
     const grpcMemory = allMemories.find(m => m.content.includes('gRPC'))
     expect(grpcMemory).toBeTruthy()
-    console.log(`[LLM CLASSIFICATION] gRPC memory found in project domain`)
+    console.log(`[LLM CLASSIFICATION] gRPC memory found in code repo domain`)
 
     // Check each classification to see which one was assigned
     const classifications = ['decision', 'direction', 'rationale', 'clarification', 'observation', 'question']
     for (const cls of classifications) {
       const matches = await ctx.getMemories({
-        tags: [PROJECT_TAG],
+        tags: [CODE_REPO_TAG],
         attributes: { classification: cls },
       })
       const found = matches.find(m => m.content.includes('gRPC'))
@@ -161,12 +161,12 @@ describe('Contradiction detection and supersedes edges (real)', () => {
     await engine.initialize({
       connection: 'mem://',
       namespace: 'test',
-      database: `integ_project_contradict_${Date.now()}`,
+      database: `integ_code_repo_contradict_${Date.now()}`,
       llm,
       embedding,
       debug: { timing: true },
     })
-    await engine.registerDomain(createProjectDomain())
+    await engine.registerDomain(createCodeRepoDomain())
     await engine.registerDomain(topicDomain)
   })
 
@@ -175,20 +175,20 @@ describe('Contradiction detection and supersedes edges (real)', () => {
   })
 
   test('new contradicting decision creates supersedes edge on old one', async () => {
-    const ctx = engine.createDomainContext(PROJECT_DOMAIN_ID)
+    const ctx = engine.createDomainContext(CODE_REPO_DOMAIN_ID)
 
     // First decision: use REST
     await engine.ingest(
       'We chose REST for all inter-service communication because it is simple and well-understood by the team',
       {
-        domains: [PROJECT_DOMAIN_ID],
+        domains: [CODE_REPO_DOMAIN_ID],
         metadata: { classification: 'decision', audience: ['technical'] },
       },
     )
     await drainInbox(engine)
 
-    // Verify first decision is stored — query all project memories
-    const firstMemories = await ctx.getMemories({ tags: [PROJECT_TAG] })
+    // Verify first decision is stored — query all code repo memories
+    const firstMemories = await ctx.getMemories({ tags: [CODE_REPO_TAG] })
     const restDecisions = firstMemories.filter(m => m.content.includes('REST'))
     expect(restDecisions.length).toBe(1)
     console.log(`[CONTRADICTION] First decision: "${restDecisions[0].content.slice(0, 80)}..."`)
@@ -197,7 +197,7 @@ describe('Contradiction detection and supersedes edges (real)', () => {
     const second = await engine.ingest(
       'We are switching from REST to gRPC for all inter-service communication because REST latency is too high for our throughput requirements',
       {
-        domains: [PROJECT_DOMAIN_ID],
+        domains: [CODE_REPO_DOMAIN_ID],
         metadata: { classification: 'decision', audience: ['technical'] },
       },
     )
@@ -212,7 +212,7 @@ describe('Contradiction detection and supersedes edges (real)', () => {
 
       // Verify old decision is marked as superseded
       const oldDecisions = await ctx.getMemories({
-        tags: [PROJECT_TAG],
+        tags: [CODE_REPO_TAG],
         attributes: { superseded: true },
       })
       if (oldDecisions.length > 0) {
@@ -223,7 +223,7 @@ describe('Contradiction detection and supersedes edges (real)', () => {
     }
 
     // Either way, both decisions should be stored
-    const allDecisions = await ctx.getMemories({ tags: [PROJECT_TAG] })
+    const allDecisions = await ctx.getMemories({ tags: [CODE_REPO_TAG] })
     const decisionCount = allDecisions.filter(m =>
       m.content.includes('REST') || m.content.includes('gRPC')
     ).length
@@ -243,12 +243,12 @@ describe('buildContext with audience filtering (real)', () => {
     await engine.initialize({
       connection: 'mem://',
       namespace: 'test',
-      database: `integ_project_ctx_${Date.now()}`,
+      database: `integ_code_repo_ctx_${Date.now()}`,
       llm,
       embedding,
       debug: { timing: true },
     })
-    await engine.registerDomain(createProjectDomain())
+    await engine.registerDomain(createCodeRepoDomain())
     await engine.registerDomain(topicDomain)
   })
 
@@ -257,14 +257,14 @@ describe('buildContext with audience filtering (real)', () => {
   })
 
   test('buildContext filters by audience and returns structured sections', async () => {
-    const ctx = engine.createDomainContext(PROJECT_DOMAIN_ID)
+    const ctx = engine.createDomainContext(CODE_REPO_DOMAIN_ID)
 
     // Technical-only decision
     await ctx.writeMemory({
       content: 'We chose event sourcing with Kafka for the order pipeline to enable replay and auditing of all state transitions',
-      tags: [PROJECT_TAG, PROJECT_DECISION_TAG, PROJECT_TECHNICAL_TAG],
+      tags: [CODE_REPO_TAG, CODE_REPO_DECISION_TAG, CODE_REPO_TECHNICAL_TAG],
       ownership: {
-        domain: PROJECT_DOMAIN_ID,
+        domain: CODE_REPO_DOMAIN_ID,
         attributes: { classification: 'decision', audience: ['technical'], superseded: false },
       },
     })
@@ -272,9 +272,9 @@ describe('buildContext with audience filtering (real)', () => {
     // Business-only decision
     await ctx.writeMemory({
       content: 'Order cancellations require a 48-hour cooling period because of consumer protection regulations in the EU market',
-      tags: [PROJECT_TAG, PROJECT_DECISION_TAG, PROJECT_BUSINESS_TAG],
+      tags: [CODE_REPO_TAG, CODE_REPO_DECISION_TAG, CODE_REPO_BUSINESS_TAG],
       ownership: {
-        domain: PROJECT_DOMAIN_ID,
+        domain: CODE_REPO_DOMAIN_ID,
         attributes: { classification: 'decision', audience: ['business'], superseded: false },
       },
     })
@@ -282,9 +282,9 @@ describe('buildContext with audience filtering (real)', () => {
     // Dual-audience decision
     await ctx.writeMemory({
       content: 'Payment processing moved from synchronous to asynchronous to handle peak Black Friday load while maintaining audit requirements',
-      tags: [PROJECT_TAG, PROJECT_DECISION_TAG, PROJECT_TECHNICAL_TAG, PROJECT_BUSINESS_TAG],
+      tags: [CODE_REPO_TAG, CODE_REPO_DECISION_TAG, CODE_REPO_TECHNICAL_TAG, CODE_REPO_BUSINESS_TAG],
       ownership: {
-        domain: PROJECT_DOMAIN_ID,
+        domain: CODE_REPO_DOMAIN_ID,
         attributes: { classification: 'decision', audience: ['technical', 'business'], superseded: false },
       },
     })
@@ -292,16 +292,16 @@ describe('buildContext with audience filtering (real)', () => {
     // Technical observation
     await ctx.writeMemory({
       content: 'New payment-gateway service directory detected in latest commit',
-      tags: [PROJECT_TAG, PROJECT_OBSERVATION_TAG, PROJECT_TECHNICAL_TAG],
+      tags: [CODE_REPO_TAG, CODE_REPO_OBSERVATION_TAG, CODE_REPO_TECHNICAL_TAG],
       ownership: {
-        domain: PROJECT_DOMAIN_ID,
+        domain: CODE_REPO_DOMAIN_ID,
         attributes: { classification: 'observation', audience: ['technical'], superseded: false },
       },
     })
 
     // --- Technical audience ---
     const techContext = await engine.buildContext('order processing and payments', {
-      domains: [PROJECT_DOMAIN_ID],
+      domains: [CODE_REPO_DOMAIN_ID],
       budgetTokens: 2000,
       context: { audience: 'technical' },
     })
@@ -319,7 +319,7 @@ describe('buildContext with audience filtering (real)', () => {
 
     // --- Business audience ---
     const bizContext = await engine.buildContext('order processing and payments', {
-      domains: [PROJECT_DOMAIN_ID],
+      domains: [CODE_REPO_DOMAIN_ID],
       budgetTokens: 2000,
       context: { audience: 'business' },
     })
@@ -338,7 +338,7 @@ describe('buildContext with audience filtering (real)', () => {
 
     // --- No audience filter ---
     const allContext = await engine.buildContext('order processing and payments', {
-      domains: [PROJECT_DOMAIN_ID],
+      domains: [CODE_REPO_DOMAIN_ID],
       budgetTokens: 4000,
     })
 
@@ -360,12 +360,12 @@ describe('Commit scanner with real git history (real)', () => {
     await engine.initialize({
       connection: 'mem://',
       namespace: 'test',
-      database: `integ_project_scanner_${Date.now()}`,
+      database: `integ_code_repo_scanner_${Date.now()}`,
       llm,
       embedding,
       debug: { timing: true },
     })
-    await engine.registerDomain(createProjectDomain({ projectRoot: PROJECT_ROOT }))
+    await engine.registerDomain(createCodeRepoDomain({ projectRoot: PROJECT_ROOT }))
     await engine.registerDomain(topicDomain)
   })
 
@@ -374,33 +374,33 @@ describe('Commit scanner with real git history (real)', () => {
   })
 
   test('first run stores HEAD and creates no memories', async () => {
-    const ctx = engine.createDomainContext(PROJECT_DOMAIN_ID)
+    const ctx = engine.createDomainContext(CODE_REPO_DOMAIN_ID)
 
     // First run — should just store HEAD
     await scanCommits(ctx, { projectRoot: PROJECT_ROOT })
 
-    const lastHash = await ctx.getMeta('project:lastCommitHash')
+    const lastHash = await ctx.getMeta('code-repo:lastCommitHash')
     expect(lastHash).toBeTruthy()
     expect(lastHash!.length).toBe(40) // Full SHA
     console.log(`[COMMIT SCANNER] First run stored HEAD: ${lastHash!.slice(0, 8)}...`)
 
     // No memories should be created on first run
-    const memories = await ctx.getMemories({ tags: [PROJECT_TAG] })
+    const memories = await ctx.getMemories({ tags: [CODE_REPO_TAG] })
     expect(memories.length).toBe(0)
     console.log('[PASS] First run: no observation memories created')
   })
 
   test('subsequent run detects changes since stored HEAD', async () => {
-    const ctx = engine.createDomainContext(PROJECT_DOMAIN_ID)
+    const ctx = engine.createDomainContext(CODE_REPO_DOMAIN_ID)
 
     // Set lastCommitHash to 5 commits ago so the scanner has something to process
-    await ctx.setMeta('project:lastCommitHash', '55e3365048415e9ceef53c4a1fdab9569c389f19')
+    await ctx.setMeta('code-repo:lastCommitHash', '55e3365048415e9ceef53c4a1fdab9569c389f19')
 
     await scanCommits(ctx, { projectRoot: PROJECT_ROOT })
 
     // Check what observations were created
     const observations = await ctx.getMemories({
-      tags: [PROJECT_TAG],
+      tags: [CODE_REPO_TAG],
       attributes: { classification: 'observation' },
     })
     console.log(`[COMMIT SCANNER] Created ${observations.length} observation(s):`)
@@ -410,7 +410,7 @@ describe('Commit scanner with real git history (real)', () => {
 
     // Check for question memories (business logic hints)
     const questions = await ctx.getMemories({
-      tags: [PROJECT_TAG],
+      tags: [CODE_REPO_TAG],
       attributes: { classification: 'question' },
     })
     console.log(`[COMMIT SCANNER] Created ${questions.length} question(s):`)
@@ -436,7 +436,7 @@ describe('Commit scanner with real git history (real)', () => {
     }
 
     // Verify HEAD was updated
-    const newHash = await ctx.getMeta('project:lastCommitHash')
+    const newHash = await ctx.getMeta('code-repo:lastCommitHash')
     expect(newHash).not.toBe('55e3365048415e9ceef53c4a1fdab9569c389f19')
     console.log(`[PASS] HEAD updated to ${newHash?.slice(0, 8)}...`)
   })
@@ -453,12 +453,12 @@ describe('Direct write, entity graph, ask() and buildContext evaluation (real)',
     await engine.initialize({
       connection: 'mem://',
       namespace: 'test',
-      database: `integ_project_ask_${Date.now()}`,
+      database: `integ_code_repo_ask_${Date.now()}`,
       llm,
       embedding,
       debug: { timing: true },
     })
-    await engine.registerDomain(createProjectDomain())
+    await engine.registerDomain(createCodeRepoDomain())
     await engine.registerDomain(topicDomain)
   })
 
@@ -467,7 +467,7 @@ describe('Direct write, entity graph, ask() and buildContext evaluation (real)',
   })
 
   test('populate knowledge graph and evaluate ask() responses', async () => {
-    const ctx = engine.createDomainContext(PROJECT_DOMAIN_ID)
+    const ctx = engine.createDomainContext(CODE_REPO_DOMAIN_ID)
     const graph = engine.getGraph()
 
     // --- Populate entity nodes ---
@@ -508,9 +508,9 @@ describe('Direct write, entity graph, ask() and buildContext evaluation (real)',
     // --- Populate decision memories ---
     const decision1Id = await ctx.writeMemory({
       content: 'We chose SQS over direct HTTP for order-processor to payment-service communication because of retry guarantees and async decoupling',
-      tags: [PROJECT_TAG, PROJECT_DECISION_TAG, PROJECT_TECHNICAL_TAG],
+      tags: [CODE_REPO_TAG, CODE_REPO_DECISION_TAG, CODE_REPO_TECHNICAL_TAG],
       ownership: {
-        domain: PROJECT_DOMAIN_ID,
+        domain: CODE_REPO_DOMAIN_ID,
         attributes: { classification: 'decision', audience: ['technical'], superseded: false },
       },
     })
@@ -519,27 +519,27 @@ describe('Direct write, entity graph, ask() and buildContext evaluation (real)',
 
     await ctx.writeMemory({
       content: 'Payment data is stored in a separate PostgreSQL instance because PCI compliance requires physical isolation from application data',
-      tags: [PROJECT_TAG, PROJECT_DECISION_TAG, PROJECT_TECHNICAL_TAG, PROJECT_BUSINESS_TAG],
+      tags: [CODE_REPO_TAG, CODE_REPO_DECISION_TAG, CODE_REPO_TECHNICAL_TAG, CODE_REPO_BUSINESS_TAG],
       ownership: {
-        domain: PROJECT_DOMAIN_ID,
+        domain: CODE_REPO_DOMAIN_ID,
         attributes: { classification: 'decision', audience: ['technical', 'business'], superseded: false },
       },
     })
 
     await ctx.writeMemory({
       content: 'Order cancellations have a 48-hour cooling period per EU consumer protection regulation, during which the order stays in pending-cancel status',
-      tags: [PROJECT_TAG, PROJECT_DECISION_TAG, PROJECT_BUSINESS_TAG],
+      tags: [CODE_REPO_TAG, CODE_REPO_DECISION_TAG, CODE_REPO_BUSINESS_TAG],
       ownership: {
-        domain: PROJECT_DOMAIN_ID,
+        domain: CODE_REPO_DOMAIN_ID,
         attributes: { classification: 'decision', audience: ['business'], superseded: false },
       },
     })
 
     await ctx.writeMemory({
       content: 'The order-processor validates orders against a rules engine before forwarding to payment-service, rejecting invalid combinations at the service boundary',
-      tags: [PROJECT_TAG, PROJECT_DECISION_TAG, PROJECT_TECHNICAL_TAG],
+      tags: [CODE_REPO_TAG, CODE_REPO_DECISION_TAG, CODE_REPO_TECHNICAL_TAG],
       ownership: {
-        domain: PROJECT_DOMAIN_ID,
+        domain: CODE_REPO_DOMAIN_ID,
         attributes: { classification: 'rationale', audience: ['technical'], superseded: false },
       },
     })
@@ -548,7 +548,7 @@ describe('Direct write, entity graph, ask() and buildContext evaluation (real)',
 
     // --- Evaluate buildContext ---
     const techBuild = await engine.buildContext('How does order processing work?', {
-      domains: [PROJECT_DOMAIN_ID],
+      domains: [CODE_REPO_DOMAIN_ID],
       budgetTokens: 2000,
       context: { audience: 'technical' },
     })
@@ -563,7 +563,7 @@ describe('Direct write, entity graph, ask() and buildContext evaluation (real)',
     console.log('  [ASSESSMENT] Technical context correctly includes SQS, excludes business-only cancellation policy')
 
     // --- Evaluate ask() --- (run in parallel to reduce wall-clock time)
-    const askOpts = { domains: [PROJECT_DOMAIN_ID], budgetTokens: 2000, maxRounds: 2 }
+    const askOpts = { domains: [CODE_REPO_DOMAIN_ID], budgetTokens: 2000, maxRounds: 2 }
     const [askResult1, askResult2, askResult3] = await Promise.all([
       engine.ask('How does order-processor communicate with payment-service?', askOpts),
       engine.ask('Why is payment data stored separately?', askOpts),

@@ -3,16 +3,16 @@ import { execFile } from 'node:child_process'
 import { join, relative } from 'node:path'
 import type { DomainContext } from '../../core/types.ts'
 import {
-  PROJECT_DOMAIN_ID,
-  PROJECT_TAG,
-  PROJECT_TECHNICAL_TAG,
-  PROJECT_OBSERVATION_TAG,
+  CODE_REPO_DOMAIN_ID,
+  CODE_REPO_TAG,
+  CODE_REPO_TECHNICAL_TAG,
+  CODE_REPO_OBSERVATION_TAG,
 } from './types.ts'
-import type { ProjectDomainOptions, DirEntry, TriageResult, AnalysisResult } from './types.ts'
+import type { CodeRepoDomainOptions, DirEntry, TriageResult, AnalysisResult } from './types.ts'
 import { ensureTag, findOrCreateEntity } from './utils.ts'
 import { formatTree, countDirectories, calculateScanDepth, validateAnalysisResult } from './bootstrap-utils.ts'
 
-const META_LAST_COMMIT = 'project:lastCommitHash'
+const META_LAST_COMMIT = 'code-repo:lastCommitHash'
 
 const KEY_FILES = new Set([
   'package.json',
@@ -208,9 +208,9 @@ function parseJsonResponse<T>(text: string): T {
   return JSON.parse(jsonStr) as T
 }
 
-export async function bootstrapProject(
+export async function bootstrapCodeRepo(
   context: DomainContext,
-  options?: ProjectDomainOptions,
+  options?: CodeRepoDomainOptions,
 ): Promise<void> {
   const projectRoot = options?.projectRoot
   if (!projectRoot) return
@@ -282,9 +282,9 @@ export async function bootstrapProject(
   analysis = validated.analysis
 
   // Step 5: Create entities in graph
-  const projectTagId = await ensureTag(context, PROJECT_TAG)
-  const techTagId = await ensureTag(context, PROJECT_TECHNICAL_TAG)
-  const obsTagId = await ensureTag(context, PROJECT_OBSERVATION_TAG)
+  const codeRepoTagId = await ensureTag(context, CODE_REPO_TAG)
+  const techTagId = await ensureTag(context, CODE_REPO_TECHNICAL_TAG)
+  const obsTagId = await ensureTag(context, CODE_REPO_OBSERVATION_TAG)
 
   const moduleNameToId = new Map<string, string>()
 
@@ -376,16 +376,16 @@ export async function bootstrapProject(
   const conceptCount = analysis.concepts?.length ?? 0
   const patternCount = analysis.patterns?.length ?? 0
   const summary =
-    `Project bootstrap complete: identified ${moduleCount} modules, ` +
+    `Code repo bootstrap complete: identified ${moduleCount} modules, ` +
     `${entityCount} data entities, ${conceptCount} concepts, ` +
     `and ${patternCount} patterns from directory and code analysis. ` +
     `Read ${filesToRead.length} files for deep understanding.`
 
   const memoryId = await context.writeMemory({
     content: summary,
-    tags: [PROJECT_TAG, PROJECT_TECHNICAL_TAG, PROJECT_OBSERVATION_TAG],
+    tags: [CODE_REPO_TAG, CODE_REPO_TECHNICAL_TAG, CODE_REPO_OBSERVATION_TAG],
     ownership: {
-      domain: PROJECT_DOMAIN_ID,
+      domain: CODE_REPO_DOMAIN_ID,
       attributes: {
         classification: 'observation',
         audience: ['technical'],
@@ -393,7 +393,7 @@ export async function bootstrapProject(
       },
     },
   })
-  await context.tagMemory(memoryId, projectTagId)
+  await context.tagMemory(memoryId, codeRepoTagId)
   await context.tagMemory(memoryId, techTagId)
   await context.tagMemory(memoryId, obsTagId)
 }

@@ -1,14 +1,14 @@
 import type { OwnedMemory, DomainContext, ScoredMemory } from '../../core/types.ts'
 import {
-  PROJECT_TAG,
-  PROJECT_DOMAIN_ID,
-  PROJECT_DECISION_TAG,
+  CODE_REPO_TAG,
+  CODE_REPO_DOMAIN_ID,
+  CODE_REPO_DECISION_TAG,
   AUDIENCE_TAGS,
 } from './types.ts'
 import type { MemoryClassification, Audience } from './types.ts'
 import { ensureTag, findOrCreateEntity, linkToTopicsBatch, classificationToTag } from './utils.ts'
 
-function logProjectInboxWarning(scope: string, error: unknown): void {
+function logCodeRepoInboxWarning(scope: string, error: unknown): void {
   const errorMessage = error instanceof Error ? error.message : String(error)
   console.warn(`[memory-domain warning] ${scope}: ${errorMessage}`)
 }
@@ -52,7 +52,7 @@ const BATCH_ENTITY_EXTRACTION_SCHEMA = JSON.stringify({
 })
 
 const BATCH_ENTITY_EXTRACTION_PROMPT =
-  'Extract architectural entities referenced in each numbered project knowledge item below. ' +
+  'Extract architectural entities referenced in each numbered code repo knowledge item below. ' +
   'Return only entities explicitly mentioned or clearly implied. ' +
   'Types: module (code packages, services, lambdas), data_entity (domain objects like Order, Payment), ' +
   'concept (business concepts like reconciliation, return flow), pattern (architectural patterns in use). ' +
@@ -90,7 +90,7 @@ interface EntityResult {
 }
 
 export async function processInboxBatch(entries: OwnedMemory[], context: DomainContext): Promise<void> {
-  await context.debug.time('project.inbox.total', async () => {
+  await context.debug.time('code-repo.inbox.total', async () => {
     const audienceMap = new Map<string, string[]>()
     for (const entry of entries) {
       let audience = entry.domainAttributes.audience as string[] | undefined
@@ -104,14 +104,14 @@ export async function processInboxBatch(entries: OwnedMemory[], context: DomainC
     }
 
     const classificationMap = await context.debug.time(
-      'project.inbox.classify',
+      'code-repo.inbox.classify',
       () => batchClassify(entries, context),
       { entries: entries.length },
     )
 
-    const projectTagId = await ensureTag(context, PROJECT_TAG)
+    const codeRepoTagId = await ensureTag(context, CODE_REPO_TAG)
 
-    await context.debug.time('project.inbox.tagAndAttribute', async () => {
+    await context.debug.time('code-repo.inbox.tagAndAttribute', async () => {
       for (const entry of entries) {
         const classification = classificationMap.get(entry.memory.id) ?? 'observation'
         const audience = audienceMap.get(entry.memory.id) ?? ['technical']
@@ -122,12 +122,12 @@ export async function processInboxBatch(entries: OwnedMemory[], context: DomainC
           superseded: false,
         })
 
-        await context.tagMemory(entry.memory.id, projectTagId)
+        await context.tagMemory(entry.memory.id, codeRepoTagId)
 
         const classTag = classificationToTag(classification as MemoryClassification)
         const classTagId = await ensureTag(context, classTag)
         try {
-          await context.graph.relate(classTagId, 'child_of', projectTagId)
+          await context.graph.relate(classTagId, 'child_of', codeRepoTagId)
         } catch { /* already related */ }
         await context.tagMemory(entry.memory.id, classTagId)
 
@@ -136,7 +136,7 @@ export async function processInboxBatch(entries: OwnedMemory[], context: DomainC
           if (audTag) {
             const audTagId = await ensureTag(context, audTag)
             try {
-              await context.graph.relate(audTagId, 'child_of', projectTagId)
+              await context.graph.relate(audTagId, 'child_of', codeRepoTagId)
             } catch { /* already related */ }
             await context.tagMemory(entry.memory.id, audTagId)
           }
@@ -145,12 +145,12 @@ export async function processInboxBatch(entries: OwnedMemory[], context: DomainC
     }, { entries: entries.length })
 
     const entitiesMap = await context.debug.time(
-      'project.inbox.entityExtraction',
+      'code-repo.inbox.entityExtraction',
       () => batchExtractEntities(entries, context),
       { entries: entries.length },
     )
 
-    await context.debug.time('project.inbox.entityLinking', async () => {
+    await context.debug.time('code-repo.inbox.entityLinking', async () => {
       for (const entry of entries) {
         const entities = entitiesMap.get(entry.memory.id) ?? []
         for (const entity of entities) {
@@ -170,7 +170,7 @@ export async function processInboxBatch(entries: OwnedMemory[], context: DomainC
     }, { entries: entries.length })
 
     await context.debug.time(
-      'project.inbox.topicLinking',
+      'code-repo.inbox.topicLinking',
       () => linkToTopicsBatch(context, entries),
       { entries: entries.length },
     )
@@ -180,7 +180,7 @@ export async function processInboxBatch(entries: OwnedMemory[], context: DomainC
     )
     if (decisions.length > 0) {
       await context.debug.time(
-        'project.inbox.contradictionDetection',
+        'code-repo.inbox.contradictionDetection',
         () => batchDetectContradictions(decisions, context),
         { decisions: decisions.length },
       )
@@ -239,7 +239,7 @@ async function batchClassify(
       result.set(needsClassification[i].entry.memory.id, classification)
     }
   } catch (error) {
-    logProjectInboxWarning('project.inbox.classify', error)
+    logCodeRepoInboxWarning('code-repo.inbox.classify', error)
     // Fallback: default to observation
     for (const { entry } of needsClassification) {
       result.set(entry.memory.id, 'observation')
@@ -275,7 +275,7 @@ async function batchExtractEntities(
       }
     }
   } catch (error) {
-    logProjectInboxWarning('project.inbox.entityExtraction', error)
+    logCodeRepoInboxWarning('code-repo.inbox.entityExtraction', error)
     // Entity extraction is best-effort
   }
 
@@ -296,13 +296,13 @@ async function batchDetectContradictions(
   for (const decision of decisions) {
     const searchResult = await context.search({
       text: decision.memory.content,
-      tags: [PROJECT_DECISION_TAG],
+      tags: [CODE_REPO_DECISION_TAG],
       minScore: 0.7,
     })
 
     for (const existing of searchResult.entries) {
       if (newDecisionIds.has(existing.id)) continue
-      const attrs = existing.domainAttributes[PROJECT_DOMAIN_ID] as Record<string, unknown> | undefined
+      const attrs = existing.domainAttributes[CODE_REPO_DOMAIN_ID] as Record<string, unknown> | undefined
       if (attrs && !attrs.superseded) {
         existingDecisionsMap.set(existing.id, existing)
       }
@@ -398,12 +398,12 @@ async function processContradictionBatch(
 
       await context.graph.relate(newMemoryId, 'supersedes', existing.id)
       await context.updateAttributes(existing.id, {
-        ...existing.domainAttributes[PROJECT_DOMAIN_ID],
+        ...existing.domainAttributes[CODE_REPO_DOMAIN_ID],
         superseded: true,
       })
     }
   } catch (error) {
-    logProjectInboxWarning('project.inbox.contradictionDetection', error)
+    logCodeRepoInboxWarning('code-repo.inbox.contradictionDetection', error)
     // Contradiction detection is best-effort
   }
 }

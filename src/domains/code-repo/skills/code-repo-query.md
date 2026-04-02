@@ -1,19 +1,19 @@
-# Querying Project Knowledge
+# Querying Code Repo Knowledge
 
-Search and retrieve project knowledge by classification, audience, entity references, and graph traversal.
+Search and retrieve code repo knowledge by classification, audience, entity references, and graph traversal.
 
 ## Searching Memories
 
 ```sh
 # By text
-node memory-domain search "<query-text>" --domains project
+node memory-domain search "<query-text>" --domains code-repo
 
 # By classification tag
-node memory-domain search "<query-text>" --domains project --tags project/decision
+node memory-domain search "<query-text>" --domains code-repo --tags code-repo/decision
 
 # Build context with audience filter
 node memory-domain build-context "<content-to-build-context-for>" \
-  --domains project \
+  --domains code-repo \
   --meta audience=business
 ```
 
@@ -21,15 +21,15 @@ node memory-domain build-context "<content-to-build-context-for>" \
 
 | Tag | Content |
 |-----|---------|
-| `project/decision` | Architectural and design decisions |
-| `project/rationale` | Reasoning behind choices |
-| `project/clarification` | Corrections and non-obvious explanations |
-| `project/direction` | Future plans and migration paths |
-| `project/question` | Observations needing human explanation |
+| `code-repo/decision` | Architectural and design decisions |
+| `code-repo/rationale` | Reasoning behind choices |
+| `code-repo/clarification` | Corrections and non-obvious explanations |
+| `code-repo/direction` | Future plans and migration paths |
+| `code-repo/question` | Observations needing human explanation |
 
 ## Architecture Graph Queries
 
-The project domain maintains an entity graph. Use graph traversal to explore architecture.
+The code repo domain maintains an entity graph. Use graph traversal to explore architecture.
 
 ```sh
 # What modules connect to a service?
@@ -50,12 +50,12 @@ node memory-domain graph traverse <entity-id> --edges about_entity --direction i
 The commit scanner and drift detector create `question` memories when they detect changes needing explanation:
 
 ```sh
-node memory-domain search "" --domains project --tags project/question
+node memory-domain search "" --domains code-repo --tags code-repo/question
 ```
 
 ## Context Building
 
-The project domain's `build-context` returns structured sections:
+The code repo domain's `build-context` returns structured sections:
 
 - **Decisions** — Relevant decisions and rationale (50% of token budget)
 - **Architecture** — Entity-linked context from graph traversal (30%)

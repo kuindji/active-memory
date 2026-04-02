@@ -1,6 +1,6 @@
 import { describe, test, expect } from 'bun:test'
-import { formatTree, countDirectories, calculateScanDepth, validateAnalysisResult } from '../src/domains/project/bootstrap-utils.ts'
-import type { DirEntry, AnalysisResult } from '../src/domains/project/types.ts'
+import { formatTree, countDirectories, calculateScanDepth, validateAnalysisResult } from '../src/domains/code-repo/bootstrap-utils.ts'
+import type { DirEntry, AnalysisResult } from '../src/domains/code-repo/types.ts'
 
 function makeDir(name: string, files: string[] = [], children: DirEntry[] = []): DirEntry {
   return { name, relativePath: name, isDirectory: true, files, children }

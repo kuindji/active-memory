@@ -3,15 +3,15 @@ import { existsSync } from 'node:fs'
 import { join, dirname, basename } from 'node:path'
 import type { DomainContext } from '../../core/types.ts'
 import {
-  PROJECT_DOMAIN_ID,
-  PROJECT_TAG,
-  PROJECT_TECHNICAL_TAG,
-  PROJECT_QUESTION_TAG,
+  CODE_REPO_DOMAIN_ID,
+  CODE_REPO_TAG,
+  CODE_REPO_TECHNICAL_TAG,
+  CODE_REPO_QUESTION_TAG,
 } from './types.ts'
-import type { ProjectDomainOptions } from './types.ts'
+import type { CodeRepoDomainOptions } from './types.ts'
 import { ensureTag, findOrCreateEntity } from './utils.ts'
 
-const META_LAST_COMMIT = 'project:lastCommitHash'
+const META_LAST_COMMIT = 'code-repo:lastCommitHash'
 
 function execGit(args: string[], cwd: string): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -115,7 +115,7 @@ function collectDirectoryChanges(commits: CommitChanges[]): {
   return { newDirs, deletedDirs: deletedFiles }
 }
 
-export async function scanCommits(context: DomainContext, options?: ProjectDomainOptions): Promise<void> {
+export async function scanCommits(context: DomainContext, options?: CodeRepoDomainOptions): Promise<void> {
   const projectRoot = options?.projectRoot
   if (!projectRoot) return
 
@@ -154,9 +154,9 @@ export async function scanCommits(context: DomainContext, options?: ProjectDomai
   const { newDirs, deletedDirs } = collectDirectoryChanges(commits)
 
   // Ensure tags
-  const projectTagId = await ensureTag(context, PROJECT_TAG)
-  const techTagId = await ensureTag(context, PROJECT_TECHNICAL_TAG)
-  const questionTagId = await ensureTag(context, PROJECT_QUESTION_TAG)
+  const codeRepoTagId = await ensureTag(context, CODE_REPO_TAG)
+  const techTagId = await ensureTag(context, CODE_REPO_TECHNICAL_TAG)
+  const questionTagId = await ensureTag(context, CODE_REPO_QUESTION_TAG)
 
   // Create module entities for new directories
   for (const dir of newDirs) {
@@ -185,9 +185,9 @@ export async function scanCommits(context: DomainContext, options?: ProjectDomai
     const content = `New directories detected: ${dirList}${newDirs.size > 10 ? ` (and ${newDirs.size - 10} more)` : ''}`
     const memoryId = await context.writeMemory({
       content,
-      tags: [PROJECT_TAG, PROJECT_TECHNICAL_TAG],
+      tags: [CODE_REPO_TAG, CODE_REPO_TECHNICAL_TAG],
       ownership: {
-        domain: PROJECT_DOMAIN_ID,
+        domain: CODE_REPO_DOMAIN_ID,
         attributes: {
           classification: 'observation',
           audience: ['technical'],
@@ -195,7 +195,7 @@ export async function scanCommits(context: DomainContext, options?: ProjectDomai
         },
       },
     })
-    await context.tagMemory(memoryId, projectTagId)
+    await context.tagMemory(memoryId, codeRepoTagId)
     await context.tagMemory(memoryId, techTagId)
   }
 
@@ -204,9 +204,9 @@ export async function scanCommits(context: DomainContext, options?: ProjectDomai
     const content = `Directories removed: ${dirList}${deletedDirs.size > 10 ? ` (and ${deletedDirs.size - 10} more)` : ''}`
     const memoryId = await context.writeMemory({
       content,
-      tags: [PROJECT_TAG, PROJECT_TECHNICAL_TAG],
+      tags: [CODE_REPO_TAG, CODE_REPO_TECHNICAL_TAG],
       ownership: {
-        domain: PROJECT_DOMAIN_ID,
+        domain: CODE_REPO_DOMAIN_ID,
         attributes: {
           classification: 'observation',
           audience: ['technical'],
@@ -214,7 +214,7 @@ export async function scanCommits(context: DomainContext, options?: ProjectDomai
         },
       },
     })
-    await context.tagMemory(memoryId, projectTagId)
+    await context.tagMemory(memoryId, codeRepoTagId)
     await context.tagMemory(memoryId, techTagId)
   }
 
@@ -237,9 +237,9 @@ export async function scanCommits(context: DomainContext, options?: ProjectDomai
     const fileList = businessHints.slice(0, 5).join(', ')
     const memoryId = await context.writeMemory({
       content: `New files with potential business logic significance: ${fileList}. What do these represent?`,
-      tags: [PROJECT_TAG, PROJECT_QUESTION_TAG],
+      tags: [CODE_REPO_TAG, CODE_REPO_QUESTION_TAG],
       ownership: {
-        domain: PROJECT_DOMAIN_ID,
+        domain: CODE_REPO_DOMAIN_ID,
         attributes: {
           classification: 'question',
           audience: ['technical', 'business'],
@@ -247,7 +247,7 @@ export async function scanCommits(context: DomainContext, options?: ProjectDomai
         },
       },
     })
-    await context.tagMemory(memoryId, projectTagId)
+    await context.tagMemory(memoryId, codeRepoTagId)
     await context.tagMemory(memoryId, questionTagId)
   }
 
@@ -256,20 +256,20 @@ export async function scanCommits(context: DomainContext, options?: ProjectDomai
   await context.setMeta(META_LAST_COMMIT, newHead)
 }
 
-export async function detectDrift(context: DomainContext, options?: ProjectDomainOptions): Promise<void> {
+export async function detectDrift(context: DomainContext, options?: CodeRepoDomainOptions): Promise<void> {
   const projectRoot = options?.projectRoot
   if (!projectRoot) return
 
   // Get non-superseded decision memories
   const decisions = await context.getMemories({
-    tags: [PROJECT_TAG],
+    tags: [CODE_REPO_TAG],
     attributes: { classification: 'decision', superseded: false },
   })
 
   if (decisions.length === 0) return
 
-  const projectTagId = await ensureTag(context, PROJECT_TAG)
-  const techTagId = await ensureTag(context, PROJECT_TECHNICAL_TAG)
+  const codeRepoTagId = await ensureTag(context, CODE_REPO_TAG)
+  const techTagId = await ensureTag(context, CODE_REPO_TECHNICAL_TAG)
 
   for (const decision of decisions) {
     // Find entity nodes linked to this decision via about_entity edges
@@ -295,9 +295,9 @@ export async function detectDrift(context: DomainContext, options?: ProjectDomai
         const entityName = entityData.name as string
         const memoryId = await context.writeMemory({
           content: `Structural drift detected: module "${entityName}" at path "${entityPath}" no longer exists, but is referenced in decision: "${decision.content.substring(0, 100)}..."`,
-          tags: [PROJECT_TAG, PROJECT_TECHNICAL_TAG],
+          tags: [CODE_REPO_TAG, CODE_REPO_TECHNICAL_TAG],
           ownership: {
-            domain: PROJECT_DOMAIN_ID,
+            domain: CODE_REPO_DOMAIN_ID,
             attributes: {
               classification: 'observation',
               audience: ['technical'],
@@ -305,7 +305,7 @@ export async function detectDrift(context: DomainContext, options?: ProjectDomai
             },
           },
         })
-        await context.tagMemory(memoryId, projectTagId)
+        await context.tagMemory(memoryId, codeRepoTagId)
         await context.tagMemory(memoryId, techTagId)
 
         // Link observation to the decision it's about

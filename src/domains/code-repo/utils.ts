@@ -3,7 +3,7 @@ import { TOPIC_TAG, TOPIC_DOMAIN_ID } from '../topic/types.ts'
 import type { MemoryClassification } from './types.ts'
 import { CLASSIFICATION_TAGS } from './types.ts'
 
-function logProjectWarning(scope: string, error: unknown): void {
+function logCodeRepoWarning(scope: string, error: unknown): void {
   const errorMessage = error instanceof Error ? error.message : String(error)
   console.warn(`[memory-domain warning] ${scope}: ${errorMessage}`)
 }
@@ -130,7 +130,7 @@ async function batchExtractTopics(
       }
       return result
     } catch (error) {
-      logProjectWarning('project.inbox.topicExtraction.extractStructured', error)
+      logCodeRepoWarning('code-repo.inbox.topicExtraction.extractStructured', error)
       // Fall through to sequential fallback
     }
   }
@@ -141,7 +141,7 @@ async function batchExtractTopics(
       const topics = await llm.extract(entry.memory.content)
       result.set(entry.memory.id, topics)
     } catch (error) {
-      logProjectWarning('project.inbox.topicExtraction.extract', error)
+      logCodeRepoWarning('code-repo.inbox.topicExtraction.extract', error)
       result.set(entry.memory.id, [])
     }
   }

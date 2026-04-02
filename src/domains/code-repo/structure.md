@@ -1,18 +1,18 @@
-# Project Knowledge Domain
+# Code Repo Knowledge Domain
 
 Captures the invisible knowledge layer around a codebase: architectural decisions and their rationale, business logic semantics, design direction, and relationships between system components. This knowledge cannot be derived from code or git history alone.
 
 ## Tags
 
-- `project` — Root tag for all project knowledge memories
-- `project/technical` — Implementation architecture, decisions, direction
-- `project/business` — Data semantics, business rules, real-world meaning
-- `project/decision` — "We chose X because Y"
-- `project/rationale` — "The reason this works this way is..."
-- `project/clarification` — "Despite the name, this actually means..."
-- `project/direction` — "We're moving toward X"
-- `project/observation` — System-detected change (from commit scanner or drift detector)
-- `project/question` — Flagged gap needing human input
+- `code-repo` — Root tag for all code repo knowledge memories
+- `code-repo/technical` — Implementation architecture, decisions, direction
+- `code-repo/business` — Data semantics, business rules, real-world meaning
+- `code-repo/decision` — "We chose X because Y"
+- `code-repo/rationale` — "The reason this works this way is..."
+- `code-repo/clarification` — "Despite the name, this actually means..."
+- `code-repo/direction` — "We're moving toward X"
+- `code-repo/observation` — System-detected change (from commit scanner or drift detector)
+- `code-repo/question` — Flagged gap needing human input
 
 ## Ownership Attributes
 
@@ -49,4 +49,4 @@ Module `status` values: 'active' (default), 'archived'
 - `has_field(data_entity -> data_entity)` — Entity composition/relationships. Fields: `cardinality?` (one, many)
 
 ### Cross-Domain
-- `about_topic(memory -> topic)` — Links project memories to shared topics (reuses Topic domain edge)
+- `about_topic(memory -> topic)` — Links code repo memories to shared topics (reuses Topic domain edge)

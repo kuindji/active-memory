@@ -10,21 +10,21 @@ import type {
 } from '../../core/types.ts'
 import { countTokens } from '../../core/scoring.ts'
 import {
-  PROJECT_DOMAIN_ID,
-  PROJECT_TAG,
-  PROJECT_DECISION_TAG,
-  PROJECT_RATIONALE_TAG,
-  PROJECT_OBSERVATION_TAG,
+  CODE_REPO_DOMAIN_ID,
+  CODE_REPO_TAG,
+  CODE_REPO_DECISION_TAG,
+  CODE_REPO_RATIONALE_TAG,
+  CODE_REPO_OBSERVATION_TAG,
   DEFAULT_SCAN_INTERVAL_MS,
   DEFAULT_DRIFT_INTERVAL_MS,
 } from './types.ts'
-import type { ProjectDomainOptions } from './types.ts'
-import { projectSkills } from './skills.ts'
+import type { CodeRepoDomainOptions } from './types.ts'
+import { codeRepoSkills } from './skills.ts'
 import { processInboxBatch } from './inbox.ts'
 import { scanCommits, detectDrift } from './schedules.ts'
-import { bootstrapProject } from './bootstrap.ts'
+import { bootstrapCodeRepo } from './bootstrap.ts'
 
-function buildSchedules(options?: ProjectDomainOptions): DomainSchedule[] {
+function buildSchedules(options?: CodeRepoDomainOptions): DomainSchedule[] {
   const schedules: DomainSchedule[] = []
   const hasProjectRoot = !!options?.projectRoot
 
@@ -49,10 +49,10 @@ function buildSchedules(options?: ProjectDomainOptions): DomainSchedule[] {
   return schedules
 }
 
-export function createProjectDomain(options?: ProjectDomainOptions): DomainConfig {
+export function createCodeRepoDomain(options?: CodeRepoDomainOptions): DomainConfig {
   return {
-    id: PROJECT_DOMAIN_ID,
-    name: 'Project Knowledge',
+    id: CODE_REPO_DOMAIN_ID,
+    name: 'Code Repo Knowledge',
     baseDir: dirname(fileURLToPath(import.meta.url)),
     schema: {
       nodes: [
@@ -102,13 +102,13 @@ export function createProjectDomain(options?: ProjectDomainOptions): DomainConfi
         { name: 'has_field', from: 'data_entity', to: 'data_entity', fields: [{ name: 'cardinality', type: 'string' }] },
       ],
     },
-    skills: projectSkills,
+    skills: codeRepoSkills,
     processInboxBatch,
     schedules: buildSchedules(options),
-    bootstrap: (context: DomainContext) => bootstrapProject(context, options),
+    bootstrap: (context: DomainContext) => bootstrapCodeRepo(context, options),
 
     describe() {
-      return 'Built-in project knowledge domain that captures the invisible knowledge layer around a codebase: architectural decisions and rationale, business logic semantics, design direction, and relationships between system components.'
+      return 'Built-in code repo knowledge domain that captures the invisible knowledge layer around a codebase: architectural decisions and rationale, business logic semantics, design direction, and relationships between system components.'
     },
 
     search: {
@@ -161,7 +161,7 @@ export function createProjectDomain(options?: ProjectDomainOptions): DomainConfi
       const sections: string[] = []
 
       // Section 1 — [Decisions]: decisions and rationale
-      for (const tag of [PROJECT_DECISION_TAG, PROJECT_RATIONALE_TAG]) {
+      for (const tag of [CODE_REPO_DECISION_TAG, CODE_REPO_RATIONALE_TAG]) {
         const result = await context.search({
           text,
           tags: [tag],
@@ -169,7 +169,7 @@ export function createProjectDomain(options?: ProjectDomainOptions): DomainConfi
         })
 
         const entries = result.entries.filter(e => {
-          const attrs = e.domainAttributes[PROJECT_DOMAIN_ID]
+          const attrs = e.domainAttributes[CODE_REPO_DOMAIN_ID]
           if (attrs?.superseded) return false
           return matchesAudience(attrs, audience)
         })
@@ -187,12 +187,12 @@ export function createProjectDomain(options?: ProjectDomainOptions): DomainConfi
       // Section 2 — [Architecture]: entity-linked context via graph
       const archResult = await context.search({
         text,
-        tags: [PROJECT_TAG],
+        tags: [CODE_REPO_TAG],
         tokenBudget: architectureBudget,
       })
       const archEntries = archResult.entries.filter(e => {
         if (decisionMemories.some(d => d.id === e.id)) return false
-        const attrs = e.domainAttributes[PROJECT_DOMAIN_ID]
+        const attrs = e.domainAttributes[CODE_REPO_DOMAIN_ID]
         return matchesAudience(attrs, audience)
       })
       if (archEntries.length > 0) {
@@ -206,13 +206,13 @@ export function createProjectDomain(options?: ProjectDomainOptions): DomainConfi
       // Section 3 — [Recent Observations]: latest observations
       const obsResult = await context.search({
         text,
-        tags: [PROJECT_OBSERVATION_TAG],
+        tags: [CODE_REPO_OBSERVATION_TAG],
         tokenBudget: observationBudget,
       })
       if (obsResult.entries.length > 0) {
         const newObs = obsResult.entries.filter(e => {
           if (allMemories.some(m => m.id === e.id)) return false
-          const attrs = e.domainAttributes[PROJECT_DOMAIN_ID]
+          const attrs = e.domainAttributes[CODE_REPO_DOMAIN_ID]
           return matchesAudience(attrs, audience)
         })
         const lines = truncateToTokenBudget(newObs, observationBudget)
@@ -275,4 +275,4 @@ function truncateToTokenBudget(memories: ScoredMemory[], budget: number): string
   return lines
 }
 
-export const projectDomain = createProjectDomain()
+export const codeRepoDomain = createCodeRepoDomain()

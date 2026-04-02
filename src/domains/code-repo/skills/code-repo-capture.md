@@ -1,6 +1,6 @@
-# Capturing Project Knowledge
+# Capturing Code Repo Knowledge
 
-Record curated project knowledge — decisions, rationale, clarifications, and direction. Focus on knowledge that cannot be derived from code or git history.
+Record curated code repo knowledge — decisions, rationale, clarifications, and direction. Focus on knowledge that cannot be derived from code or git history.
 
 ## What to Capture
 
@@ -11,10 +11,10 @@ Record curated project knowledge — decisions, rationale, clarifications, and d
 
 Do NOT capture: implementation details visible in code, commit messages, or existing documentation.
 
-## Ingesting Project Knowledge
+## Ingesting Code Repo Knowledge
 
 ```sh
-node memory-domain ingest --domains project \
+node memory-domain ingest --domains code-repo \
   --meta classification=decision \
   --meta audience=technical,business \
   --text "We chose event sourcing for the order pipeline because we need full audit trail for compliance"
@@ -52,10 +52,10 @@ When writing about specific architectural components, create entity nodes and li
 
 ```sh
 # Link a memory to an entity
-node memory-domain graph relate <memory-id> <entity-id> about_entity --domain project
+node memory-domain graph relate <memory-id> <entity-id> about_entity --domain code-repo
 
 # Relate two entities
-node memory-domain graph relate <module-id> <data-entity-id> manages --domain project
+node memory-domain graph relate <module-id> <data-entity-id> manages --domain code-repo
 ```
 
 ## When to Capture
