@@ -427,45 +427,92 @@ class MemoryEngine {
       }
     }
 
-    // Determine target domains
-    let targetDomainIds = options?.domains
-      ? [...options.domains]
-      : this.domainRegistry.getAllDomainIds()
+    // Path A: Explicit domains specified — direct ownership + inbox processing tags
+    if (options?.domains && options.domains.length > 0) {
+      let targetDomainIds = options.domains.filter(id => {
+        if (!this.domainRegistry.has(id)) return true
+        return this.domainRegistry.getAccess(id) === 'write'
+      })
 
-    // Filter out read-only domains
-    targetDomainIds = targetDomainIds.filter(id => {
-      if (!this.domainRegistry.has(id)) return true
-      return this.domainRegistry.getAccess(id) === 'write'
-    })
+      // Add autoOwn domains not already in the list
+      for (const domain of this.domainRegistry.list()) {
+        if (
+          domain.settings?.autoOwn &&
+          !targetDomainIds.includes(domain.id) &&
+          this.domainRegistry.getAccess(domain.id) === 'write'
+        ) {
+          targetDomainIds.push(domain.id)
+        }
+      }
 
-    if (targetDomainIds.length === 0) {
-      throw new Error('Cannot ingest: all target domains are read-only')
-    }
+      if (targetDomainIds.length === 0) {
+        throw new Error('Cannot ingest: all target domains are read-only')
+      }
 
-    // Add autoOwn domains not already in the list
-    for (const domain of this.domainRegistry.list()) {
-      if (
-        domain.settings?.autoOwn &&
-        !targetDomainIds.includes(domain.id) &&
-        this.domainRegistry.getAccess(domain.id) === 'write'
-      ) {
-        targetDomainIds.push(domain.id)
+      for (const domainId of targetDomainIds) {
+        const fullDomainId = domainId.startsWith('domain:') ? domainId : `domain:${domainId}`
+        await this.graph.relate(memId, 'owned_by', fullDomainId, {
+          attributes: options?.metadata ?? {},
+          owned_at: now,
+        })
+        // Add inbox processing tag for this domain
+        const inboxTagId = await this.ensureInboxTag(`inbox:${domainId}`, now)
+        await this.graph.relate(memId, 'tagged', inboxTagId)
       }
     }
+    // Path B: No explicit domains — assertion-based ownership
+    else {
+      let hasAnyTarget = false
 
-    // Assign ownership
-    for (const domainId of targetDomainIds) {
-      const fullDomainId = domainId.startsWith('domain:') ? domainId : `domain:${domainId}`
-      await this.graph.relate(memId, 'owned_by', fullDomainId, {
-        attributes: options?.metadata ?? {},
-        owned_at: now,
-      })
+      // autoOwn domains get direct ownership + inbox processing tags
+      for (const domain of this.domainRegistry.list()) {
+        if (
+          domain.settings?.autoOwn &&
+          this.domainRegistry.getAccess(domain.id) === 'write'
+        ) {
+          const fullDomainId = `domain:${domain.id}`
+          await this.graph.relate(memId, 'owned_by', fullDomainId, {
+            attributes: options?.metadata ?? {},
+            owned_at: now,
+          })
+          const inboxTagId = await this.ensureInboxTag(`inbox:${domain.id}`, now)
+          await this.graph.relate(memId, 'tagged', inboxTagId)
+          hasAnyTarget = true
+        }
+      }
+
+      // Domains with assertInboxClaim get assertion tags
+      for (const domain of this.domainRegistry.list()) {
+        if (
+          domain.assertInboxClaim &&
+          !domain.settings?.autoOwn &&
+          this.domainRegistry.getAccess(domain.id) === 'write'
+        ) {
+          const assertTagId = await this.ensureInboxTag(`inbox:assert-claim:${domain.id}`, now)
+          await this.graph.relate(memId, 'tagged', assertTagId)
+          hasAnyTarget = true
+        }
+      }
+
+      if (!hasAnyTarget) {
+        throw new Error('Cannot ingest: no domains available (no explicit domain, no autoOwn, no assertInboxClaim)')
+      }
     }
 
     // Emit event
     this.events.emit('ingested', { id: memId, content: text, tokenCount: tokens })
 
     return memId
+  }
+
+  private async ensureInboxTag(label: string, now: number): Promise<string> {
+    const tagId = `tag:\`${label}\``
+    try {
+      await this.graph.createNodeWithId(tagId, { label, created_at: now })
+    } catch {
+      // Already exists
+    }
+    return tagId
   }
 
   async search(query: SearchQuery): Promise<SearchResult> {

@@ -17,6 +17,7 @@ describe('MemoryEngine', () => {
     await engine.registerDomain({
       id: 'test',
       name: 'Test',
+      settings: { autoOwn: true },
       async processInboxItem() {},
     })
   })
@@ -43,10 +44,39 @@ describe('MemoryEngine', () => {
       expect(memory!.content).toBe('Test content for ingestion')
     })
 
-    test('assigns ownership to all registered domains', async () => {
+    test('autoOwn domain gets ownership without explicit --domain', async () => {
+      const result = await engine.ingest('Some content')
+
+      const owners = await engine.getGraph().query<{ out: string }[]>(
+        'SELECT out FROM owned_by WHERE in = $id',
+        { id: new StringRecordId(result.id!) }
+      )
+
+      const domainIds = (owners ?? []).map(o => String(o.out))
+      expect(domainIds).toContain('domain:test')
+    })
+
+    test('domain with assertInboxClaim gets assert-claim tag at ingestion', async () => {
       await engine.registerDomain({
-        id: 'test_domain',
-        name: 'Test',
+        id: 'claimer',
+        name: 'Claimer',
+        async processInboxItem() {},
+        async assertInboxClaim() { return true },
+      })
+
+      const result = await engine.ingest('Claimable content')
+
+      const tags = await engine.getGraph().traverse<{ id: string; label: string }>(
+        result.id!, '->tagged->tag'
+      )
+      const tagLabels = tags.map(t => t.label ?? String(t.id))
+      expect(tagLabels).toContain('inbox:assert-claim:claimer')
+    })
+
+    test('domain without autoOwn or assertInboxClaim gets no ownership or tags', async () => {
+      await engine.registerDomain({
+        id: 'passive',
+        name: 'Passive',
         async processInboxItem() {},
       })
 
@@ -56,9 +86,8 @@ describe('MemoryEngine', () => {
         'SELECT out FROM owned_by WHERE in = $id',
         { id: new StringRecordId(result.id!) }
       )
-
       const domainIds = (owners ?? []).map(o => String(o.out))
-      expect(domainIds).toContain('domain:test_domain')
+      expect(domainIds).not.toContain('domain:passive')
     })
 
     test('ingest with specific domains targets only those domains', async () => {
@@ -83,6 +112,13 @@ describe('MemoryEngine', () => {
       const domainIds = (owners ?? []).map(o => String(o.out))
       expect(domainIds).toContain('domain:domain_a')
       expect(domainIds).not.toContain('domain:domain_b')
+
+      // Should also have inbox processing tag
+      const tags = await engine.getGraph().traverse<{ id: string; label: string }>(
+        result.id!, '->tagged->tag'
+      )
+      const tagLabels = tags.map(t => t.label ?? String(t.id))
+      expect(tagLabels).toContain('inbox:domain_a')
     })
   })
 
@@ -98,6 +134,7 @@ describe('MemoryEngine', () => {
       const memId = result.id!
 
       await engine.releaseOwnership(memId, 'domain_a')
+      await engine.releaseOwnership(memId, 'test')
 
       const memory = await engine.getGraph().getNode(memId)
       expect(memory).toBeNull()
@@ -150,6 +187,7 @@ describe('MemoryEngine', () => {
 
       // Release all ownership of first memory
       await engine.releaseOwnership(r1.id!, 'edge_test')
+      await engine.releaseOwnership(r1.id!, 'test')
 
       // Memory should be deleted
       const mem = await engine.getGraph().getNode(r1.id!)
@@ -182,6 +220,7 @@ describe('deduplication', () => {
     await dedupEngine.registerDomain({
       id: 'test',
       name: 'Test',
+      settings: { autoOwn: true },
       async processInboxItem() {},
     })
   })
@@ -217,6 +256,7 @@ describe('deduplication', () => {
     await noEmbedEngine.registerDomain({
       id: 'test',
       name: 'Test',
+      settings: { autoOwn: true },
       async processInboxItem() {},
     })
 
