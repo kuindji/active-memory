@@ -240,6 +240,7 @@ export interface DomainConfig {
   skills?: DomainSkill[]
   settings?: DomainSettings
   processInboxItem(entry: OwnedMemory, context: DomainContext): Promise<void>
+  assertInboxClaim?(entry: OwnedMemory, context: DomainContext): Promise<boolean>
   search?: {
     rank?(query: SearchQuery, candidates: ScoredMemory[]): ScoredMemory[]
     expand?(query: SearchQuery, context: DomainContext): Promise<SearchQuery>
@@ -354,6 +355,8 @@ export type MemoryEventName =
   | 'ownershipAdded'
   | 'ownershipRemoved'
   | 'inboxProcessed'
+  | 'inboxClaimAsserted'
+  | 'inboxDomainProcessed'
   | 'scheduleRun'
   | 'error'
   | 'warning'
