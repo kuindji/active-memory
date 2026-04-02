@@ -72,6 +72,11 @@ class SearchEngine {
       candidates = filtered
     }
 
+    // Apply tag filter (universal, across all search modes)
+    if (query.tags && query.tags.length > 0) {
+      candidates = await this.filterByTags(candidates, query.tags)
+    }
+
     // Apply domain ownership filter
     if (query.domains && query.domains.length > 0) {
       candidates = await this.filterByDomainOwnership(candidates, query.domains)
@@ -347,6 +352,35 @@ class SearchEngine {
     }
 
     return merged
+  }
+
+  private async filterByTags(
+    candidates: Map<string, ScoredMemory>,
+    requiredTags: string[]
+  ): Promise<Map<string, ScoredMemory>> {
+    const filtered = new Map<string, ScoredMemory>()
+    if (candidates.size === 0) return filtered
+
+    const tagRefs = requiredTags.map(t =>
+      new StringRecordId(t.startsWith('tag:') ? t : `tag:${t}`)
+    )
+    const memIds = [...candidates.keys()].map(id => new StringRecordId(id))
+
+    const taggedRows = await this.store.query<{ in: unknown }[]>(
+      'SELECT in FROM tagged WHERE in IN $memIds AND out IN $tagRefs',
+      { memIds, tagRefs }
+    )
+    if (!taggedRows) return filtered
+
+    const taggedIds = new Set(taggedRows.map(r => String(r.in)))
+
+    for (const [id, mem] of candidates) {
+      if (taggedIds.has(id)) {
+        filtered.set(id, mem)
+      }
+    }
+
+    return filtered
   }
 
   private async filterByDomainOwnership(

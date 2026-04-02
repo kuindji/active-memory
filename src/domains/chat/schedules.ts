@@ -225,11 +225,6 @@ export async function consolidateEpisodic(context: DomainContext, options?: Chat
     for (const memId of cluster) {
       await context.graph.relate(semanticId, 'summarizes', memId)
     }
-
-    // Release ownership on consolidated episodic memories
-    for (const memId of cluster) {
-      await context.releaseOwnership(memId, CHAT_DOMAIN_ID)
-    }
   }
 }
 
