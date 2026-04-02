@@ -86,7 +86,16 @@ class InboxProcessor {
       }
 
       const ctx = this.contextFactory(domainIdShort)
-      await domain.processInboxItem(owned, ctx)
+      try {
+        await domain.processInboxItem(owned, ctx)
+      } catch (err) {
+        this.events.emit('error', {
+          source: 'inbox',
+          domainId: domainIdShort,
+          memoryId: memId,
+          error: err,
+        })
+      }
     }
 
     // Remove inbox tag

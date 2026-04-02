@@ -108,6 +108,36 @@ describe('InboxProcessor', () => {
     expect((emittedEvents[0] as { memoryId: string }).memoryId).toBe(memId)
   })
 
+  test('processNext removes inbox tag even when domain handler throws', async () => {
+    const errorEvents: unknown[] = []
+    events.on('error', (...args: unknown[]) => { errorEvents.push(args[0]) })
+
+    const throwingDomain: DomainConfig = {
+      id: 'thrower',
+      name: 'Thrower',
+      processInboxItem(): Promise<void> { throw new Error('boom') },
+    }
+    domainRegistry.register(throwingDomain)
+
+    const memId = await store.createNode('memory', {
+      content: 'poison pill',
+      created_at: Date.now(),
+      token_count: 3,
+    })
+    await store.createNodeWithId('tag:inbox', { label: 'inbox', created_at: Date.now() })
+    await store.relate(memId, 'tagged', 'tag:inbox')
+    await store.createNodeWithId('domain:thrower', { name: 'Thrower' })
+    await store.relate(memId, 'owned_by', 'domain:thrower', { attributes: {}, owned_at: Date.now() })
+
+    const processed = await processor.processNext()
+
+    expect(processed).toBe(true)
+    const tags = await store.traverse<{ id: string }>(memId, '->tagged->tag')
+    const inboxTags = tags.filter(t => String(t.id) === 'tag:inbox')
+    expect(inboxTags.length).toBe(0)
+    expect(errorEvents.length).toBe(1)
+  })
+
   test('processes memory with multiple owning domains', async () => {
     const secondProcessed: OwnedMemory[] = []
     const secondDomain: DomainConfig = {
