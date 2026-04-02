@@ -1,0 +1,12 @@
+#!/bin/sh
+set -e
+
+SCRIPT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+TUI_ENTRY="$SCRIPT_DIR/src/tui/tui.ts"
+
+if command -v bun >/dev/null 2>&1; then
+  exec bun run "$TUI_ENTRY" "$@"
+else
+  echo "Error: bun is required. Install from https://bun.sh" >&2
+  exit 1
+fi
