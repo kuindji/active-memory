@@ -27,7 +27,7 @@ describe('buildContextCommand', () => {
     await engine.registerDomain({
       id: 'test',
       name: 'Test',
-      async processInboxItem() {},
+      async processInboxBatch() {},
     })
 
     await engine.ingest('The quick brown fox jumps over the lazy dog', { domains: ['test'] })

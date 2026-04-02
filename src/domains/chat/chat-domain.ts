@@ -13,7 +13,7 @@ import {
 } from './types.ts'
 import type { ChatDomainOptions } from './types.ts'
 import { chatSkills } from './skills.ts'
-import { processInboxItem } from './inbox.ts'
+import { processInboxBatch } from './inbox.ts'
 import { promoteWorkingMemory, consolidateEpisodic, pruneDecayed } from './schedules.ts'
 
 function buildSchedules(options?: ChatDomainOptions): DomainSchedule[] {
@@ -61,7 +61,7 @@ export function createChatDomain(options?: ChatDomainOptions): DomainConfig {
       ],
     },
     skills: chatSkills,
-    processInboxItem,
+    processInboxBatch,
     schedules: buildSchedules(options),
     describe() {
       return 'Built-in conversational memory with tiered lifecycle. Stores raw messages as working memory, extracts highlights into episodic memory, and consolidates long-term knowledge into semantic memory.'

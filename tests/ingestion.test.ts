@@ -18,7 +18,7 @@ describe('MemoryEngine', () => {
       id: 'test',
       name: 'Test',
       settings: { autoOwn: true },
-      async processInboxItem() {},
+      async processInboxBatch() {},
     })
   })
 
@@ -56,12 +56,12 @@ describe('MemoryEngine', () => {
       expect(domainIds).toContain('domain:test')
     })
 
-    test('domain with assertInboxClaim gets assert-claim tag at ingestion', async () => {
+    test('domain with assertInboxClaimBatch gets assert-claim tag at ingestion', async () => {
       await engine.registerDomain({
         id: 'claimer',
         name: 'Claimer',
-        async processInboxItem() {},
-        assertInboxClaim() { return Promise.resolve(true) },
+        async processInboxBatch() {},
+        assertInboxClaimBatch(entries) { return Promise.resolve(entries.map(e => e.memory.id)) },
       })
 
       const result = await engine.ingest('Claimable content')
@@ -73,11 +73,11 @@ describe('MemoryEngine', () => {
       expect(tagLabels).toContain('inbox:assert-claim:claimer')
     })
 
-    test('domain without autoOwn or assertInboxClaim gets no ownership or tags', async () => {
+    test('domain without autoOwn or assertInboxClaimBatch gets no ownership or tags', async () => {
       await engine.registerDomain({
         id: 'passive',
         name: 'Passive',
-        async processInboxItem() {},
+        async processInboxBatch() {},
       })
 
       const result = await engine.ingest('Some content')
@@ -94,12 +94,12 @@ describe('MemoryEngine', () => {
       await engine.registerDomain({
         id: 'domain_a',
         name: 'A',
-        async processInboxItem() {},
+        async processInboxBatch() {},
       })
       await engine.registerDomain({
         id: 'domain_b',
         name: 'B',
-        async processInboxItem() {},
+        async processInboxBatch() {},
       })
 
       const result = await engine.ingest('Targeted content', { domains: ['domain_a'] })
@@ -127,7 +127,7 @@ describe('MemoryEngine', () => {
       await engine.registerDomain({
         id: 'domain_a',
         name: 'A',
-        async processInboxItem() {},
+        async processInboxBatch() {},
       })
 
       const result = await engine.ingest('Owned content', { domains: ['domain_a'] })
@@ -144,12 +144,12 @@ describe('MemoryEngine', () => {
       await engine.registerDomain({
         id: 'domain_a',
         name: 'A',
-        async processInboxItem() {},
+        async processInboxBatch() {},
       })
       await engine.registerDomain({
         id: 'domain_b',
         name: 'B',
-        async processInboxItem() {},
+        async processInboxBatch() {},
       })
 
       const result = await engine.ingest('Shared content', { domains: ['domain_a', 'domain_b'] })
@@ -169,7 +169,7 @@ describe('MemoryEngine', () => {
           nodes: [],
           edges: [{ name: 'analyzed_by', from: 'memory', to: 'memory' }],
         },
-        async processInboxItem() {},
+        async processInboxBatch() {},
       })
 
       const r1 = await engine.ingest('first memory', { domains: ['edge_test'] })
@@ -221,7 +221,7 @@ describe('deduplication', () => {
       id: 'test',
       name: 'Test',
       settings: { autoOwn: true },
-      async processInboxItem() {},
+      async processInboxBatch() {},
     })
   })
 
@@ -257,7 +257,7 @@ describe('deduplication', () => {
       id: 'test',
       name: 'Test',
       settings: { autoOwn: true },
-      async processInboxItem() {},
+      async processInboxBatch() {},
     })
 
     await noEmbedEngine.ingest('duplicate without embedding')

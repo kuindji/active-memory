@@ -16,7 +16,7 @@ describe('MemoryEngine.buildContext', () => {
     await engine.registerDomain({
       id: 'test',
       name: 'Test',
-      async processInboxItem() {},
+      async processInboxBatch() {},
     })
   })
 
@@ -61,7 +61,7 @@ describe('MemoryEngine.buildContext', () => {
     await engine.registerDomain({
       id: 'special',
       name: 'Special',
-      async processInboxItem() {},
+      async processInboxBatch() {},
     })
 
     // Ingest to specific domain
@@ -80,7 +80,7 @@ describe('MemoryEngine.buildContext', () => {
     await engine.registerDomain({
       id: 'custom',
       name: 'Custom',
-      async processInboxItem() {},
+      async processInboxBatch() {},
       buildContext(_text, _budget, _ctx) {
         return Promise.resolve({
           context: 'custom context output',

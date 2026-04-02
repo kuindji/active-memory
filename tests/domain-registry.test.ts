@@ -9,7 +9,7 @@ function makeDomain(id: string, name?: string): DomainConfig {
   return {
     id,
     name: name ?? id,
-    async processInboxItem() {},
+    async processInboxBatch() {},
   }
 }
 
@@ -107,7 +107,7 @@ describe('DomainRegistry', () => {
       id: 'typed',
       name: 'Typed Domain',
       baseDir: '/some/path',
-      async processInboxItem() {},
+      async processInboxBatch() {},
     }
     registry.register(domain)
     expect(registry.get('typed')?.baseDir).toBe('/some/path')
@@ -140,7 +140,7 @@ describe('Lazy loading', () => {
       id: 'fixtured',
       name: 'Fixtured',
       baseDir: FIXTURES_DIR,
-      async processInboxItem() {},
+      async processInboxBatch() {},
     })
     const structure = await registry.getStructure('fixtured')
     expect(structure).toContain('## Tags')
@@ -152,7 +152,7 @@ describe('Lazy loading', () => {
     registry.register({
       id: 'nobase',
       name: 'No Base',
-      async processInboxItem() {},
+      async processInboxBatch() {},
     })
     const structure = await registry.getStructure('nobase')
     expect(structure).toBeNull()
@@ -164,7 +164,7 @@ describe('Lazy loading', () => {
       id: 'emptydir',
       name: 'Empty Dir',
       baseDir: join(import.meta.dir, 'fixtures'),
-      async processInboxItem() {},
+      async processInboxBatch() {},
     })
     const structure = await registry.getStructure('emptydir')
     expect(structure).toBeNull()
@@ -179,7 +179,7 @@ describe('Lazy loading', () => {
       skills: [
         { id: 'consumption', name: 'Consumption', description: 'desc', scope: 'external' },
       ],
-      async processInboxItem() {},
+      async processInboxBatch() {},
     })
     const content = await registry.getSkillContent('fixtured', 'consumption')
     expect(content).toContain('test/category')
@@ -194,7 +194,7 @@ describe('Lazy loading', () => {
       skills: [
         { id: 'nonexistent', name: 'Missing', description: 'desc', scope: 'external' },
       ],
-      async processInboxItem() {},
+      async processInboxBatch() {},
     })
     const content = await registry.getSkillContent('fixtured', 'nonexistent')
     expect(content).toBeNull()
@@ -208,7 +208,7 @@ describe('Lazy loading', () => {
       skills: [
         { id: 'any', name: 'Any', description: 'desc', scope: 'external' },
       ],
-      async processInboxItem() {},
+      async processInboxBatch() {},
     })
     const content = await registry.getSkillContent('nobase', 'any')
     expect(content).toBeNull()
@@ -233,7 +233,7 @@ describe('Skill filtering by access level', () => {
         { id: 'both-write', name: 'Both', description: 'both', scope: 'both', writes: true },
         { id: 'internal-write', name: 'Internal', description: 'internal', scope: 'internal', writes: true },
       ],
-      async processInboxItem() {},
+      async processInboxBatch() {},
     }, { access: 'read' })
 
     const skills = registry.getExternalSkills('filtered')
@@ -250,7 +250,7 @@ describe('Skill filtering by access level', () => {
         { id: 'write-skill', name: 'Write', description: 'write', scope: 'external', writes: true },
         { id: 'both-write', name: 'Both', description: 'both', scope: 'both', writes: true },
       ],
-      async processInboxItem() {},
+      async processInboxBatch() {},
     })
 
     const skills = registry.getExternalSkills('full')

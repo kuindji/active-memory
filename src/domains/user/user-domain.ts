@@ -43,7 +43,7 @@ export function createUserDomain(options?: UserDomainOptions): DomainConfig {
       ],
     },
     skills: userSkills,
-    async processInboxItem(_entry: OwnedMemory, _context: DomainContext): Promise<void> {
+    async processInboxBatch(_entries: OwnedMemory[], _context: DomainContext): Promise<void> {
       // User domain does not process inbox items
     },
     schedules: buildSchedules(options),

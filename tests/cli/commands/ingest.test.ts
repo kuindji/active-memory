@@ -27,7 +27,7 @@ describe('ingestCommand', () => {
     await engine.registerDomain({
       id: 'test',
       name: 'Test',
-      async processInboxItem() {},
+      async processInboxBatch() {},
     })
   })
 

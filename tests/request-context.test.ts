@@ -75,7 +75,7 @@ describe('Request context', () => {
     const testDomain: DomainConfig = {
       id: 'ctx-test',
       name: 'Context Test',
-      async processInboxItem() {},
+      async processInboxBatch() {},
       search: {
         expand(query, context) {
           capturedContext = context.requestContext
@@ -104,7 +104,7 @@ describe('getMemoryTags', () => {
     await engine.registerDomain({
       id: 'test',
       name: 'Test',
-      async processInboxItem() {},
+      async processInboxBatch() {},
     })
   })
 
@@ -146,7 +146,7 @@ describe('getNodeEdges', () => {
     await engine.registerDomain({
       id: 'test',
       name: 'Test',
-      async processInboxItem() {},
+      async processInboxBatch() {},
     })
   })
 

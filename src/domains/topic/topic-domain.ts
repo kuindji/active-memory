@@ -35,7 +35,7 @@ export function createTopicDomain(options?: TopicDomainOptions): DomainConfig {
     },
     baseDir: dirname(fileURLToPath(import.meta.url)),
     skills: topicSkills,
-    async processInboxItem(_entry: OwnedMemory, _context: DomainContext): Promise<void> {
+    async processInboxBatch(_entries: OwnedMemory[], _context: DomainContext): Promise<void> {
       // Topics are created explicitly, not via inbox processing
     },
     schedules: buildSchedules(options),

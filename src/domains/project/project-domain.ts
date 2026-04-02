@@ -20,7 +20,7 @@ import {
 } from './types.ts'
 import type { ProjectDomainOptions } from './types.ts'
 import { projectSkills } from './skills.ts'
-import { processInboxItem } from './inbox.ts'
+import { processInboxBatch } from './inbox.ts'
 import { scanCommits, detectDrift } from './schedules.ts'
 import { bootstrapProject } from './bootstrap.ts'
 
@@ -103,7 +103,7 @@ export function createProjectDomain(options?: ProjectDomainOptions): DomainConfi
       ],
     },
     skills: projectSkills,
-    processInboxItem,
+    processInboxBatch,
     schedules: buildSchedules(options),
     bootstrap: (context: DomainContext) => bootstrapProject(context, options),
 

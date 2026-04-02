@@ -180,7 +180,7 @@ describe('Visibility with built-in domains', () => {
     id: 'notes',
     name: 'Notes',
     schema: { nodes: [], edges: [] },
-    async processInboxItem(_entry: OwnedMemory, _context: DomainContext) {},
+    async processInboxBatch(_entries: OwnedMemory[], _context: DomainContext) {},
   }
 
   beforeEach(async () => {
@@ -273,7 +273,7 @@ describe('Request context propagation', () => {
   const ctxTestDomain: DomainConfig = {
     id: 'ctx-test',
     name: 'Context Test',
-    async processInboxItem() {},
+    async processInboxBatch() {},
     search: {
       expand(query: SearchQuery, context: DomainContext) {
         capturedExpandContext = context.requestContext
@@ -331,7 +331,7 @@ describe('Request context propagation', () => {
     const fallbackDomain: DomainConfig = {
       id: 'ctx-fallback',
       name: 'Context Fallback',
-      async processInboxItem() {},
+      async processInboxBatch() {},
       search: {
         expand(query: SearchQuery, context: DomainContext) {
           fallbackCaptured = context.requestContext

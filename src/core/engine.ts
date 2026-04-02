@@ -4,6 +4,7 @@ import { GraphStore } from './graph-store.ts'
 import { SchemaRegistry } from './schema-registry.ts'
 import { SearchEngine } from './search-engine.ts'
 import { InboxProcessor } from './inbox-processor.ts'
+import type { InboxProcessorOptions } from './inbox-processor.ts'
 import { DomainRegistry } from './domain-registry.ts'
 import { Scheduler, MetaScheduleStateStore } from './scheduler.ts'
 import { EventEmitter } from './events.ts'
@@ -481,10 +482,10 @@ class MemoryEngine {
         }
       }
 
-      // Domains with assertInboxClaim get assertion tags
+      // Domains with assertInboxClaimBatch get assertion tags
       for (const domain of this.domainRegistry.list()) {
         if (
-          domain.assertInboxClaim &&
+          domain.assertInboxClaimBatch &&
           !domain.settings?.autoOwn &&
           this.domainRegistry.getAccess(domain.id) === 'write'
         ) {
@@ -495,7 +496,7 @@ class MemoryEngine {
       }
 
       if (!hasAnyTarget) {
-        throw new Error('Cannot ingest: no domains available (no explicit domain, no autoOwn, no assertInboxClaim)')
+        throw new Error('Cannot ingest: no domains available (no explicit domain, no autoOwn, no assertInboxClaimBatch)')
       }
     }
 
@@ -1104,8 +1105,8 @@ Otherwise, respond with a query plan to find more relevant information.`
     return this.events
   }
 
-  startProcessing(intervalMs?: number): void {
-    this.inboxProcessor.start({ intervalMs })
+  startProcessing(options?: InboxProcessorOptions): void {
+    this.inboxProcessor.start(options)
     this.scheduler.start()
   }
 

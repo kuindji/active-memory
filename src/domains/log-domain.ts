@@ -6,7 +6,7 @@ export const logDomain: DomainConfig = {
   settings: {
     autoOwn: true,
   },
-  async processInboxItem(_entry: OwnedMemory, _context: DomainContext): Promise<void> {
+  async processInboxBatch(_entries: OwnedMemory[], _context: DomainContext): Promise<void> {
     // Log domain is a no-op processor — it just keeps the raw memories
   },
   describe() {

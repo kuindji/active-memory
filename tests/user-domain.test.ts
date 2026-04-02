@@ -58,10 +58,10 @@ describe('User domain - config', () => {
     expect(domain.schedules![0].intervalMs).toBe(5000)
   })
 
-  test('processInboxItem is a no-op (returns undefined)', async () => {
+  test('processInboxBatch is a no-op (returns undefined)', async () => {
     const domain = createUserDomain()
-    const result = await domain.processInboxItem(
-      { memory: { id: 'test', content: '', embedding: [], eventTime: null, createdAt: 0, tokenCount: 0 }, domainAttributes: {}, tags: [] },
+    const result = await domain.processInboxBatch(
+      [{ memory: { id: 'test', content: '', embedding: [], eventTime: null, createdAt: 0, tokenCount: 0 }, domainAttributes: {}, tags: [] }],
       {} as DomainContext
     )
     expect(result).toBeUndefined()
@@ -156,7 +156,7 @@ describe('User domain - integration', () => {
       id: 'notes',
       name: 'Notes',
       schema: { nodes: [], edges: [] },
-      async processInboxItem(_entry: OwnedMemory, _context: DomainContext) {},
+      async processInboxBatch(_entries: OwnedMemory[], _context: DomainContext) {},
     }
     await engine.registerDomain(notesDomain)
 

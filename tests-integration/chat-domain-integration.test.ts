@@ -84,7 +84,7 @@ describe('Chat message ingestion with cross-domain interaction (real)', () => {
     )
     expect(msg2.action).toBe('stored')
 
-    // Process inbox to trigger processInboxItem for each message
+    // Process inbox to trigger processInboxBatch for each message
     await drainInbox(engine)
 
     // Verify working memory attributes via search (returns ScoredMemory with domainAttributes)

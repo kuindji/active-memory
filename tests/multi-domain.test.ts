@@ -36,7 +36,7 @@ const entitiesDomain: DomainConfig = {
       { name: 'belongs_to', from: ['entity'], to: 'category' },
     ],
   },
-  async processInboxItem() {
+  async processInboxBatch() {
     // Type-definition domain — no processing needed
   },
 }
@@ -54,13 +54,15 @@ describe('Multi-domain integration', () => {
         { name: 'mentions', from: 'memory', to: 'entity', fields: [{ name: 'role_in_context', type: 'string' }] },
       ],
     },
-    async processInboxItem(entry: OwnedMemory, ctx: DomainContext) {
-      if (entry.memory.content.includes('alpha')) {
-        const topicId = await ctx.graph.createNodeWithId('topic:alpha_topic', {
-          name: 'Alpha Topic',
-          status: 'active',
-        }).catch(() => 'topic:alpha_topic')
-        await ctx.graph.relate(entry.memory.id, 'about', topicId, { relevance: 0.9 })
+    async processInboxBatch(entries: OwnedMemory[], ctx: DomainContext) {
+      for (const entry of entries) {
+        if (entry.memory.content.includes('alpha')) {
+          const topicId = await ctx.graph.createNodeWithId('topic:alpha_topic', {
+            name: 'Alpha Topic',
+            status: 'active',
+          }).catch(() => 'topic:alpha_topic')
+          await ctx.graph.relate(entry.memory.id, 'about', topicId, { relevance: 0.9 })
+        }
       }
     },
   }
@@ -76,13 +78,15 @@ describe('Multi-domain integration', () => {
         { name: 'impacts', from: 'memory', to: 'resource', fields: [{ name: 'direction', type: 'string' }] },
       ],
     },
-    async processInboxItem(entry: OwnedMemory, ctx: DomainContext) {
-      if (entry.memory.content.includes('beta')) {
-        const resourceId = await ctx.graph.createNodeWithId('resource:beta_resource', {
-          name: 'Beta Resource',
-          kind: 'abstract',
-        }).catch(() => 'resource:beta_resource')
-        await ctx.graph.relate(entry.memory.id, 'impacts', resourceId, { direction: 'positive' })
+    async processInboxBatch(entries: OwnedMemory[], ctx: DomainContext) {
+      for (const entry of entries) {
+        if (entry.memory.content.includes('beta')) {
+          const resourceId = await ctx.graph.createNodeWithId('resource:beta_resource', {
+            name: 'Beta Resource',
+            kind: 'abstract',
+          }).catch(() => 'resource:beta_resource')
+          await ctx.graph.relate(entry.memory.id, 'impacts', resourceId, { direction: 'positive' })
+        }
       }
     },
   }

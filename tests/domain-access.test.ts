@@ -8,7 +8,7 @@ function makeDomain(id: string): DomainConfig {
   return {
     id,
     name: id,
-    async processInboxItem() {},
+    async processInboxBatch() {},
   }
 }
 

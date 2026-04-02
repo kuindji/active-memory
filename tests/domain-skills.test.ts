@@ -39,7 +39,7 @@ describe('Domain skills and structure', () => {
         scope: 'both',
       },
     ],
-    async processInboxItem(_entry: OwnedMemory, _context: DomainContext) {
+    async processInboxBatch(_entries: OwnedMemory[], _context: DomainContext) {
       // no-op
     },
   }
@@ -47,7 +47,7 @@ describe('Domain skills and structure', () => {
   const minimalDomain: DomainConfig = {
     id: 'minimal',
     name: 'Minimal Domain',
-    async processInboxItem(_entry: OwnedMemory, _context: DomainContext) {
+    async processInboxBatch(_entries: OwnedMemory[], _context: DomainContext) {
       // no-op
     },
   }

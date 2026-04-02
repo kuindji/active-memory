@@ -18,7 +18,7 @@ describe('MemoryEngine.ask', () => {
     await engine.registerDomain({
       id: 'test',
       name: 'Test',
-      async processInboxItem() {},
+      async processInboxBatch() {},
     })
   })
 
@@ -121,7 +121,7 @@ describe('MemoryEngine.ask', () => {
     await engine.registerDomain({
       id: 'science',
       name: 'Science',
-      async processInboxItem() {},
+      async processInboxBatch() {},
     })
 
     await engine.ingest('Physics is fundamental', { domains: ['science'] })

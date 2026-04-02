@@ -83,7 +83,7 @@ describe('MemoryEngine.writeMemory', () => {
     await engine.registerDomain({
       id: 'test',
       name: 'Test',
-      async processInboxItem() {},
+      async processInboxBatch() {},
     })
   })
 
@@ -162,7 +162,7 @@ describe('MemoryEngine CRUD methods', () => {
     await engine.registerDomain({
       id: 'test',
       name: 'Test',
-      async processInboxItem() {},
+      async processInboxBatch() {},
     })
   })
 
@@ -236,7 +236,7 @@ describe('MemoryEngine tagging methods', () => {
     await engine.registerDomain({
       id: 'test',
       name: 'Test',
-      async processInboxItem() {},
+      async processInboxBatch() {},
     })
   })
 
@@ -292,7 +292,7 @@ describe('MemoryEngine graph methods', () => {
     await engine.registerDomain({
       id: 'test',
       name: 'Test',
-      async processInboxItem() {},
+      async processInboxBatch() {},
     })
   })
 

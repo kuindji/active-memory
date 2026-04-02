@@ -18,7 +18,7 @@ describe('vector search', () => {
     await engine.registerDomain({
       id: 'test',
       name: 'Test',
-      async processInboxItem() {},
+      async processInboxBatch() {},
     })
   })
 
@@ -63,7 +63,7 @@ describe('vector search', () => {
     await noVecEngine.registerDomain({
       id: 'test',
       name: 'Test',
-      async processInboxItem() {},
+      async processInboxBatch() {},
     })
 
     await noVecEngine.ingest('some text', { domains: ['test'] })

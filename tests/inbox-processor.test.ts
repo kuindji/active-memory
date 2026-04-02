@@ -38,12 +38,16 @@ describe('InboxProcessor', () => {
   })
 
   // Helper to create a memory with inbox tag
-  async function createInboxMemory(content: string): Promise<string> {
-    const memId = await store.createNode('memory', {
+  async function createInboxMemory(content: string, embedding?: number[]): Promise<string> {
+    const data: Record<string, unknown> = {
       content,
       created_at: Date.now(),
       token_count: content.split(' ').length,
-    })
+    }
+    if (embedding) {
+      data.embedding = embedding
+    }
+    const memId = await store.createNode('memory', data)
     try {
       await store.createNodeWithId('tag:inbox', { label: 'inbox', created_at: Date.now() })
     } catch { /* already exists */ }
@@ -80,14 +84,14 @@ describe('InboxProcessor', () => {
   }
 
   describe('Phase 1: Claim Assertion', () => {
-    test('assertInboxClaim is called for domains with assert-claim tags', async () => {
+    test('assertInboxClaimBatch is called for domains with assert-claim tags', async () => {
       const domain: DomainConfig = {
         id: 'claimer',
         name: 'Claimer',
-        async processInboxItem() {},
-        assertInboxClaim(entry) {
-          claimCalls.push(entry.memory.content)
-          return Promise.resolve(true)
+        async processInboxBatch() {},
+        assertInboxClaimBatch(entries) {
+          for (const e of entries) claimCalls.push(e.memory.content)
+          return Promise.resolve(entries.map(e => e.memory.id))
         },
       }
       domainRegistry.register(domain)
@@ -104,11 +108,13 @@ describe('InboxProcessor', () => {
       const domain: DomainConfig = {
         id: 'claimer',
         name: 'Claimer',
-        processInboxItem(entry: OwnedMemory): Promise<void> {
-          processedItems.push(entry)
+        processInboxBatch(entries: OwnedMemory[]): Promise<void> {
+          processedItems.push(...entries)
           return Promise.resolve()
         },
-        assertInboxClaim() { return Promise.resolve(true) },
+        assertInboxClaimBatch(entries) {
+          return Promise.resolve(entries.map(e => e.memory.id))
+        },
       }
       domainRegistry.register(domain)
       await createDomainNode('claimer')
@@ -134,8 +140,8 @@ describe('InboxProcessor', () => {
       const domain: DomainConfig = {
         id: 'decliner',
         name: 'Decliner',
-        async processInboxItem() {},
-        assertInboxClaim() { return Promise.resolve(false) },
+        async processInboxBatch() {},
+        assertInboxClaimBatch() { return Promise.resolve([]) },
       }
       domainRegistry.register(domain)
 
@@ -144,7 +150,7 @@ describe('InboxProcessor', () => {
         id: 'auto',
         name: 'Auto',
         settings: { autoOwn: true },
-        async processInboxItem() {},
+        async processInboxBatch() {},
       }
       domainRegistry.register(autoOwn)
       await createDomainNode('auto')
@@ -176,8 +182,8 @@ describe('InboxProcessor', () => {
       const domain: DomainConfig = {
         id: 'decliner',
         name: 'Decliner',
-        async processInboxItem() {},
-        assertInboxClaim() { return Promise.resolve(false) },
+        async processInboxBatch() {},
+        assertInboxClaimBatch() { return Promise.resolve([]) },
       }
       domainRegistry.register(domain)
 
@@ -195,14 +201,17 @@ describe('InboxProcessor', () => {
       const domainA: DomainConfig = {
         id: 'a',
         name: 'A',
-        async processInboxItem() {},
-        assertInboxClaim() { calls.push('a'); return Promise.resolve(true) },
+        async processInboxBatch() {},
+        assertInboxClaimBatch(entries) {
+          calls.push('a')
+          return Promise.resolve(entries.map(e => e.memory.id))
+        },
       }
       const domainB: DomainConfig = {
         id: 'b',
         name: 'B',
-        async processInboxItem() {},
-        assertInboxClaim() { calls.push('b'); return Promise.resolve(false) },
+        async processInboxBatch() {},
+        assertInboxClaimBatch() { calls.push('b'); return Promise.resolve([]) },
       }
       domainRegistry.register(domainA)
       domainRegistry.register(domainB)
@@ -218,21 +227,23 @@ describe('InboxProcessor', () => {
       expect(calls).toContain('b')
     })
 
-    test('assertInboxClaim error does not block other domains', async () => {
+    test('assertInboxClaimBatch error does not block other domains', async () => {
       const errorEvents: unknown[] = []
       events.on('error', (...args: unknown[]) => { errorEvents.push(args[0]) })
 
       const domainA: DomainConfig = {
         id: 'thrower',
         name: 'Thrower',
-        async processInboxItem() {},
-        assertInboxClaim() { throw new Error('boom') },
+        async processInboxBatch() {},
+        assertInboxClaimBatch() { throw new Error('boom') },
       }
       const domainB: DomainConfig = {
         id: 'claimer',
         name: 'Claimer',
-        async processInboxItem() {},
-        assertInboxClaim() { return Promise.resolve(true) },
+        async processInboxBatch() {},
+        assertInboxClaimBatch(entries) {
+          return Promise.resolve(entries.map(e => e.memory.id))
+        },
       }
       domainRegistry.register(domainA)
       domainRegistry.register(domainB)
@@ -255,12 +266,12 @@ describe('InboxProcessor', () => {
   })
 
   describe('Phase 2: Inbox Processing', () => {
-    test('processInboxItem called for domain with inbox:domain tag', async () => {
+    test('processInboxBatch called for domain with inbox:domain tag', async () => {
       const domain: DomainConfig = {
         id: 'test',
         name: 'Test',
-        processInboxItem(entry: OwnedMemory): Promise<void> {
-          processedItems.push(entry)
+        processInboxBatch(entries: OwnedMemory[]): Promise<void> {
+          processedItems.push(...entries)
           return Promise.resolve()
         },
       }
@@ -281,12 +292,12 @@ describe('InboxProcessor', () => {
       const domainA: DomainConfig = {
         id: 'a',
         name: 'A',
-        async processInboxItem() {},
+        async processInboxBatch() {},
       }
       const domainB: DomainConfig = {
         id: 'b',
         name: 'B',
-        async processInboxItem() {},
+        async processInboxBatch() {},
       }
       domainRegistry.register(domainA)
       domainRegistry.register(domainB)
@@ -317,13 +328,13 @@ describe('InboxProcessor', () => {
       const domainA: DomainConfig = {
         id: 'thrower',
         name: 'Thrower',
-        processInboxItem(): Promise<void> { throw new Error('boom') },
+        processInboxBatch(): Promise<void> { throw new Error('boom') },
       }
       const domainB: DomainConfig = {
         id: 'worker',
         name: 'Worker',
-        processInboxItem(entry: OwnedMemory): Promise<void> {
-          processedItems.push(entry)
+        processInboxBatch(entries: OwnedMemory[]): Promise<void> {
+          processedItems.push(...entries)
           return Promise.resolve()
         },
       }
@@ -361,8 +372,8 @@ describe('InboxProcessor', () => {
       const domain: DomainConfig = {
         id: 'test',
         name: 'Test',
-        processInboxItem(entry: OwnedMemory): Promise<void> {
-          processedItems.push(entry)
+        processInboxBatch(entries: OwnedMemory[]): Promise<void> {
+          processedItems.push(...entries)
           return Promise.resolve()
         },
       }
@@ -388,8 +399,8 @@ describe('InboxProcessor', () => {
       const domain: DomainConfig = {
         id: 'test',
         name: 'Test',
-        processInboxItem(entry: OwnedMemory): Promise<void> {
-          processedItems.push(entry)
+        processInboxBatch(entries: OwnedMemory[]): Promise<void> {
+          processedItems.push(...entries)
           return Promise.resolve()
         },
       }
@@ -409,8 +420,8 @@ describe('InboxProcessor', () => {
       const domain: DomainConfig = {
         id: 'test',
         name: 'Test',
-        processInboxItem(entry: OwnedMemory): Promise<void> {
-          processedItems.push(entry)
+        processInboxBatch(entries: OwnedMemory[]): Promise<void> {
+          processedItems.push(...entries)
           return Promise.resolve()
         },
       }

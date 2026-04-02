@@ -239,8 +239,8 @@ export interface DomainConfig {
   schema?: DomainSchema
   skills?: DomainSkill[]
   settings?: DomainSettings
-  processInboxItem(entry: OwnedMemory, context: DomainContext): Promise<void>
-  assertInboxClaim?(entry: OwnedMemory, context: DomainContext): Promise<boolean>
+  processInboxBatch(entries: OwnedMemory[], context: DomainContext): Promise<void>
+  assertInboxClaimBatch?(entries: OwnedMemory[], context: DomainContext): Promise<string[]>
   search?: {
     rank?(query: SearchQuery, candidates: ScoredMemory[]): ScoredMemory[]
     expand?(query: SearchQuery, context: DomainContext): Promise<SearchQuery>

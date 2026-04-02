@@ -17,7 +17,7 @@ const testTopicDomain: DomainConfig = {
       { name: 'about_topic', from: 'memory', to: 'memory', fields: [{ name: 'domain', type: 'string' }] },
     ],
   },
-  async processInboxItem(_entry: OwnedMemory, _context: DomainContext) {},
+  async processInboxBatch(_entries: OwnedMemory[], _context: DomainContext) {},
 }
 
 describe('Topic domain - merge schedule', () => {
@@ -259,10 +259,10 @@ describe('Topic domain - config', () => {
     expect(domain.schedules![0].intervalMs).toBe(5000)
   })
 
-  test('processInboxItem is a no-op (does not throw, returns void)', async () => {
+  test('processInboxBatch is a no-op (does not throw, returns void)', async () => {
     const domain = createTopicDomain()
-    const result = await domain.processInboxItem(
-      { memory: { id: 'test', content: '', embedding: [], eventTime: null, createdAt: 0, tokenCount: 0 }, domainAttributes: {}, tags: [] },
+    const result = await domain.processInboxBatch(
+      [{ memory: { id: 'test', content: '', embedding: [], eventTime: null, createdAt: 0, tokenCount: 0 }, domainAttributes: {}, tags: [] }],
       {} as DomainContext
     )
     expect(result).toBeUndefined()
@@ -352,7 +352,7 @@ describe('Topic domain - integration', () => {
       id: 'notes',
       name: 'Notes',
       schema: { nodes: [], edges: [] },
-      async processInboxItem(_entry: OwnedMemory, _context: DomainContext) {},
+      async processInboxBatch(_entries: OwnedMemory[], _context: DomainContext) {},
     }
     await engine.registerDomain(notesDomain)
 

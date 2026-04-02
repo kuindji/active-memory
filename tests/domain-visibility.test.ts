@@ -10,26 +10,26 @@ describe('Domain visibility', () => {
     id: 'domaina',
     name: 'Domain A',
     settings: { includeDomains: ['domainb'] },
-    async processInboxItem(_entry: OwnedMemory, _ctx: DomainContext) {},
+    async processInboxBatch(_entries: OwnedMemory[], _ctx: DomainContext) {},
   }
 
   const domainB: DomainConfig = {
     id: 'domainb',
     name: 'Domain B',
-    async processInboxItem(_entry: OwnedMemory, _ctx: DomainContext) {},
+    async processInboxBatch(_entries: OwnedMemory[], _ctx: DomainContext) {},
   }
 
   const domainC: DomainConfig = {
     id: 'domainc',
     name: 'Domain C',
     settings: { excludeDomains: ['domaina'] },
-    async processInboxItem(_entry: OwnedMemory, _ctx: DomainContext) {},
+    async processInboxBatch(_entries: OwnedMemory[], _ctx: DomainContext) {},
   }
 
   const domainD: DomainConfig = {
     id: 'domaind',
     name: 'Domain D',
-    async processInboxItem(_entry: OwnedMemory, _ctx: DomainContext) {},
+    async processInboxBatch(_entries: OwnedMemory[], _ctx: DomainContext) {},
   }
 
   beforeEach(async () => {
