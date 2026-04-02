@@ -64,12 +64,14 @@ export type {
 export type { TopicAttributes, TopicDomainOptions, TopicStatus } from './domains/topic/types.ts'
 export type { UserDomainOptions } from './domains/user/types.ts'
 export type { CodeRepoDomainOptions, MemoryClassification, Audience, ModuleKind, CodeRepoAttributes } from './domains/code-repo/types.ts'
+export type { KbDomainOptions, KbClassification, KbAttributes } from './domains/kb/types.ts'
 
 // Domains
 export { logDomain } from './domains/log-domain.ts'
 export { createTopicDomain, topicDomain } from './domains/topic/index.ts'
 export { createUserDomain, userDomain } from './domains/user/index.ts'
 export { createCodeRepoDomain, codeRepoDomain } from './domains/code-repo/index.ts'
+export { createKbDomain, kbDomain } from './domains/kb/index.ts'
 
 // Adapters
 export { ClaudeCliAdapter } from './adapters/llm/claude-cli.ts'

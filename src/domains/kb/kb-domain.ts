@@ -1,0 +1,228 @@
+import { fileURLToPath } from 'node:url'
+import { dirname } from 'node:path'
+import type {
+  DomainConfig,
+  DomainSchedule,
+  DomainContext,
+  SearchQuery,
+  ScoredMemory,
+  ContextResult,
+} from '../../core/types.ts'
+import { countTokens } from '../../core/scoring.ts'
+import { TOPIC_TAG } from '../topic/types.ts'
+import {
+  KB_DOMAIN_ID,
+  KB_DEFINITION_TAG,
+  KB_CONCEPT_TAG,
+  KB_FACT_TAG,
+  KB_REFERENCE_TAG,
+  KB_HOWTO_TAG,
+  KB_INSIGHT_TAG,
+  DEFAULT_CONSOLIDATE_INTERVAL_MS,
+} from './types.ts'
+import type { KbDomainOptions } from './types.ts'
+import { kbSkills } from './skills.ts'
+import { processInboxBatch } from './inbox.ts'
+import { consolidateKnowledge } from './schedules.ts'
+
+function buildSchedules(options?: KbDomainOptions): DomainSchedule[] {
+  const schedules: DomainSchedule[] = []
+
+  if (options?.consolidateSchedule?.enabled !== false) {
+    schedules.push({
+      id: 'consolidate-knowledge',
+      name: 'Consolidate overlapping knowledge entries',
+      intervalMs: options?.consolidateSchedule?.intervalMs ?? DEFAULT_CONSOLIDATE_INTERVAL_MS,
+      run: (context: DomainContext) => consolidateKnowledge(context),
+    })
+  }
+
+  return schedules
+}
+
+export function createKbDomain(options?: KbDomainOptions): DomainConfig {
+  return {
+    id: KB_DOMAIN_ID,
+    name: 'Knowledge Base',
+    baseDir: dirname(fileURLToPath(import.meta.url)),
+    schema: {
+      nodes: [],
+      edges: [
+        { name: 'supersedes', from: 'memory', to: 'memory' },
+        {
+          name: 'related_knowledge',
+          from: 'memory',
+          to: 'memory',
+          fields: [{ name: 'relationship', type: 'string' }],
+        },
+      ],
+    },
+    skills: kbSkills,
+    processInboxBatch,
+    schedules: buildSchedules(options),
+
+    describe() {
+      return 'General-purpose knowledge base domain for storing domain-agnostic knowledge: facts, definitions, how-tos, technical references, concepts, and insights. A personal wiki not tied to any specific project or conversation.'
+    },
+
+    search: {
+      async expand(query: SearchQuery, context: DomainContext): Promise<SearchQuery> {
+        if (!query.text) return query
+
+        // Query graph directly for topic nodes matching text (avoids recursive search)
+        const topicTagId = `tag:\`${TOPIC_TAG}\``
+        try {
+          const results = await context.graph.query<Array<{ id: string }>>(
+            `SELECT in as id FROM tagged WHERE out = $tagId AND (SELECT content FROM ONLY $parent.in).content CONTAINS $text LIMIT 5`,
+            { tagId: topicTagId, text: query.text },
+          )
+          if (!Array.isArray(results) || results.length === 0) return query
+
+          const topicIds = results.map(r => String(r.id))
+          return {
+            ...query,
+            traversal: {
+              from: topicIds,
+              pattern: '<-about_topic<-memory.*',
+              depth: 1,
+            },
+          }
+        } catch {
+          // Topic lookup is best-effort
+          return query
+        }
+      },
+
+      rank(_query: SearchQuery, candidates: ScoredMemory[]): ScoredMemory[] {
+        return candidates
+          .map(c => {
+            const attrs = c.domainAttributes[KB_DOMAIN_ID] as Record<string, unknown> | undefined
+            let score = c.score
+            if (attrs?.superseded) score *= 0.1
+            return { ...c, score }
+          })
+          .sort((a, b) => b.score - a.score)
+      },
+    },
+
+    async buildContext(text: string, budgetTokens: number, context: DomainContext): Promise<ContextResult> {
+      const empty: ContextResult = { context: '', memories: [], totalTokens: 0 }
+      if (!text) return empty
+
+      const definitionBudget = Math.floor(budgetTokens * 0.3)
+      const factBudget = Math.floor(budgetTokens * 0.4)
+      const howtoBudget = Math.floor(budgetTokens * 0.3)
+
+      const allMemories: ScoredMemory[] = []
+      const sections: string[] = []
+
+      // Section 1 — [Definitions & Concepts]
+      for (const tag of [KB_DEFINITION_TAG, KB_CONCEPT_TAG]) {
+        const result = await context.search({
+          text,
+          tags: [tag],
+          tokenBudget: definitionBudget,
+        })
+
+        const entries = result.entries.filter(e => {
+          const attrs = e.domainAttributes[KB_DOMAIN_ID]
+          return !attrs?.superseded
+        })
+        allMemories.push(...entries)
+      }
+
+      const definitionMemories = deduplicateMemories(allMemories)
+      if (definitionMemories.length > 0) {
+        const lines = truncateToTokenBudget(definitionMemories, definitionBudget)
+        if (lines.length > 0) {
+          sections.push(`[Definitions & Concepts]\n${lines.join('\n')}`)
+        }
+      }
+
+      // Section 2 — [Facts & References]
+      for (const tag of [KB_FACT_TAG, KB_REFERENCE_TAG]) {
+        const result = await context.search({
+          text,
+          tags: [tag],
+          tokenBudget: factBudget,
+        })
+
+        const entries = result.entries.filter(e => {
+          if (allMemories.some(m => m.id === e.id)) return false
+          const attrs = e.domainAttributes[KB_DOMAIN_ID]
+          return !attrs?.superseded
+        })
+        allMemories.push(...entries)
+      }
+
+      const factMemories = allMemories.filter(m =>
+        !definitionMemories.some(d => d.id === m.id),
+      )
+      const dedupedFacts = deduplicateMemories(factMemories)
+      if (dedupedFacts.length > 0) {
+        const lines = truncateToTokenBudget(dedupedFacts, factBudget)
+        if (lines.length > 0) {
+          sections.push(`[Facts & References]\n${lines.join('\n')}`)
+        }
+      }
+
+      // Section 3 — [How-Tos & Insights]
+      for (const tag of [KB_HOWTO_TAG, KB_INSIGHT_TAG]) {
+        const result = await context.search({
+          text,
+          tags: [tag],
+          tokenBudget: howtoBudget,
+        })
+
+        const entries = result.entries.filter(e => {
+          if (allMemories.some(m => m.id === e.id)) return false
+          const attrs = e.domainAttributes[KB_DOMAIN_ID]
+          return !attrs?.superseded
+        })
+
+        if (entries.length > 0) {
+          const lines = truncateToTokenBudget(entries, howtoBudget)
+          if (lines.length > 0) {
+            sections.push(`[How-Tos & Insights]\n${lines.join('\n')}`)
+            allMemories.push(...entries)
+          }
+        }
+      }
+
+      const finalContext = sections.join('\n\n')
+      const totalTokens = countTokens(finalContext)
+
+      return {
+        context: finalContext,
+        memories: deduplicateMemories(allMemories),
+        totalTokens,
+      }
+    },
+  }
+}
+
+function deduplicateMemories(memories: ScoredMemory[]): ScoredMemory[] {
+  const seen = new Set<string>()
+  const result: ScoredMemory[] = []
+  for (const mem of memories) {
+    if (!seen.has(mem.id)) {
+      seen.add(mem.id)
+      result.push(mem)
+    }
+  }
+  return result
+}
+
+function truncateToTokenBudget(memories: ScoredMemory[], budget: number): string[] {
+  const lines: string[] = []
+  let tokens = 0
+  for (const mem of memories) {
+    const t = countTokens(mem.content)
+    if (tokens + t > budget) break
+    tokens += t
+    lines.push(mem.content)
+  }
+  return lines
+}
+
+export const kbDomain = createKbDomain()
