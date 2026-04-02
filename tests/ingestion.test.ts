@@ -61,7 +61,7 @@ describe('MemoryEngine', () => {
         id: 'claimer',
         name: 'Claimer',
         async processInboxItem() {},
-        async assertInboxClaim() { return true },
+        assertInboxClaim() { return Promise.resolve(true) },
       })
 
       const result = await engine.ingest('Claimable content')

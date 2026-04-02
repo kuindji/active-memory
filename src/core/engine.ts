@@ -429,7 +429,7 @@ class MemoryEngine {
 
     // Path A: Explicit domains specified — direct ownership + inbox processing tags
     if (options?.domains && options.domains.length > 0) {
-      let targetDomainIds = options.domains.filter(id => {
+      const targetDomainIds = options.domains.filter(id => {
         if (!this.domainRegistry.has(id)) return true
         return this.domainRegistry.getAccess(id) === 'write'
       })
@@ -1115,7 +1115,7 @@ Otherwise, respond with a query plan to find more relevant information.`
   }
 
   async processInbox(): Promise<boolean> {
-    return this.inboxProcessor.processNext()
+    return this.inboxProcessor.tick()
   }
 
   getBootstrappableDomains(): string[] {
