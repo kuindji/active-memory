@@ -1,0 +1,11 @@
+{
+  "phase": 1,
+  "config": "baseline-no-kb",
+  "timestamp": "2026-04-03T20:24:54.879Z",
+  "durationMs": 0,
+  "status": "success",
+  "data": {
+    "memoryIdMap": {},
+    "entryCount": 0
+  }
+}
