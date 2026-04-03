@@ -34,7 +34,7 @@ Scoring rubric:
 Respond with ONLY a JSON object: {"score": <0-5>, "reasoning": "<one sentence>"}`;
 
     try {
-        const response = await llm.generate!(prompt);
+        const response = await llm.generate(prompt);
         const match = response.match(/\{[\s\S]*\}/);
         if (match) {
             const parsed = JSON.parse(match[0]) as { score: number; reasoning: string };

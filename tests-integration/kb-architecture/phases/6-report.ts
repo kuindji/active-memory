@@ -106,7 +106,7 @@ export function runReport(): ReportData {
             );
         }
 
-        const belowBaseline = rows.filter((r) => r.avgScore <= baseline!.avgScore);
+        const belowBaseline = rows.filter((r) => r.avgScore <= baseline.avgScore);
         if (belowBaseline.length > 0) {
             recommendations.push(
                 `Configs at or below baseline (remove): ${belowBaseline.map((r) => r.config).join(", ")}`,

@@ -15,7 +15,7 @@ export async function runBaseline(): Promise<void> {
 
     for (const question of dataset.questions) {
         const askStart = performance.now();
-        const answer = await llm.generate!(question.question);
+        const answer = await llm.generate(question.question);
         const askMs = performance.now() - askStart;
 
         entries.push({
