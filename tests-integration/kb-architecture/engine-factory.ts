@@ -62,6 +62,26 @@ export async function createConfiguredEngine(config: ArchitectureConfig): Promis
     await engine.registerDomain(modifiedDomain);
     await engine.registerDomain(topicDomain);
 
+    // Apply noise reduction toggles via tunable params
+    if (config.noiseReduction) {
+        const overrides: Record<string, number> = {};
+        if (config.noiseReduction.embeddingRerank !== undefined) {
+            overrides.embeddingRerank = config.noiseReduction.embeddingRerank ? 1 : 0;
+        } else {
+            // Default: embedding rerank OFF for non-noise-reduction configs
+            overrides.embeddingRerank = 0;
+        }
+        if (config.noiseReduction.llmRerank !== undefined) {
+            overrides.llmRerank = config.noiseReduction.llmRerank ? 1 : 0;
+        }
+        if (Object.keys(overrides).length > 0) {
+            await engine.saveTunableParams("kb", overrides);
+        }
+    } else {
+        // Existing configs without noiseReduction: disable rerank
+        await engine.saveTunableParams("kb", { embeddingRerank: 0 });
+    }
+
     return engine;
 }
 

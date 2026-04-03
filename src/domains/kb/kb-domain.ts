@@ -109,6 +109,8 @@ export function createKbDomain(options?: KbDomainOptions): DomainConfig {
             { name: "definitionBudgetPct", default: 0.3, min: 0.1, max: 0.6, step: 0.05 },
             { name: "factBudgetPct", default: 0.4, min: 0.1, max: 0.6, step: 0.05 },
             { name: "topicBoostFactor", default: 1.5, min: 1.0, max: 3.0, step: 0.25 },
+            { name: "embeddingRerank", default: 1, min: 0, max: 1, step: 1 },
+            { name: "llmRerank", default: 0, min: 0, max: 1, step: 1 },
         ],
 
         describe() {
@@ -162,6 +164,8 @@ export function createKbDomain(options?: KbDomainOptions): DomainConfig {
             const factPct = context.getTunableParam("factBudgetPct") ?? 0.4;
             const howtoPct = Math.max(0.1, 1.0 - defPct - factPct);
             const topicBoost = context.getTunableParam("topicBoostFactor") ?? 1.5;
+            const useEmbeddingRerank = (context.getTunableParam("embeddingRerank") ?? 1) > 0;
+            const _useLlmRerank = (context.getTunableParam("llmRerank") ?? 0) > 0;
 
             const definitionBudget = Math.floor(budgetTokens * defPct);
             const factBudget = Math.floor(budgetTokens * factPct);
@@ -186,7 +190,7 @@ export function createKbDomain(options?: KbDomainOptions): DomainConfig {
                     tags: [tag],
                     tokenBudget: definitionBudget,
                     minScore,
-                    rerank: true,
+                    rerank: useEmbeddingRerank,
                     rerankThreshold: minScore,
                 });
 
@@ -222,7 +226,7 @@ export function createKbDomain(options?: KbDomainOptions): DomainConfig {
                     tags: [tag],
                     tokenBudget: factBudget,
                     minScore,
-                    rerank: true,
+                    rerank: useEmbeddingRerank,
                     rerankThreshold: minScore,
                 });
 
@@ -260,7 +264,7 @@ export function createKbDomain(options?: KbDomainOptions): DomainConfig {
                     tags: [tag],
                     tokenBudget: howtoBudget,
                     minScore,
-                    rerank: true,
+                    rerank: useEmbeddingRerank,
                     rerankThreshold: minScore,
                 });
 
