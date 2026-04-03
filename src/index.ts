@@ -1,16 +1,16 @@
 // Core
-export { MemoryEngine } from "./core/engine.ts";
-export { GraphStore } from "./core/graph-store.ts";
-export { SchemaRegistry } from "./core/schema-registry.ts";
-export { SearchEngine } from "./core/search-engine.ts";
-export { InboxProcessor } from "./core/inbox-processor.ts";
-export type { InboxProcessorOptions } from "./core/inbox-processor.ts";
-export { DomainRegistry } from "./core/domain-registry.ts";
-export { Scheduler } from "./core/scheduler.ts";
-export { EventEmitter } from "./core/events.ts";
+export { MemoryEngine } from "./core/engine.js";
+export { GraphStore } from "./core/graph-store.js";
+export { SchemaRegistry } from "./core/schema-registry.js";
+export { SearchEngine } from "./core/search-engine.js";
+export { InboxProcessor } from "./core/inbox-processor.js";
+export type { InboxProcessorOptions } from "./core/inbox-processor.js";
+export { DomainRegistry } from "./core/domain-registry.js";
+export { Scheduler } from "./core/scheduler.js";
+export { EventEmitter } from "./core/events.js";
 
 // Scoring utilities
-export { computeDecay, countTokens, mergeScores, applyTokenBudget } from "./core/scoring.ts";
+export { computeDecay, countTokens, mergeScores, applyTokenBudget } from "./core/scoring.js";
 
 // Types
 export type {
@@ -62,31 +62,31 @@ export type {
     ModelLevel,
     ConnectionAdapter,
     S3AdapterConfig,
-} from "./core/types.ts";
-export type { TopicAttributes, TopicDomainOptions, TopicStatus } from "./domains/topic/types.ts";
-export type { UserDomainOptions } from "./domains/user/types.ts";
+} from "./core/types.js";
+export type { TopicAttributes, TopicDomainOptions, TopicStatus } from "./domains/topic/types.js";
+export type { UserDomainOptions } from "./domains/user/types.js";
 export type {
     CodeRepoDomainOptions,
     MemoryClassification,
     Audience,
     ModuleKind,
     CodeRepoAttributes,
-} from "./domains/code-repo/types.ts";
-export type { KbDomainOptions, KbClassification, KbAttributes } from "./domains/kb/types.ts";
+} from "./domains/code-repo/types.js";
+export type { KbDomainOptions, KbClassification, KbAttributes } from "./domains/kb/types.js";
 
 // Domains
-export { logDomain } from "./domains/log-domain.ts";
-export { createTopicDomain, topicDomain } from "./domains/topic/index.ts";
-export { createUserDomain, userDomain } from "./domains/user/index.ts";
-export { createCodeRepoDomain, codeRepoDomain } from "./domains/code-repo/index.ts";
-export { createKbDomain, kbDomain } from "./domains/kb/index.ts";
+export { logDomain } from "./domains/log-domain.js";
+export { createTopicDomain, topicDomain } from "./domains/topic/index.js";
+export { createUserDomain, userDomain } from "./domains/user/index.js";
+export { createCodeRepoDomain, codeRepoDomain } from "./domains/code-repo/index.js";
+export { createKbDomain, kbDomain } from "./domains/kb/index.js";
 
 // Adapters
-export { ClaudeCliAdapter } from "./adapters/llm/claude-cli.ts";
-export { OnnxEmbeddingAdapter } from "./adapters/onnx-embedding.ts";
-export type { OnnxEmbeddingConfig } from "./adapters/onnx-embedding.ts";
-export { PassthroughAdapter } from "./adapters/connection/passthrough.ts";
-export { S3ConnectionAdapter } from "./adapters/connection/s3.ts";
+export { ClaudeCliAdapter } from "./adapters/llm/claude-cli.js";
+export { OnnxEmbeddingAdapter } from "./adapters/onnx-embedding.js";
+export type { OnnxEmbeddingConfig } from "./adapters/onnx-embedding.js";
+export { PassthroughAdapter } from "./adapters/connection/passthrough.js";
+export { S3ConnectionAdapter } from "./adapters/connection/s3.js";
 
 // Config
-export { resolveConfigPath, loadConfig } from "./config-loader.ts";
+export { resolveConfigPath, loadConfig } from "./config-loader.js";

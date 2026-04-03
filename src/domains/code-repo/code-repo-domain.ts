@@ -7,8 +7,8 @@ import type {
     SearchQuery,
     ScoredMemory,
     ContextResult,
-} from "../../core/types.ts";
-import { countTokens } from "../../core/scoring.ts";
+} from "../../core/types.js";
+import { countTokens } from "../../core/scoring.js";
 import {
     CODE_REPO_DOMAIN_ID,
     CODE_REPO_TAG,
@@ -17,12 +17,12 @@ import {
     CODE_REPO_OBSERVATION_TAG,
     DEFAULT_SCAN_INTERVAL_MS,
     DEFAULT_DRIFT_INTERVAL_MS,
-} from "./types.ts";
-import type { CodeRepoDomainOptions } from "./types.ts";
-import { codeRepoSkills } from "./skills.ts";
-import { processInboxBatch } from "./inbox.ts";
-import { scanCommits, detectDrift } from "./schedules.ts";
-import { bootstrapCodeRepo } from "./bootstrap.ts";
+} from "./types.js";
+import type { CodeRepoDomainOptions } from "./types.js";
+import { codeRepoSkills } from "./skills.js";
+import { processInboxBatch } from "./inbox.js";
+import { scanCommits, detectDrift } from "./schedules.js";
+import { bootstrapCodeRepo } from "./bootstrap.js";
 
 function buildSchedules(options?: CodeRepoDomainOptions): DomainSchedule[] {
     const schedules: DomainSchedule[] = [];

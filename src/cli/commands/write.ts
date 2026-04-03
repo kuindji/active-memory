@@ -1,6 +1,6 @@
-import type { CommandHandler } from "../types.ts";
-import type { WriteOptions } from "../../core/types.ts";
-import { parseMeta } from "../utils.ts";
+import type { CommandHandler } from "../types.js";
+import type { WriteOptions } from "../../core/types.js";
+import { parseMeta } from "../utils.js";
 
 const writeCommand: CommandHandler = async (engine, parsed) => {
     const text = parsed.flags["text"] as string | undefined;

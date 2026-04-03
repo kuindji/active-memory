@@ -1,4 +1,4 @@
-import type { MemoryEngine } from "../core/engine.ts";
+import type { MemoryEngine } from "../core/engine.js";
 
 interface GlobalFlags {
     config?: string;

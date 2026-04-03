@@ -1,7 +1,7 @@
 import { describe, test, expect, beforeEach } from "bun:test";
-import { Scheduler } from "../src/core/scheduler.ts";
-import { EventEmitter } from "../src/core/events.ts";
-import type { DomainContext, DomainSchedule } from "../src/core/types.ts";
+import { Scheduler } from "../src/core/scheduler.js";
+import { EventEmitter } from "../src/core/events.js";
+import type { DomainContext, DomainSchedule } from "../src/core/types.js";
 
 function makeSchedule(
     id: string,

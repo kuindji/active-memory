@@ -1,19 +1,20 @@
-import { parseArgs } from "./parse-args.ts";
-import { formatOutput, formatError } from "./format.ts";
-import { getHelpText, getCommandHelp } from "./commands/help.ts";
-import { domainsCommand, domainCommand } from "./commands/domains.ts";
-import { ingestCommand } from "./commands/ingest.ts";
-import { searchCommand } from "./commands/search.ts";
-import { askCommand } from "./commands/ask.ts";
-import { buildContextCommand } from "./commands/build-context.ts";
-import { writeCommand } from "./commands/write.ts";
-import { memoryCommand } from "./commands/memory.ts";
-import { graphCommand } from "./commands/graph.ts";
-import { scheduleCommand } from "./commands/schedule.ts";
-import { initCommand } from "./commands/init.ts";
-import { skillCommand } from "./commands/skill.ts";
-import { loadConfig } from "../config-loader.ts";
-import type { CommandHandler, CommandResult } from "./types.ts";
+#!/usr/bin/env node
+import { parseArgs } from "./parse-args.js";
+import { formatOutput, formatError } from "./format.js";
+import { getHelpText, getCommandHelp } from "./commands/help.js";
+import { domainsCommand, domainCommand } from "./commands/domains.js";
+import { ingestCommand } from "./commands/ingest.js";
+import { searchCommand } from "./commands/search.js";
+import { askCommand } from "./commands/ask.js";
+import { buildContextCommand } from "./commands/build-context.js";
+import { writeCommand } from "./commands/write.js";
+import { memoryCommand } from "./commands/memory.js";
+import { graphCommand } from "./commands/graph.js";
+import { scheduleCommand } from "./commands/schedule.js";
+import { initCommand } from "./commands/init.js";
+import { skillCommand } from "./commands/skill.js";
+import { loadConfig } from "../config-loader.js";
+import type { CommandHandler, CommandResult } from "./types.js";
 
 const COMMANDS: Record<string, CommandHandler> = {
     init: initCommand,
@@ -31,7 +32,7 @@ const COMMANDS: Record<string, CommandHandler> = {
 };
 
 async function main(): Promise<void> {
-    const parsed = parseArgs(Bun.argv.slice(2));
+    const parsed = parseArgs(process.argv.slice(2));
 
     // Handle help early (no engine needed)
     if (parsed.command === "help") {

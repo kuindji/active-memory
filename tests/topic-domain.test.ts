@@ -1,14 +1,14 @@
 import { describe, test, expect, beforeEach, afterEach } from "bun:test";
-import { MemoryEngine } from "../src/core/engine.ts";
-import { MockLLMAdapter, MockEmbeddingAdapter } from "./helpers.ts";
-import { mergeSimilarTopics } from "../src/domains/topic/schedules.ts";
+import { MemoryEngine } from "../src/core/engine.js";
+import { MockLLMAdapter, MockEmbeddingAdapter } from "./helpers.js";
+import { mergeSimilarTopics } from "../src/domains/topic/schedules.js";
 import {
     TOPIC_TAG,
     TOPIC_DOMAIN_ID,
     DEFAULT_MERGE_INTERVAL_MS,
-} from "../src/domains/topic/types.ts";
-import { createTopicDomain, topicDomain } from "../src/domains/topic/index.ts";
-import type { DomainConfig, OwnedMemory, DomainContext } from "../src/core/types.ts";
+} from "../src/domains/topic/types.js";
+import { createTopicDomain, topicDomain } from "../src/domains/topic/index.js";
+import type { DomainConfig, OwnedMemory, DomainContext } from "../src/core/types.js";
 
 const testTopicDomain: DomainConfig = {
     id: "topic",

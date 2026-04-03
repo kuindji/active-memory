@@ -1,14 +1,14 @@
 import { describe, test, expect, beforeEach, afterEach } from "bun:test";
-import { MemoryEngine } from "../src/core/engine.ts";
-import { MockLLMAdapter, MockEmbeddingAdapter } from "./helpers.ts";
-import { consolidateUserProfile } from "../src/domains/user/schedules.ts";
+import { MemoryEngine } from "../src/core/engine.js";
+import { MockLLMAdapter, MockEmbeddingAdapter } from "./helpers.js";
+import { consolidateUserProfile } from "../src/domains/user/schedules.js";
 import {
     USER_TAG,
     USER_DOMAIN_ID,
     DEFAULT_CONSOLIDATE_INTERVAL_MS,
-} from "../src/domains/user/types.ts";
-import { createUserDomain, userDomain } from "../src/domains/user/index.ts";
-import type { DomainConfig, OwnedMemory, DomainContext } from "../src/core/types.ts";
+} from "../src/domains/user/types.js";
+import { createUserDomain, userDomain } from "../src/domains/user/index.js";
+import type { DomainConfig, OwnedMemory, DomainContext } from "../src/core/types.js";
 
 describe("User domain - config", () => {
     test("has correct id and name", () => {

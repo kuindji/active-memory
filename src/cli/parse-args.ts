@@ -1,4 +1,4 @@
-import type { ParsedCommand } from "./types.ts";
+import type { ParsedCommand } from "./types.js";
 
 const BOOLEAN_FLAGS = new Set(["pretty", "skip-dedup", "help"]);
 const REPEATABLE_KV_FLAGS = new Set(["meta", "attr"]);

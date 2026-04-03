@@ -1,5 +1,5 @@
 import { describe, test, expect } from "bun:test";
-import { EventEmitter } from "../src/core/events.ts";
+import { EventEmitter } from "../src/core/events.js";
 
 describe("EventEmitter", () => {
     test("on and emit deliver events to handler", () => {

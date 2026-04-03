@@ -1,10 +1,10 @@
 import { describe, it, expect, beforeEach, afterEach } from "bun:test";
-import { MemoryEngine } from "../../../src/core/engine.ts";
-import { MockLLMAdapter } from "../../helpers.ts";
-import { scheduleCommand } from "../../../src/cli/commands/schedule.ts";
-import { createTopicDomain } from "../../../src/domains/topic/index.ts";
-import type { ParsedCommand } from "../../../src/cli/types.ts";
-import type { ScheduleInfo } from "../../../src/core/types.ts";
+import { MemoryEngine } from "../../../src/core/engine.js";
+import { MockLLMAdapter } from "../../helpers.js";
+import { scheduleCommand } from "../../../src/cli/commands/schedule.js";
+import { createTopicDomain } from "../../../src/domains/topic/index.js";
+import type { ParsedCommand } from "../../../src/cli/types.js";
+import type { ScheduleInfo } from "../../../src/core/types.js";
 
 function makeParsed(
     args: string[] = [],

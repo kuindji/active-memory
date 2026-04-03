@@ -1,7 +1,7 @@
-import type { OwnedMemory, DomainContext, ScoredMemory } from "../../core/types.ts";
-import { KB_TAG, KB_DOMAIN_ID } from "./types.ts";
-import type { KbClassification } from "./types.ts";
-import { ensureTag, linkToTopicsBatch, classificationToTag } from "./utils.ts";
+import type { OwnedMemory, DomainContext, ScoredMemory } from "../../core/types.js";
+import { KB_TAG, KB_DOMAIN_ID } from "./types.js";
+import type { KbClassification } from "./types.js";
+import { ensureTag, linkToTopicsBatch, classificationToTag } from "./utils.js";
 
 function logKbInboxWarning(scope: string, error: unknown): void {
     const errorMessage = error instanceof Error ? error.message : String(error);

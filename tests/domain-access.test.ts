@@ -1,8 +1,8 @@
 import { describe, test, expect, beforeEach, afterEach } from "bun:test";
 import { StringRecordId } from "surrealdb";
-import { MemoryEngine } from "../src/core/engine.ts";
-import { MockLLMAdapter } from "./helpers.ts";
-import type { DomainConfig } from "../src/core/types.ts";
+import { MemoryEngine } from "../src/core/engine.js";
+import { MockLLMAdapter } from "./helpers.js";
+import type { DomainConfig } from "../src/core/types.js";
 
 function makeDomain(id: string): DomainConfig {
     return {

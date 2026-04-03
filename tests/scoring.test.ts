@@ -1,5 +1,5 @@
 import { describe, test, expect } from "bun:test";
-import { countTokens, mergeScores, applyTokenBudget } from "../src/core/scoring.ts";
+import { countTokens, mergeScores, applyTokenBudget } from "../src/core/scoring.js";
 
 describe("countTokens", () => {
     test("returns token count for a simple string", () => {

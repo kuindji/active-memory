@@ -1,5 +1,5 @@
 import type { Surreal } from "surrealdb";
-import type { DomainSchema, NodeDef, EdgeDef, FieldDef, IndexDef } from "./types.ts";
+import type { DomainSchema, NodeDef, EdgeDef, FieldDef, IndexDef } from "./types.js";
 
 interface RegisteredNode {
     name: string;

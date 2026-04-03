@@ -1,8 +1,8 @@
 import { describe, test, expect, beforeEach, afterEach } from "bun:test";
-import { SearchEngine } from "../src/core/search-engine.ts";
-import { GraphStore } from "../src/core/graph-store.ts";
-import { SchemaRegistry } from "../src/core/schema-registry.ts";
-import { createTestDb } from "./helpers.ts";
+import { SearchEngine } from "../src/core/search-engine.js";
+import { GraphStore } from "../src/core/graph-store.js";
+import { SchemaRegistry } from "../src/core/schema-registry.js";
+import { createTestDb } from "./helpers.js";
 import type { Surreal } from "surrealdb";
 
 describe("SearchEngine", () => {

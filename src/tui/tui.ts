@@ -1,7 +1,8 @@
+#!/usr/bin/env node
 import * as p from "@clack/prompts";
-import { loadConfig } from "../config-loader.ts";
-import type { MemoryEngine } from "../core/engine.ts";
-import type { DomainSummary } from "../core/types.ts";
+import { loadConfig } from "../config-loader.js";
+import type { MemoryEngine } from "../core/engine.js";
+import type { DomainSummary } from "../core/types.js";
 
 function parseArgs(argv: string[]): { config?: string } {
     const args = argv.slice(2);
@@ -158,7 +159,7 @@ async function runIngest(engine: MemoryEngine, domains: string[]): Promise<void>
 }
 
 async function main(): Promise<void> {
-    const { config } = parseArgs(Bun.argv);
+    const { config } = parseArgs(process.argv);
 
     p.intro("memory-domain");
 

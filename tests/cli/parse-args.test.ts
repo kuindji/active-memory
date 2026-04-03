@@ -1,5 +1,5 @@
 import { describe, it, expect } from "bun:test";
-import { parseArgs } from "../../src/cli/parse-args.ts";
+import { parseArgs } from "../../src/cli/parse-args.js";
 
 describe("parseArgs", () => {
     it("returns help command when no args provided", () => {

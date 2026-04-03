@@ -1,12 +1,12 @@
-import type { OwnedMemory, DomainContext, ScoredMemory } from "../../core/types.ts";
+import type { OwnedMemory, DomainContext, ScoredMemory } from "../../core/types.js";
 import {
     CODE_REPO_TAG,
     CODE_REPO_DOMAIN_ID,
     CODE_REPO_DECISION_TAG,
     AUDIENCE_TAGS,
-} from "./types.ts";
-import type { MemoryClassification, Audience } from "./types.ts";
-import { ensureTag, findOrCreateEntity, linkToTopicsBatch, classificationToTag } from "./utils.ts";
+} from "./types.js";
+import type { MemoryClassification, Audience } from "./types.js";
+import { ensureTag, findOrCreateEntity, linkToTopicsBatch, classificationToTag } from "./utils.js";
 
 function logCodeRepoInboxWarning(scope: string, error: unknown): void {
     const errorMessage = error instanceof Error ? error.message : String(error);

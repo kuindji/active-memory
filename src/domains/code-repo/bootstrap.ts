@@ -1,21 +1,21 @@
 import { readdir, stat, readFile } from "node:fs/promises";
 import { execFile } from "node:child_process";
 import { join, relative } from "node:path";
-import type { DomainContext } from "../../core/types.ts";
+import type { DomainContext } from "../../core/types.js";
 import {
     CODE_REPO_DOMAIN_ID,
     CODE_REPO_TAG,
     CODE_REPO_TECHNICAL_TAG,
     CODE_REPO_OBSERVATION_TAG,
-} from "./types.ts";
-import type { CodeRepoDomainOptions, DirEntry, TriageResult, AnalysisResult } from "./types.ts";
-import { ensureTag, findOrCreateEntity } from "./utils.ts";
+} from "./types.js";
+import type { CodeRepoDomainOptions, DirEntry, TriageResult, AnalysisResult } from "./types.js";
+import { ensureTag, findOrCreateEntity } from "./utils.js";
 import {
     formatTree,
     countDirectories,
     calculateScanDepth,
     validateAnalysisResult,
-} from "./bootstrap-utils.ts";
+} from "./bootstrap-utils.js";
 
 const META_LAST_COMMIT = "code-repo:lastCommitHash";
 

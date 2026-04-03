@@ -1,7 +1,7 @@
 import { StringRecordId } from "surrealdb";
-import type { GraphApi, EngineConfig, EmbeddingAdapter } from "./types.ts";
-import type { SearchQuery, SearchResult, ScoredMemory } from "./types.ts";
-import { countTokens, mergeScores, applyTokenBudget } from "./scoring.ts";
+import type { GraphApi, EngineConfig, EmbeddingAdapter } from "./types.js";
+import type { SearchQuery, SearchResult, ScoredMemory } from "./types.js";
+import { countTokens, mergeScores, applyTokenBudget } from "./scoring.js";
 
 interface MemoryRow {
     id: unknown;

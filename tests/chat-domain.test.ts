@@ -1,14 +1,14 @@
 import { describe, test, expect, beforeEach, afterEach } from "bun:test";
-import { MemoryEngine } from "../src/core/engine.ts";
-import type { DomainContext } from "../src/core/types.ts";
-import { MockLLMAdapter, MockEmbeddingAdapter } from "./helpers.ts";
-import { createChatDomain, chatDomain } from "../src/domains/chat/index.ts";
-import { createTopicDomain } from "../src/domains/topic/index.ts";
+import { MemoryEngine } from "../src/core/engine.js";
+import type { DomainContext } from "../src/core/types.js";
+import { MockLLMAdapter, MockEmbeddingAdapter } from "./helpers.js";
+import { createChatDomain, chatDomain } from "../src/domains/chat/index.js";
+import { createTopicDomain } from "../src/domains/topic/index.js";
 import {
     promoteWorkingMemory,
     consolidateEpisodic,
     pruneDecayed,
-} from "../src/domains/chat/schedules.ts";
+} from "../src/domains/chat/schedules.js";
 import {
     CHAT_DOMAIN_ID,
     CHAT_TAG,
@@ -18,8 +18,8 @@ import {
     DEFAULT_PROMOTE_INTERVAL_MS,
     DEFAULT_CONSOLIDATE_INTERVAL_MS,
     DEFAULT_PRUNE_INTERVAL_MS,
-} from "../src/domains/chat/types.ts";
-import { TOPIC_TAG } from "../src/domains/topic/types.ts";
+} from "../src/domains/chat/types.js";
+import { TOPIC_TAG } from "../src/domains/topic/types.js";
 describe("Chat domain - config", () => {
     test("has correct id and name", () => {
         const domain = createChatDomain();

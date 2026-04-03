@@ -1,5 +1,5 @@
-import type { CommandHandler } from "../types.ts";
-import type { UpdateOptions } from "../../core/types.ts";
+import type { CommandHandler } from "../types.js";
+import type { UpdateOptions } from "../../core/types.js";
 
 const memoryCommand: CommandHandler = async (engine, parsed) => {
     const [id, subcommand, subArg] = parsed.args;

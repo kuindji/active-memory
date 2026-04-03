@@ -1,7 +1,7 @@
 import { StringRecordId } from "surrealdb";
-import type { DomainContext } from "../../core/types.ts";
-import type { TopicAttributes } from "./types.ts";
-import { TOPIC_TAG, TOPIC_DOMAIN_ID, MERGE_SIMILARITY_THRESHOLD } from "./types.ts";
+import type { DomainContext } from "../../core/types.js";
+import type { TopicAttributes } from "./types.js";
+import { TOPIC_TAG, TOPIC_DOMAIN_ID, MERGE_SIMILARITY_THRESHOLD } from "./types.js";
 
 export async function mergeSimilarTopics(context: DomainContext): Promise<void> {
     const activeTopics = await context.getMemories({

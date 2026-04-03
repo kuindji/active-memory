@@ -1,4 +1,4 @@
-import type { DomainContext } from "../../core/types.ts";
+import type { DomainContext } from "../../core/types.js";
 
 /**
  * Ensures a tag node exists in the graph with the given label.

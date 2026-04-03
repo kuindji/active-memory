@@ -8,22 +8,22 @@
  */
 
 import { describe, test, expect, beforeAll, afterAll } from "bun:test";
-import { MemoryEngine } from "../src/core/engine.ts";
-import { ClaudeCliAdapter } from "../src/adapters/llm/claude-cli.ts";
-import { OnnxEmbeddingAdapter } from "../src/adapters/onnx-embedding.ts";
-import { createUserDomain, userDomain } from "../src/domains/user/index.ts";
-import { topicDomain } from "../src/domains/topic/index.ts";
-import { USER_DOMAIN_ID, USER_TAG } from "../src/domains/user/types.ts";
-import { TOPIC_DOMAIN_ID, TOPIC_TAG } from "../src/domains/topic/types.ts";
-import { consolidateUserProfile } from "../src/domains/user/schedules.ts";
-import { mergeSimilarTopics } from "../src/domains/topic/schedules.ts";
+import { MemoryEngine } from "../src/core/engine.js";
+import { ClaudeCliAdapter } from "../src/adapters/llm/claude-cli.js";
+import { OnnxEmbeddingAdapter } from "../src/adapters/onnx-embedding.js";
+import { createUserDomain, userDomain } from "../src/domains/user/index.js";
+import { topicDomain } from "../src/domains/topic/index.js";
+import { USER_DOMAIN_ID, USER_TAG } from "../src/domains/user/types.js";
+import { TOPIC_DOMAIN_ID, TOPIC_TAG } from "../src/domains/topic/types.js";
+import { consolidateUserProfile } from "../src/domains/user/schedules.js";
+import { mergeSimilarTopics } from "../src/domains/topic/schedules.js";
 import type {
     DomainConfig,
     DomainContext,
     OwnedMemory,
     RequestContext,
     SearchQuery,
-} from "../src/core/types.ts";
+} from "../src/core/types.js";
 
 const llm = new ClaudeCliAdapter({ model: "haiku" });
 const embedding = new OnnxEmbeddingAdapter();

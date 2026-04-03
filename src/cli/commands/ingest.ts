@@ -1,13 +1,13 @@
-import type { IngestOptions } from "../../core/types.ts";
-import type { CommandHandler } from "../types.ts";
-import { parseMeta } from "../utils.ts";
+import { readFileSync } from "node:fs";
+import type { IngestOptions } from "../../core/types.js";
+import type { CommandHandler } from "../types.js";
+import { parseMeta } from "../utils.js";
 
 const ingestCommand: CommandHandler = async (engine, parsed) => {
     let text = parsed.flags["text"] as string | undefined;
 
     if (!text && !process.stdin.isTTY) {
-        text = await Bun.stdin.text();
-        text = text.trim();
+        text = readFileSync(0, "utf-8").trim();
     }
 
     if (!text) {

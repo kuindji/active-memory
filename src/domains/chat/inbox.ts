@@ -1,7 +1,7 @@
-import type { OwnedMemory, DomainContext } from "../../core/types.ts";
-import { CHAT_TAG, CHAT_MESSAGE_TAG } from "./types.ts";
-import { TOPIC_TAG, TOPIC_DOMAIN_ID } from "../topic/types.ts";
-import { ensureTag } from "./utils.ts";
+import type { OwnedMemory, DomainContext } from "../../core/types.js";
+import { CHAT_TAG, CHAT_MESSAGE_TAG } from "./types.js";
+import { TOPIC_TAG, TOPIC_DOMAIN_ID } from "../topic/types.js";
+import { ensureTag } from "./utils.js";
 
 function logInboxWarning(scope: string, error: unknown): void {
     const errorMessage = error instanceof Error ? error.message : String(error);

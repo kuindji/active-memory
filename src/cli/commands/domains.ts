@@ -1,4 +1,4 @@
-import type { CommandHandler, CommandResult } from "../types.ts";
+import type { CommandHandler, CommandResult } from "../types.js";
 
 const domainsCommand: CommandHandler = (engine, _parsed) => {
     const registry = engine.getDomainRegistry();

@@ -1,7 +1,7 @@
 import { StringRecordId } from "surrealdb";
-import type { DomainContext } from "../../core/types.ts";
-import { KB_DOMAIN_ID, KB_TAG } from "./types.ts";
-import { ensureTag } from "./utils.ts";
+import type { DomainContext } from "../../core/types.js";
+import { KB_DOMAIN_ID, KB_TAG } from "./types.js";
+import { ensureTag } from "./utils.js";
 
 interface OwnershipRow {
     in: string;

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "bun:test";
-import { formatOutput, formatError } from "../../src/cli/format.ts";
+import { formatOutput, formatError } from "../../src/cli/format.js";
 import type {
     DomainSummary,
     DomainSkill,
@@ -8,7 +8,7 @@ import type {
     AskResult,
     ContextResult,
     ScoredMemory,
-} from "../../src/core/types.ts";
+} from "../../src/core/types.js";
 
 const makeScoredMemory = (overrides: Partial<ScoredMemory> = {}): ScoredMemory => ({
     id: "mem1",

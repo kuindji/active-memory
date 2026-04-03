@@ -1,6 +1,6 @@
-import type { CommandHandler } from "../types.ts";
-import type { AskOptions } from "../../core/types.ts";
-import { parseMeta } from "../utils.ts";
+import type { CommandHandler } from "../types.js";
+import type { AskOptions } from "../../core/types.js";
+import { parseMeta } from "../utils.js";
 
 const askCommand: CommandHandler = async (engine, parsed) => {
     const question = parsed.args[0];

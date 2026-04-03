@@ -6,7 +6,7 @@ import type {
     AskResult,
     ContextResult,
     ScoredMemory,
-} from "../core/types.ts";
+} from "../core/types.js";
 
 interface JsonEnvelope {
     ok: true;

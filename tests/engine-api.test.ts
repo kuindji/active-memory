@@ -1,15 +1,15 @@
 import { describe, it, expect, beforeEach, afterEach } from "bun:test";
 import { StringRecordId } from "surrealdb";
-import { MemoryEngine } from "../src/core/engine.ts";
-import { MockLLMAdapter } from "./helpers.ts";
-import { createTopicDomain } from "../src/domains/topic/index.ts";
+import { MemoryEngine } from "../src/core/engine.js";
+import { MockLLMAdapter } from "./helpers.js";
+import { createTopicDomain } from "../src/domains/topic/index.js";
 import type {
     WriteOptions,
     WriteResult,
     UpdateOptions,
     ScheduleInfo,
     TraversalNode,
-} from "../src/core/types.ts";
+} from "../src/core/types.js";
 
 // --- Type-level compile checks (Task 1) ---
 

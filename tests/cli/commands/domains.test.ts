@@ -1,10 +1,10 @@
 import { describe, it, expect, beforeEach, afterEach } from "bun:test";
 import { join } from "node:path";
-import { MemoryEngine } from "../../../src/core/engine.ts";
-import { MockLLMAdapter } from "../../helpers.ts";
-import { domainsCommand, domainCommand } from "../../../src/cli/commands/domains.ts";
-import type { DomainConfig, OwnedMemory, DomainContext } from "../../../src/core/types.ts";
-import type { ParsedCommand } from "../../../src/cli/types.ts";
+import { MemoryEngine } from "../../../src/core/engine.js";
+import { MockLLMAdapter } from "../../helpers.js";
+import { domainsCommand, domainCommand } from "../../../src/cli/commands/domains.js";
+import type { DomainConfig, OwnedMemory, DomainContext } from "../../../src/core/types.js";
+import type { ParsedCommand } from "../../../src/cli/types.js";
 
 const FIXTURES_DIR = join(import.meta.dir, "..", "..", "fixtures", "test-domain");
 

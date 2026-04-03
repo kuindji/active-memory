@@ -1,5 +1,5 @@
 import { createInterface } from "node:readline";
-import type { CommandHandler } from "../types.ts";
+import type { CommandHandler } from "../types.js";
 
 function confirm(message: string): Promise<boolean> {
     const rl = createInterface({ input: process.stdin, output: process.stderr });

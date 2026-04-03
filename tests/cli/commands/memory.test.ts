@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach, afterEach } from "bun:test";
-import { MemoryEngine } from "../../../src/core/engine.ts";
-import { MockLLMAdapter } from "../../helpers.ts";
-import { memoryCommand } from "../../../src/cli/commands/memory.ts";
-import type { ParsedCommand } from "../../../src/cli/types.ts";
+import { MemoryEngine } from "../../../src/core/engine.js";
+import { MockLLMAdapter } from "../../helpers.js";
+import { memoryCommand } from "../../../src/cli/commands/memory.js";
+import type { ParsedCommand } from "../../../src/cli/types.js";
 
 function makeParsed(
     args: string[] = [],

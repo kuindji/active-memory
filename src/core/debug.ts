@@ -1,4 +1,4 @@
-import type { DebugConfig, DebugTools, LLMAdapter, ModelLevel, ScoredMemory } from "./types.ts";
+import type { DebugConfig, DebugTools, LLMAdapter, ModelLevel, ScoredMemory } from "./types.js";
 
 function formatDetails(details?: Record<string, unknown>): string {
     if (!details) return "";

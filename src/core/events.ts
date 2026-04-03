@@ -1,4 +1,4 @@
-import type { MemoryEventName } from "./types.ts";
+import type { MemoryEventName } from "./types.js";
 
 type EventHandler = (...args: unknown[]) => void;
 

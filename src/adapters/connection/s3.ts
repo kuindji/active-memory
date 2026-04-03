@@ -8,7 +8,7 @@ import { createGunzip } from "zlib";
 import { GetObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { fromIni } from "@aws-sdk/credential-providers";
 import * as tar from "tar";
-import type { ConnectionAdapter, S3AdapterConfig } from "../../core/types.ts";
+import type { ConnectionAdapter, S3AdapterConfig } from "../../core/types.js";
 
 type Downloader = () => Promise<Buffer | null>;
 type Uploader = (data: Buffer) => Promise<void>;

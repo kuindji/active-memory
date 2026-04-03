@@ -1,4 +1,4 @@
-import type { CommandHandler } from "../types.ts";
+import type { CommandHandler } from "../types.js";
 
 const scheduleCommand: CommandHandler = async (engine, parsed) => {
     const [subcommand, domainArg, scheduleArg] = parsed.args;

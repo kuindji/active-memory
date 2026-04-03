@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import type { CommandHandler } from "../types.ts";
+import type { CommandHandler } from "../types.js";
 
 const skillCommand: CommandHandler = async (engine, _parsed) => {
     const registry = engine.getDomainRegistry();

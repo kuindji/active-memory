@@ -1,4 +1,4 @@
-import type { DomainConfig, OwnedMemory, DomainContext } from "../core/types.ts";
+import type { DomainConfig, OwnedMemory, DomainContext } from "../core/types.js";
 
 export const logDomain: DomainConfig = {
     id: "log",

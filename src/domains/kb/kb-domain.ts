@@ -7,9 +7,9 @@ import type {
     SearchQuery,
     ScoredMemory,
     ContextResult,
-} from "../../core/types.ts";
-import { countTokens } from "../../core/scoring.ts";
-import { TOPIC_TAG } from "../topic/types.ts";
+} from "../../core/types.js";
+import { countTokens } from "../../core/scoring.js";
+import { TOPIC_TAG } from "../topic/types.js";
 import {
     KB_DOMAIN_ID,
     KB_DEFINITION_TAG,
@@ -19,11 +19,11 @@ import {
     KB_HOWTO_TAG,
     KB_INSIGHT_TAG,
     DEFAULT_CONSOLIDATE_INTERVAL_MS,
-} from "./types.ts";
-import type { KbDomainOptions } from "./types.ts";
-import { kbSkills } from "./skills.ts";
-import { processInboxBatch } from "./inbox.ts";
-import { consolidateKnowledge } from "./schedules.ts";
+} from "./types.js";
+import type { KbDomainOptions } from "./types.js";
+import { kbSkills } from "./skills.js";
+import { processInboxBatch } from "./inbox.js";
+import { consolidateKnowledge } from "./schedules.js";
 
 function buildSchedules(options?: KbDomainOptions): DomainSchedule[] {
     const schedules: DomainSchedule[] = [];

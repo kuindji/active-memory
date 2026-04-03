@@ -1,6 +1,6 @@
-import type { DomainSchedule, DomainContext, ScheduleInfo } from "./types.ts";
-import type { EventEmitter } from "./events.ts";
-import type { GraphApi } from "./types.ts";
+import type { DomainSchedule, DomainContext, ScheduleInfo } from "./types.js";
+import type { EventEmitter } from "./events.js";
+import type { GraphApi } from "./types.js";
 
 interface ScheduleStateStore {
     getLastRunAt(domainId: string, scheduleId: string): Promise<number>;

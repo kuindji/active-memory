@@ -1,9 +1,9 @@
 import { createHash } from "node:crypto";
 import { StringRecordId } from "surrealdb";
-import { createDebugTools } from "./debug.ts";
-import type { GraphStore } from "./graph-store.ts";
-import type { DomainRegistry } from "./domain-registry.ts";
-import type { EventEmitter } from "./events.ts";
+import { createDebugTools } from "./debug.js";
+import type { GraphStore } from "./graph-store.js";
+import type { DomainRegistry } from "./domain-registry.js";
+import type { EventEmitter } from "./events.js";
 import type {
     DebugConfig,
     DebugTools,
@@ -11,7 +11,7 @@ import type {
     OwnedMemory,
     MemoryEntry,
     Node,
-} from "./types.ts";
+} from "./types.js";
 
 interface RecordIdLike {
     tb: string;

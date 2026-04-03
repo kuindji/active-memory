@@ -1,8 +1,8 @@
 import { describe, test, expect, beforeEach, afterEach } from "bun:test";
-import { SchemaRegistry } from "../src/core/schema-registry.ts";
-import { createTestDb } from "./helpers.ts";
+import { SchemaRegistry } from "../src/core/schema-registry.js";
+import { createTestDb } from "./helpers.js";
 import type { Surreal } from "surrealdb";
-import type { DomainSchema } from "../src/core/types.ts";
+import type { DomainSchema } from "../src/core/types.js";
 
 describe("SchemaRegistry", () => {
     let db: Surreal;

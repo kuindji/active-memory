@@ -1,7 +1,7 @@
-import type { DomainContext, OwnedMemory } from "../../core/types.ts";
-import { TOPIC_TAG, TOPIC_DOMAIN_ID } from "../topic/types.ts";
-import type { KbClassification } from "./types.ts";
-import { CLASSIFICATION_TAGS } from "./types.ts";
+import type { DomainContext, OwnedMemory } from "../../core/types.js";
+import { TOPIC_TAG, TOPIC_DOMAIN_ID } from "../topic/types.js";
+import type { KbClassification } from "./types.js";
+import { CLASSIFICATION_TAGS } from "./types.js";
 
 function logKbWarning(scope: string, error: unknown): void {
     const errorMessage = error instanceof Error ? error.message : String(error);

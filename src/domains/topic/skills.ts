@@ -1,4 +1,4 @@
-import type { DomainSkill } from "../../core/types.ts";
+import type { DomainSkill } from "../../core/types.js";
 
 const topicManagement: DomainSkill = {
     id: "topic-management",

@@ -1,6 +1,6 @@
-import type { CommandHandler } from "../types.ts";
-import type { ContextOptions } from "../../core/types.ts";
-import { parseMeta } from "../utils.ts";
+import type { CommandHandler } from "../types.js";
+import type { ContextOptions } from "../../core/types.js";
+import { parseMeta } from "../utils.js";
 
 const buildContextCommand: CommandHandler = async (engine, parsed) => {
     const text = parsed.args[0];

@@ -1,12 +1,12 @@
 import { describe, test, expect, beforeEach, afterEach } from "bun:test";
-import { InboxProcessor } from "../src/core/inbox-processor.ts";
-import { GraphStore } from "../src/core/graph-store.ts";
-import { SchemaRegistry } from "../src/core/schema-registry.ts";
-import { DomainRegistry } from "../src/core/domain-registry.ts";
-import { EventEmitter } from "../src/core/events.ts";
-import { createTestDb, MockLLMAdapter } from "./helpers.ts";
+import { InboxProcessor } from "../src/core/inbox-processor.js";
+import { GraphStore } from "../src/core/graph-store.js";
+import { SchemaRegistry } from "../src/core/schema-registry.js";
+import { DomainRegistry } from "../src/core/domain-registry.js";
+import { EventEmitter } from "../src/core/events.js";
+import { createTestDb, MockLLMAdapter } from "./helpers.js";
 import type { Surreal } from "surrealdb";
-import type { DomainConfig, OwnedMemory, DomainContext } from "../src/core/types.ts";
+import type { DomainConfig, OwnedMemory, DomainContext } from "../src/core/types.js";
 
 describe("InboxProcessor", () => {
     let db: Surreal;

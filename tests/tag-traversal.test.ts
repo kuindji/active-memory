@@ -1,7 +1,7 @@
 import { describe, test, expect, beforeEach, afterEach } from "bun:test";
-import { MemoryEngine } from "../src/core/engine.ts";
-import { MockLLMAdapter } from "./helpers.ts";
-import type { DomainContext } from "../src/core/types.ts";
+import { MemoryEngine } from "../src/core/engine.js";
+import { MockLLMAdapter } from "./helpers.js";
+import type { DomainContext } from "../src/core/types.js";
 
 describe("getTagDescendants", () => {
     let engine: MemoryEngine;

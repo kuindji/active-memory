@@ -1,13 +1,33 @@
 {
-    "name": "memory-domain",
+    "name": "@kuindji/memory-domain",
     "version": "0.1.0",
     "type": "module",
-    "main": "src/index.ts",
-    "bin": {
-        "memory-domain": "bin/memory-domain",
-        "memory-domain-tui": "bin/memory-domain-tui"
+    "description": "Domain-driven memory engine with graph storage, embeddings, and semantic search",
+    "license": "MIT",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/kuindji/memory-domain.git"
     },
+    "main": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "exports": {
+        ".": {
+            "types": "./dist/index.d.ts",
+            "import": "./dist/index.js"
+        }
+    },
+    "bin": {
+        "memory-domain": "dist/cli/cli.js",
+        "memory-domain-tui": "dist/tui/tui.js"
+    },
+    "files": [
+        "dist",
+        "README.md",
+        "LICENSE"
+    ],
     "scripts": {
+        "build": "rm -rf dist && tsc -p tsconfig.build.json && node scripts/copy-assets.js",
+        "prepublishOnly": "bun run build",
         "test": "bun test",
         "test:integration": "bun test --timeout 180000 --test-root ./tests-integration",
         "typecheck": "tsc --noEmit",
@@ -15,8 +35,8 @@
         "lint:fix": "eslint . --fix",
         "format": "prettier --write .",
         "format:check": "prettier --check .",
-        "memory-domain": "bin/memory-domain",
-        "tui": "bin/memory-domain-tui"
+        "memory-domain": "bun run src/cli/cli.ts",
+        "tui": "bun run src/tui/tui.ts"
     },
     "dependencies": {
         "@aws-sdk/client-s3": "^3.1023.0",
@@ -26,15 +46,15 @@
         "js-tiktoken": "^1.0.21",
         "onnxruntime-node": "^1.24.1",
         "surrealdb": "^2.0.0",
+        "jiti": "^2.6.1",
         "tar": "^7.5.13"
     },
     "devDependencies": {
         "@eslint/js": "^10.0.1",
-        "@types/bun": "latest",
+        "@types/node": "^22.0.0",
         "@types/tar": "^7.0.87",
         "eslint": "^10.1.0",
         "eslint-config-prettier": "^10.1.8",
-        "jiti": "^2.6.1",
         "prettier": "^3.8.1",
         "typescript": "^5",
         "typescript-eslint": "^8.57.2"

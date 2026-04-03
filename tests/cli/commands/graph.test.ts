@@ -1,9 +1,9 @@
 import { describe, it, expect, beforeEach, afterEach } from "bun:test";
-import { MemoryEngine } from "../../../src/core/engine.ts";
-import { MockLLMAdapter } from "../../helpers.ts";
-import { graphCommand } from "../../../src/cli/commands/graph.ts";
-import type { ParsedCommand } from "../../../src/cli/types.ts";
-import type { Edge, TraversalNode } from "../../../src/core/types.ts";
+import { MemoryEngine } from "../../../src/core/engine.js";
+import { MockLLMAdapter } from "../../helpers.js";
+import { graphCommand } from "../../../src/cli/commands/graph.js";
+import type { ParsedCommand } from "../../../src/cli/types.js";
+import type { Edge, TraversalNode } from "../../../src/core/types.js";
 
 function makeParsed(
     args: string[] = [],

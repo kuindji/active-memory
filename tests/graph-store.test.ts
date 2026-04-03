@@ -1,7 +1,7 @@
 import { describe, test, expect, beforeEach, afterEach } from "bun:test";
 import { Surreal } from "surrealdb";
-import { GraphStore } from "../src/core/graph-store.ts";
-import { createTestDb } from "./helpers.ts";
+import { GraphStore } from "../src/core/graph-store.js";
+import { createTestDb } from "./helpers.js";
 
 describe("GraphStore", () => {
     let db: Surreal;

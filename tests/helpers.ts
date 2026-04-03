@@ -1,6 +1,6 @@
 import { Surreal } from "surrealdb";
 import { createNodeEngines } from "@surrealdb/node";
-import type { LLMAdapter, EmbeddingAdapter, ScoredMemory } from "../src/core/types.ts";
+import type { LLMAdapter, EmbeddingAdapter, ScoredMemory } from "../src/core/types.js";
 
 let dbCounter = 0;
 

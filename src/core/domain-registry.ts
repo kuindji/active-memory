@@ -6,7 +6,7 @@ import type {
     DomainSkill,
     DomainSummary,
     DomainRegistrationOptions,
-} from "./types.ts";
+} from "./types.js";
 
 export class DomainRegistry {
     private domains = new Map<string, DomainConfig>();

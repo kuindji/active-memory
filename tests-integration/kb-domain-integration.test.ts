@@ -9,11 +9,11 @@
  */
 
 import { describe, test, expect, beforeAll, afterAll } from "bun:test";
-import { MemoryEngine } from "../src/core/engine.ts";
-import { ClaudeCliAdapter } from "../src/adapters/llm/claude-cli.ts";
-import { OnnxEmbeddingAdapter } from "../src/adapters/onnx-embedding.ts";
-import { createKbDomain } from "../src/domains/kb/kb-domain.ts";
-import { topicDomain } from "../src/domains/topic/index.ts";
+import { MemoryEngine } from "../src/core/engine.js";
+import { ClaudeCliAdapter } from "../src/adapters/llm/claude-cli.js";
+import { OnnxEmbeddingAdapter } from "../src/adapters/onnx-embedding.js";
+import { createKbDomain } from "../src/domains/kb/kb-domain.js";
+import { topicDomain } from "../src/domains/topic/index.js";
 import {
     KB_DOMAIN_ID,
     KB_TAG,
@@ -23,8 +23,8 @@ import {
     KB_REFERENCE_TAG,
     KB_CONCEPT_TAG,
     KB_INSIGHT_TAG,
-} from "../src/domains/kb/types.ts";
-import { consolidateKnowledge } from "../src/domains/kb/schedules.ts";
+} from "../src/domains/kb/types.js";
+import { consolidateKnowledge } from "../src/domains/kb/schedules.js";
 
 const llm = new ClaudeCliAdapter({ model: "haiku" });
 const embedding = new OnnxEmbeddingAdapter();

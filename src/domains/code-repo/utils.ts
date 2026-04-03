@@ -1,7 +1,7 @@
-import type { DomainContext } from "../../core/types.ts";
-import { TOPIC_TAG, TOPIC_DOMAIN_ID } from "../topic/types.ts";
-import type { MemoryClassification } from "./types.ts";
-import { CLASSIFICATION_TAGS } from "./types.ts";
+import type { DomainContext } from "../../core/types.js";
+import { TOPIC_TAG, TOPIC_DOMAIN_ID } from "../topic/types.js";
+import type { MemoryClassification } from "./types.js";
+import { CLASSIFICATION_TAGS } from "./types.js";
 
 function logCodeRepoWarning(scope: string, error: unknown): void {
     const errorMessage = error instanceof Error ? error.message : String(error);
@@ -45,7 +45,7 @@ export async function findOrCreateEntity(
     return context.graph.createNode(type, { name, ...fields });
 }
 
-import type { OwnedMemory } from "../../core/types.ts";
+import type { OwnedMemory } from "../../core/types.js";
 
 const BATCH_TOPIC_EXTRACTION_SCHEMA = JSON.stringify({
     type: "array",

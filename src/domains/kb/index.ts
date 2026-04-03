@@ -1,1 +1,1 @@
-export { createKbDomain, kbDomain } from "./kb-domain.ts";
+export { createKbDomain, kbDomain } from "./kb-domain.js";

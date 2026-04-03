@@ -10,11 +10,11 @@
 
 import { describe, test, expect, beforeAll, afterAll } from "bun:test";
 import { resolve } from "node:path";
-import { MemoryEngine } from "../src/core/engine.ts";
-import { ClaudeCliAdapter } from "../src/adapters/llm/claude-cli.ts";
-import { OnnxEmbeddingAdapter } from "../src/adapters/onnx-embedding.ts";
-import { createCodeRepoDomain } from "../src/domains/code-repo/code-repo-domain.ts";
-import { topicDomain } from "../src/domains/topic/index.ts";
+import { MemoryEngine } from "../src/core/engine.js";
+import { ClaudeCliAdapter } from "../src/adapters/llm/claude-cli.js";
+import { OnnxEmbeddingAdapter } from "../src/adapters/onnx-embedding.js";
+import { createCodeRepoDomain } from "../src/domains/code-repo/code-repo-domain.js";
+import { topicDomain } from "../src/domains/topic/index.js";
 import {
     CODE_REPO_DOMAIN_ID,
     CODE_REPO_TAG,
@@ -22,8 +22,8 @@ import {
     CODE_REPO_OBSERVATION_TAG,
     CODE_REPO_TECHNICAL_TAG,
     CODE_REPO_BUSINESS_TAG,
-} from "../src/domains/code-repo/types.ts";
-import { scanCommits } from "../src/domains/code-repo/schedules.ts";
+} from "../src/domains/code-repo/types.js";
+import { scanCommits } from "../src/domains/code-repo/schedules.js";
 
 const llm = new ClaudeCliAdapter({ model: "haiku" });
 const embedding = new OnnxEmbeddingAdapter();

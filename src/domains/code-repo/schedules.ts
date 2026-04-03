@@ -1,15 +1,15 @@
 import { execFile } from "node:child_process";
 import { existsSync } from "node:fs";
 import { join, dirname, basename } from "node:path";
-import type { DomainContext } from "../../core/types.ts";
+import type { DomainContext } from "../../core/types.js";
 import {
     CODE_REPO_DOMAIN_ID,
     CODE_REPO_TAG,
     CODE_REPO_TECHNICAL_TAG,
     CODE_REPO_QUESTION_TAG,
-} from "./types.ts";
-import type { CodeRepoDomainOptions } from "./types.ts";
-import { ensureTag, findOrCreateEntity } from "./utils.ts";
+} from "./types.js";
+import type { CodeRepoDomainOptions } from "./types.js";
+import { ensureTag, findOrCreateEntity } from "./utils.js";
 
 const META_LAST_COMMIT = "code-repo:lastCommitHash";
 

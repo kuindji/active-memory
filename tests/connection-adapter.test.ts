@@ -1,9 +1,9 @@
 import { describe, it, expect } from "bun:test";
-import type { ConnectionAdapter, S3AdapterConfig } from "../src/core/types.ts";
-import { PassthroughAdapter } from "../src/adapters/connection/passthrough.ts";
-import { S3ConnectionAdapter } from "../src/adapters/connection/s3.ts";
-import { MemoryEngine } from "../src/core/engine.ts";
-import { MockLLMAdapter } from "./helpers.ts";
+import type { ConnectionAdapter, S3AdapterConfig } from "../src/core/types.js";
+import { PassthroughAdapter } from "../src/adapters/connection/passthrough.js";
+import { S3ConnectionAdapter } from "../src/adapters/connection/s3.js";
+import { MemoryEngine } from "../src/core/engine.js";
+import { MockLLMAdapter } from "./helpers.js";
 import { mkdirSync, writeFileSync, existsSync, rmSync, readFileSync } from "fs";
 import { join } from "path";
 import * as tar from "tar";

@@ -1,4 +1,4 @@
-import type { DirEntry, AnalysisResult, AnalysisModule, AnalysisRelationship } from "./types.ts";
+import type { DirEntry, AnalysisResult, AnalysisModule, AnalysisRelationship } from "./types.js";
 
 const MAX_FILES_SHOWN = 30;
 

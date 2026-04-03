@@ -7,8 +7,8 @@ import type {
     DomainContext,
     ContextResult,
     ScoredMemory,
-} from "../../core/types.ts";
-import { countTokens } from "../../core/scoring.ts";
+} from "../../core/types.js";
+import { countTokens } from "../../core/scoring.js";
 import {
     CHAT_DOMAIN_ID,
     CHAT_MESSAGE_TAG,
@@ -17,11 +17,11 @@ import {
     DEFAULT_PROMOTE_INTERVAL_MS,
     DEFAULT_CONSOLIDATE_INTERVAL_MS,
     DEFAULT_PRUNE_INTERVAL_MS,
-} from "./types.ts";
-import type { ChatDomainOptions } from "./types.ts";
-import { chatSkills } from "./skills.ts";
-import { processInboxBatch } from "./inbox.ts";
-import { promoteWorkingMemory, consolidateEpisodic, pruneDecayed } from "./schedules.ts";
+} from "./types.js";
+import type { ChatDomainOptions } from "./types.js";
+import { chatSkills } from "./skills.js";
+import { processInboxBatch } from "./inbox.js";
+import { promoteWorkingMemory, consolidateEpisodic, pruneDecayed } from "./schedules.js";
 
 function buildSchedules(options?: ChatDomainOptions): DomainSchedule[] {
     const schedules: DomainSchedule[] = [];

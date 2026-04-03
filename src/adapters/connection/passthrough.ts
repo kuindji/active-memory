@@ -1,4 +1,4 @@
-import type { ConnectionAdapter } from "../../core/types.ts";
+import type { ConnectionAdapter } from "../../core/types.js";
 
 class PassthroughAdapter implements ConnectionAdapter {
     private connection: string;

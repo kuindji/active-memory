@@ -1,6 +1,6 @@
 import { StringRecordId } from "surrealdb";
-import type { DomainContext } from "../../core/types.ts";
-import type { ChatDomainOptions } from "./types.ts";
+import type { DomainContext } from "../../core/types.js";
+import type { ChatDomainOptions } from "./types.js";
 import {
     CHAT_DOMAIN_ID,
     CHAT_TAG,
@@ -12,8 +12,8 @@ import {
     DEFAULT_CONSOLIDATION_MIN_CLUSTER,
     DEFAULT_EPISODIC_LAMBDA,
     DEFAULT_PRUNE_THRESHOLD,
-} from "./types.ts";
-import { ensureTag } from "./utils.ts";
+} from "./types.js";
+import { ensureTag } from "./utils.js";
 
 interface WorkingMemoryRow {
     in: string;

@@ -8,25 +8,25 @@
  */
 
 import { describe, test, expect, beforeAll, afterAll } from "bun:test";
-import { MemoryEngine } from "../src/core/engine.ts";
-import { ClaudeCliAdapter } from "../src/adapters/llm/claude-cli.ts";
-import { OnnxEmbeddingAdapter } from "../src/adapters/onnx-embedding.ts";
-import { createChatDomain } from "../src/domains/chat/chat-domain.ts";
-import { topicDomain } from "../src/domains/topic/index.ts";
-import { userDomain } from "../src/domains/user/index.ts";
+import { MemoryEngine } from "../src/core/engine.js";
+import { ClaudeCliAdapter } from "../src/adapters/llm/claude-cli.js";
+import { OnnxEmbeddingAdapter } from "../src/adapters/onnx-embedding.js";
+import { createChatDomain } from "../src/domains/chat/chat-domain.js";
+import { topicDomain } from "../src/domains/topic/index.js";
+import { userDomain } from "../src/domains/user/index.js";
 import {
     CHAT_DOMAIN_ID,
     CHAT_MESSAGE_TAG,
     CHAT_EPISODIC_TAG,
     CHAT_SEMANTIC_TAG,
-} from "../src/domains/chat/types.ts";
-import { TOPIC_DOMAIN_ID } from "../src/domains/topic/types.ts";
-import { USER_DOMAIN_ID, USER_TAG } from "../src/domains/user/types.ts";
+} from "../src/domains/chat/types.js";
+import { TOPIC_DOMAIN_ID } from "../src/domains/topic/types.js";
+import { USER_DOMAIN_ID, USER_TAG } from "../src/domains/user/types.js";
 import {
     promoteWorkingMemory,
     consolidateEpisodic,
     pruneDecayed,
-} from "../src/domains/chat/schedules.ts";
+} from "../src/domains/chat/schedules.js";
 
 const llm = new ClaudeCliAdapter({ model: "haiku" });
 const embedding = new OnnxEmbeddingAdapter();

@@ -6,11 +6,11 @@ import type {
     DomainContext,
     SearchQuery,
     DomainSchedule,
-} from "../../core/types.ts";
-import { USER_DOMAIN_ID, DEFAULT_CONSOLIDATE_INTERVAL_MS } from "./types.ts";
-import type { UserDomainOptions } from "./types.ts";
-import { userSkills } from "./skills.ts";
-import { consolidateUserProfile } from "./schedules.ts";
+} from "../../core/types.js";
+import { USER_DOMAIN_ID, DEFAULT_CONSOLIDATE_INTERVAL_MS } from "./types.js";
+import type { UserDomainOptions } from "./types.js";
+import { userSkills } from "./skills.js";
+import { consolidateUserProfile } from "./schedules.js";
 
 function buildSchedules(options?: UserDomainOptions): DomainSchedule[] {
     if (options?.consolidateSchedule?.enabled === false) return [];

@@ -1,5 +1,5 @@
-import type { DomainContext } from "../../core/types.ts";
-import { USER_DOMAIN_ID, USER_TAG } from "./types.ts";
+import type { DomainContext } from "../../core/types.js";
+import { USER_DOMAIN_ID, USER_TAG } from "./types.js";
 
 export async function consolidateUserProfile(context: DomainContext): Promise<void> {
     // Find all user nodes

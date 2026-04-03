@@ -3,7 +3,8 @@
  * Spawns a subprocess for each call — no API keys needed.
  */
 
-import type { LLMAdapter, ScoredMemory, ModelLevel } from "../../core/types.ts";
+import { spawn } from "node:child_process";
+import type { LLMAdapter, ScoredMemory, ModelLevel } from "../../core/types.js";
 
 interface ClaudeCliConfig {
     command?: string;
@@ -61,11 +62,11 @@ class ClaudeCliAdapter implements LLMAdapter {
             args.push("--max-tokens", String(this.maxTokens));
         }
 
-        const proc = Bun.spawn([this.command, ...args], {
-            stdin: new TextEncoder().encode(prompt),
-            stdout: "pipe",
-            stderr: "pipe",
+        const proc = spawn(this.command, args, {
+            stdio: ["pipe", "pipe", "pipe"],
         });
+
+        proc.stdin.end(prompt);
 
         let timedOut = false;
         const timeoutId = setTimeout(() => {
@@ -73,11 +74,22 @@ class ClaudeCliAdapter implements LLMAdapter {
             proc.kill();
         }, this.timeout);
 
+        const collectStream = (stream: NodeJS.ReadableStream): Promise<string> =>
+            new Promise((resolve) => {
+                const chunks: Buffer[] = [];
+                stream.on("data", (chunk: Buffer) => chunks.push(chunk));
+                stream.on("end", () => resolve(Buffer.concat(chunks).toString()));
+            });
+
+        const exitCodePromise = new Promise<number>((resolve) => {
+            proc.on("close", (code) => resolve(code ?? 1));
+        });
+
         try {
             const [output, stderr, exitCode] = await Promise.all([
-                new Response(proc.stdout).text(),
-                new Response(proc.stderr).text(),
-                proc.exited,
+                collectStream(proc.stdout),
+                collectStream(proc.stderr),
+                exitCodePromise,
             ]);
             clearTimeout(timeoutId);
 

@@ -5,3 +5,5 @@ dist/
 bun.lock
 .claude/
 .memory-domain/
+memory-domain.config.ts
+memory-domain.config.js

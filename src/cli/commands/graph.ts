@@ -1,4 +1,4 @@
-import type { CommandHandler } from "../types.ts";
+import type { CommandHandler } from "../types.js";
 
 const graphCommand: CommandHandler = async (engine, parsed) => {
     const [subcommand, ...rest] = parsed.args;

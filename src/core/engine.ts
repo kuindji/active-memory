@@ -1,15 +1,15 @@
 import { Surreal, StringRecordId } from "surrealdb";
 import { createNodeEngines } from "@surrealdb/node";
-import { GraphStore } from "./graph-store.ts";
-import { SchemaRegistry } from "./schema-registry.ts";
-import { SearchEngine } from "./search-engine.ts";
-import { InboxProcessor } from "./inbox-processor.ts";
-import type { InboxProcessorOptions } from "./inbox-processor.ts";
-import { DomainRegistry } from "./domain-registry.ts";
-import { Scheduler, MetaScheduleStateStore } from "./scheduler.ts";
-import { EventEmitter } from "./events.ts";
-import { createDebugTools, wrapLLMAdapter } from "./debug.ts";
-import { countTokens, applyTokenBudget } from "./scoring.ts";
+import { GraphStore } from "./graph-store.js";
+import { SchemaRegistry } from "./schema-registry.js";
+import { SearchEngine } from "./search-engine.js";
+import { InboxProcessor } from "./inbox-processor.js";
+import type { InboxProcessorOptions } from "./inbox-processor.js";
+import { DomainRegistry } from "./domain-registry.js";
+import { Scheduler, MetaScheduleStateStore } from "./scheduler.js";
+import { EventEmitter } from "./events.js";
+import { createDebugTools, wrapLLMAdapter } from "./debug.js";
+import { countTokens, applyTokenBudget } from "./scoring.js";
 import type {
     EngineConfig,
     DomainConfig,
@@ -41,7 +41,7 @@ import type {
     DebugConfig,
     DebugTools,
     ConnectionAdapter,
-} from "./types.ts";
+} from "./types.js";
 
 class MemoryEngine {
     private db: Surreal | null = null;

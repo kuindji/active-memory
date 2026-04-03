@@ -6,8 +6,8 @@
 import * as ort from "onnxruntime-node";
 import { resolve, join } from "node:path";
 import { existsSync } from "node:fs";
-import type { EmbeddingAdapter } from "../core/types.ts";
-import { WordPieceTokenizer } from "./wordpiece-tokenizer.ts";
+import type { EmbeddingAdapter } from "../core/types.js";
+import { WordPieceTokenizer } from "./wordpiece-tokenizer.js";
 
 interface OnnxEmbeddingConfig {
     modelDir?: string;

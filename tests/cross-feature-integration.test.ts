@@ -1,19 +1,19 @@
 import { describe, test, expect, beforeEach, afterEach } from "bun:test";
-import { MemoryEngine } from "../src/core/engine.ts";
-import { MockLLMAdapter, MockEmbeddingAdapter } from "./helpers.ts";
-import { createUserDomain, userDomain } from "../src/domains/user/index.ts";
-import { topicDomain } from "../src/domains/topic/index.ts";
-import { USER_DOMAIN_ID, USER_TAG } from "../src/domains/user/types.ts";
-import { TOPIC_DOMAIN_ID, TOPIC_TAG } from "../src/domains/topic/types.ts";
-import { consolidateUserProfile } from "../src/domains/user/schedules.ts";
-import { mergeSimilarTopics } from "../src/domains/topic/schedules.ts";
+import { MemoryEngine } from "../src/core/engine.js";
+import { MockLLMAdapter, MockEmbeddingAdapter } from "./helpers.js";
+import { createUserDomain, userDomain } from "../src/domains/user/index.js";
+import { topicDomain } from "../src/domains/topic/index.js";
+import { USER_DOMAIN_ID, USER_TAG } from "../src/domains/user/types.js";
+import { TOPIC_DOMAIN_ID, TOPIC_TAG } from "../src/domains/topic/types.js";
+import { consolidateUserProfile } from "../src/domains/user/schedules.js";
+import { mergeSimilarTopics } from "../src/domains/topic/schedules.js";
 import type {
     DomainConfig,
     DomainContext,
     OwnedMemory,
     RequestContext,
     SearchQuery,
-} from "../src/core/types.ts";
+} from "../src/core/types.js";
 
 // ---------------------------------------------------------------------------
 // 1. Topic + User domain coexistence

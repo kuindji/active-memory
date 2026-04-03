@@ -3,6 +3,8 @@
  * Tokenizes text into subword units using a vocabulary file.
  */
 
+import { readFile } from "node:fs/promises";
+
 const UNK_TOKEN = "[UNK]";
 const CLS_TOKEN = "[CLS]";
 const SEP_TOKEN = "[SEP]";
@@ -15,8 +17,7 @@ class WordPieceTokenizer {
     private initialized = false;
 
     async load(vocabPath: string): Promise<void> {
-        const file = Bun.file(vocabPath);
-        const text = await file.text();
+        const text = await readFile(vocabPath, "utf-8");
         const lines = text.split("\n");
         for (let i = 0; i < lines.length; i++) {
             const token = lines[i].trim();

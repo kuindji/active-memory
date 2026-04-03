@@ -1,6 +1,6 @@
 import { describe, test, expect, beforeEach, afterEach } from "bun:test";
-import { MemoryEngine } from "../src/core/engine.ts";
-import { MockLLMAdapter, MockEmbeddingAdapter } from "./helpers.ts";
+import { MemoryEngine } from "../src/core/engine.js";
+import { MockLLMAdapter, MockEmbeddingAdapter } from "./helpers.js";
 
 describe("vector search", () => {
     let engine: MemoryEngine;

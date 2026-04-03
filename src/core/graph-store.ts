@@ -1,6 +1,6 @@
 import { Surreal, Table, StringRecordId } from "surrealdb";
 import type { SurrealTransaction } from "surrealdb";
-import type { Node, GraphApi } from "./types.ts";
+import type { Node, GraphApi } from "./types.js";
 
 type Queryable = Surreal | SurrealTransaction;
 

@@ -4,8 +4,8 @@ import {
     countDirectories,
     calculateScanDepth,
     validateAnalysisResult,
-} from "../src/domains/code-repo/bootstrap-utils.ts";
-import type { DirEntry, AnalysisResult } from "../src/domains/code-repo/types.ts";
+} from "../src/domains/code-repo/bootstrap-utils.js";
+import type { DirEntry, AnalysisResult } from "../src/domains/code-repo/types.js";
 
 function makeDir(name: string, files: string[] = [], children: DirEntry[] = []): DirEntry {
     return { name, relativePath: name, isDirectory: true, files, children };

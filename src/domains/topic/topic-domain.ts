@@ -6,11 +6,11 @@ import type {
     DomainContext,
     SearchQuery,
     DomainSchedule,
-} from "../../core/types.ts";
-import { TOPIC_DOMAIN_ID, DEFAULT_MERGE_INTERVAL_MS } from "./types.ts";
-import type { TopicDomainOptions } from "./types.ts";
-import { topicSkills } from "./skills.ts";
-import { mergeSimilarTopics } from "./schedules.ts";
+} from "../../core/types.js";
+import { TOPIC_DOMAIN_ID, DEFAULT_MERGE_INTERVAL_MS } from "./types.js";
+import type { TopicDomainOptions } from "./types.js";
+import { topicSkills } from "./skills.js";
+import { mergeSimilarTopics } from "./schedules.js";
 
 function buildSchedules(options?: TopicDomainOptions): DomainSchedule[] {
     if (options?.mergeSchedule?.enabled === false) return [];

@@ -1,7 +1,7 @@
 import { describe, test, expect } from "bun:test";
 import { join } from "node:path";
-import { DomainRegistry } from "../src/core/domain-registry.ts";
-import type { DomainConfig } from "../src/core/types.ts";
+import { DomainRegistry } from "../src/core/domain-registry.js";
+import type { DomainConfig } from "../src/core/types.js";
 
 const FIXTURES_DIR = join(import.meta.dir, "fixtures", "test-domain");
 

@@ -1,6 +1,6 @@
 import { existsSync } from "fs";
 import { join, isAbsolute } from "path";
-import type { MemoryEngine } from "./core/engine.ts";
+import type { MemoryEngine } from "./core/engine.js";
 
 const CONFIG_NAMES = [
     "memory-domain.config.ts",
@@ -38,7 +38,15 @@ async function loadConfig(cwd?: string, configPath?: string): Promise<MemoryEngi
         );
     }
 
-    const mod = (await import(resolved)) as { default?: MemoryEngine };
+    let mod: { default?: MemoryEngine };
+
+    if (resolved.endsWith(".ts")) {
+        const { createJiti } = await import("jiti");
+        const jiti = createJiti(import.meta.url, { interopDefault: true });
+        mod = await jiti.import(resolved);
+    } else {
+        mod = (await import(resolved)) as { default?: MemoryEngine };
+    }
 
     if (!mod.default) {
         throw new Error(
