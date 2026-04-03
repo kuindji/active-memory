@@ -6,6 +6,7 @@ import { Readable } from "stream";
 import { pipeline } from "stream/promises";
 import { createGunzip } from "zlib";
 import { GetObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import { fromIni } from "@aws-sdk/credential-providers";
 import * as tar from "tar";
 import type { ConnectionAdapter, S3AdapterConfig } from "../../core/types.ts";
 
@@ -24,12 +25,16 @@ class S3ConnectionAdapter implements ConnectionAdapter {
 
         const client = new S3Client({
             region: config.region,
-            ...(config.credentials && {
-                credentials: {
-                    accessKeyId: config.credentials.accessKeyId,
-                    secretAccessKey: config.credentials.secretAccessKey,
-                },
-            }),
+            ...(config.credentials
+                ? {
+                      credentials: {
+                          accessKeyId: config.credentials.accessKeyId,
+                          secretAccessKey: config.credentials.secretAccessKey,
+                      },
+                  }
+                : config.profile
+                  ? { credentials: fromIni({ profile: config.profile }) }
+                  : {}),
         });
 
         this.downloader = async () => {

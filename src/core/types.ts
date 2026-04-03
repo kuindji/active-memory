@@ -358,6 +358,7 @@ export interface S3AdapterConfig {
     region: string;
     localDir?: string;
     save?: boolean;
+    profile?: string;
     credentials?: {
         accessKeyId: string;
         secretAccessKey: string;
