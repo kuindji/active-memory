@@ -113,16 +113,9 @@ export function createKbDomain(options?: KbDomainOptions): DomainConfig {
             async expand(query: SearchQuery, context: DomainContext): Promise<SearchQuery> {
                 if (!query.text) return query;
 
-                // Query graph directly for topic nodes matching text (avoids recursive search)
-                const topicTagId = `tag:\`${TOPIC_TAG}\``;
                 try {
-                    const results = await context.graph.query<Array<{ id: string }>>(
-                        `SELECT in as id FROM tagged WHERE out = $tagId AND (SELECT content FROM ONLY $parent.in).content CONTAINS $text LIMIT 5`,
-                        { tagId: topicTagId, text: query.text },
-                    );
-                    if (!Array.isArray(results) || results.length === 0) return query;
-
-                    const topicIds = results.map((r) => String(r.id));
+                    const topicIds = await findMatchingTopicMemoryIds(query.text, context.graph);
+                    if (topicIds.length === 0) return query;
                     return {
                         ...query,
                         traversal: {
@@ -132,7 +125,6 @@ export function createKbDomain(options?: KbDomainOptions): DomainConfig {
                         },
                     };
                 } catch {
-                    // Topic lookup is best-effort
                     return query;
                 }
             },
