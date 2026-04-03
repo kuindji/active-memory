@@ -121,6 +121,8 @@ export interface SearchQuery extends MemoryFilter {
         graph?: number;
     };
     context?: RequestContext;
+    rerank?: boolean;
+    rerankThreshold?: number;
 }
 
 export interface SearchResult {

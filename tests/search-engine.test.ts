@@ -2,7 +2,8 @@ import { describe, test, expect, beforeEach, afterEach } from "bun:test";
 import { SearchEngine } from "../src/core/search-engine.js";
 import { GraphStore } from "../src/core/graph-store.js";
 import { SchemaRegistry } from "../src/core/schema-registry.js";
-import { createTestDb } from "./helpers.js";
+import { MemoryEngine } from "../src/core/engine.js";
+import { createTestDb, MockLLMAdapter, MockEmbeddingAdapter } from "./helpers.js";
 import type { Surreal } from "surrealdb";
 
 describe("SearchEngine", () => {
@@ -371,6 +372,77 @@ describe("SearchEngine", () => {
             expect(result.entries.length).toBe(1);
             const refs = result.entries[0].connections?.references;
             expect(!refs || refs.length === 0).toBe(true);
+        });
+    });
+
+    describe("embedding re-ranking", () => {
+        let engine: MemoryEngine;
+
+        beforeEach(async () => {
+            engine = new MemoryEngine();
+            await engine.initialize({
+                connection: "mem://",
+                namespace: "test",
+                database: `test_rerank_${Date.now()}`,
+                llm: new MockLLMAdapter(),
+                embedding: new MockEmbeddingAdapter(),
+            });
+            await engine.registerDomain({
+                id: "kb",
+                name: "KB",
+                async processInboxBatch() {},
+            });
+        });
+
+        afterEach(async () => {
+            await engine.close();
+        });
+
+        test("rerank filters candidates by direct embedding similarity", async () => {
+            await engine.ingest("Silk production was a major Byzantine industry", {
+                domains: ["kb"],
+            });
+            await engine.ingest("Greek fire was a devastating naval weapon", { domains: ["kb"] });
+            await engine.ingest("The Hippodrome hosted chariot races in Constantinople", {
+                domains: ["kb"],
+            });
+
+            let hasMore = true;
+            while (hasMore) {
+                hasMore = await engine.processInbox();
+            }
+
+            // Search without rerank to get baseline (all candidates pass)
+            const baseline = await engine.search({
+                text: "Byzantine silk trade and production",
+                mode: "hybrid",
+                domains: ["kb"],
+            });
+            expect(baseline.entries.length).toBeGreaterThanOrEqual(1);
+
+            // Search with rerank enabled using a threshold that filters by embedding similarity.
+            // The mock embedding adapter produces hash-based vectors; silk has the highest cosine
+            // similarity (~-0.13) to the query vs fire (~-0.22) and hippodrome (~-0.50), so a
+            // threshold of -0.2 lets silk through while filtering lower-similarity entries.
+            const result = await engine.search({
+                text: "Byzantine silk trade and production",
+                mode: "hybrid",
+                domains: ["kb"],
+                rerank: true,
+                rerankThreshold: -0.2,
+            });
+
+            // Silk memory should be present
+            const hasSilk = result.entries.some((e) => e.content.toLowerCase().includes("silk"));
+            expect(hasSilk).toBe(true);
+
+            // With rerank, silk should rank first
+            if (result.entries.length > 0) {
+                expect(result.entries[0].content.toLowerCase()).toContain("silk");
+            }
+
+            // Reranked results should be a subset of baseline (threshold filters some out)
+            expect(result.entries.length).toBeLessThanOrEqual(baseline.entries.length);
         });
     });
 

@@ -1,7 +1,7 @@
 import { StringRecordId } from "surrealdb";
 import type { GraphApi, EngineConfig, EmbeddingAdapter } from "./types.js";
 import type { SearchQuery, SearchResult, ScoredMemory } from "./types.js";
-import { countTokens, mergeScores, applyTokenBudget } from "./scoring.js";
+import { countTokens, mergeScores, applyTokenBudget, cosineSimilarity } from "./scoring.js";
 
 interface MemoryRow {
     id: unknown;
@@ -97,6 +97,15 @@ class SearchEngine {
 
         // Sort by score descending
         entries.sort((a, b) => b.score - a.score);
+
+        // Apply embedding re-ranking if requested
+        if (query.rerank && query.text) {
+            entries = await this.rerankByEmbedding(
+                entries,
+                query.text,
+                query.rerankThreshold ?? 0.5,
+            );
+        }
 
         // Apply limit
         entries = entries.slice(0, limit);
@@ -465,6 +474,54 @@ class SearchEngine {
         );
         if (!tags || !Array.isArray(tags)) return [];
         return tags.filter((label): label is string => typeof label === "string");
+    }
+
+    private async rerankByEmbedding(
+        entries: ScoredMemory[],
+        queryText: string,
+        threshold: number,
+    ): Promise<ScoredMemory[]> {
+        if (!this.embeddingAdapter || entries.length === 0) return entries;
+
+        const queryVec = await this.embeddingAdapter.embed(queryText);
+
+        // Fetch stored embeddings for all candidate IDs
+        const ids = entries.map((e) =>
+            e.id.startsWith("memory:")
+                ? new StringRecordId(e.id)
+                : new StringRecordId(`memory:${e.id}`),
+        );
+
+        const rows = await this.store.query<Array<{ id: unknown; embedding: number[] }>>(
+            `SELECT id, embedding FROM memory WHERE id IN $ids`,
+            { ids },
+        );
+
+        if (!rows) return entries;
+
+        const embeddingMap = new Map<string, number[]>();
+        for (const row of rows) {
+            if (row.embedding) {
+                embeddingMap.set(String(row.id), row.embedding);
+            }
+        }
+
+        // Score each entry by direct cosine similarity and filter
+        const reranked: ScoredMemory[] = [];
+        for (const entry of entries) {
+            const emb = embeddingMap.get(entry.id);
+            if (!emb) {
+                reranked.push(entry);
+                continue;
+            }
+            const similarity = cosineSimilarity(queryVec, emb);
+            if (similarity >= threshold) {
+                reranked.push({ ...entry, score: similarity });
+            }
+        }
+
+        reranked.sort((a, b) => b.score - a.score);
+        return reranked;
     }
 }
 
