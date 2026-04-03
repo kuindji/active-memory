@@ -65,7 +65,7 @@ const WIKIPEDIA_SOURCES: { title: string; expectedClassifications: string[] }[] 
     { title: "Byzantine_economy", expectedClassifications: ["fact", "concept"] },
     { title: "Hagia_Sophia", expectedClassifications: ["fact", "reference"] },
     { title: "Belisarius", expectedClassifications: ["fact"] },
-    { title: "Empress_Theodora_(wife_of_Justinian_I)", expectedClassifications: ["fact"] },
+    { title: "Varangian_Guard", expectedClassifications: ["fact"] },
     { title: "Fourth_Crusade", expectedClassifications: ["fact"] },
     { title: "Greek_fire", expectedClassifications: ["definition", "concept"] },
     { title: "Filioque", expectedClassifications: ["concept", "definition"] },
