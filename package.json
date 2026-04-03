@@ -19,15 +19,18 @@
         "tui": "bin/memory-domain-tui"
     },
     "dependencies": {
+        "@aws-sdk/client-s3": "^3.1023.0",
         "@clack/prompts": "^1.2.0",
         "@surrealdb/node": "^3.0.0",
         "js-tiktoken": "^1.0.21",
         "onnxruntime-node": "^1.24.1",
-        "surrealdb": "^2.0.0"
+        "surrealdb": "^2.0.0",
+        "tar": "^7.5.13"
     },
     "devDependencies": {
         "@eslint/js": "^10.0.1",
         "@types/bun": "latest",
+        "@types/tar": "^7.0.87",
         "eslint": "^10.1.0",
         "eslint-config-prettier": "^10.1.8",
         "jiti": "^2.6.1",
