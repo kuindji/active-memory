@@ -134,6 +134,68 @@ describe("Engine tunable param integration", () => {
         await engine.close();
     });
 
+    test("tune() optimizes params to maximize evaluation score", async () => {
+        const engine = new MemoryEngine();
+        const llm = new MockLLMAdapter();
+        await engine.initialize({
+            connection: "mem://",
+            namespace: "test",
+            database: `test_tune_loop_${Date.now()}`,
+            llm,
+        });
+
+        await engine.registerDomain({
+            id: "tuned",
+            name: "Tuned",
+            tunableParams: [{ name: "weight", default: 0.5, min: 0.0, max: 1.0, step: 0.1 }],
+            async processInboxBatch() {},
+        });
+
+        const evalFn = (params: Record<string, number>) => {
+            return Promise.resolve(1.0 - Math.abs(params.weight - 0.7));
+        };
+
+        const result = await engine.tune("tuned", evalFn, { maxIterations: 20 });
+
+        expect(result.bestParams.weight).toBeGreaterThanOrEqual(0.6);
+        expect(result.bestParams.weight).toBeLessThanOrEqual(0.8);
+        expect(result.bestScore).toBeGreaterThan(0.9);
+        expect(result.iterations).toBeGreaterThan(0);
+
+        const saved = engine.getTunableParams("tuned");
+        expect(saved.weight).toBe(result.bestParams.weight);
+
+        await engine.close();
+    });
+
+    test("tune() throws for domain with no tunable params", async () => {
+        const engine = new MemoryEngine();
+        const llm = new MockLLMAdapter();
+        await engine.initialize({
+            connection: "mem://",
+            namespace: "test",
+            database: `test_tune_noop_${Date.now()}`,
+            llm,
+        });
+
+        await engine.registerDomain({
+            id: "plain",
+            name: "Plain",
+            async processInboxBatch() {},
+        });
+
+        let error: Error | undefined;
+        try {
+            await engine.tune("plain", () => Promise.resolve(1.0));
+        } catch (e) {
+            error = e instanceof Error ? e : new Error(String(e));
+        }
+        expect(error).toBeDefined();
+        expect(error!.message).toContain("no tunable parameters");
+
+        await engine.close();
+    });
+
     test("getTunableParamDefinitions returns definitions", async () => {
         const engine = new MemoryEngine();
         const llm = new MockLLMAdapter();

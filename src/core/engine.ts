@@ -42,6 +42,8 @@ import type {
     DebugConfig,
     DebugTools,
     ConnectionAdapter,
+    TuneOptions,
+    TuneResult,
 } from "./types.js";
 
 class MemoryEngine {
@@ -1212,6 +1214,55 @@ class MemoryEngine {
 
     getTunableParamDefinitions(domainId: string): TunableParamDefinition[] {
         return this.tunableParams.getDefinitions(domainId);
+    }
+
+    async tune(
+        domainId: string,
+        evaluate: (params: Record<string, number>) => Promise<number>,
+        options?: TuneOptions,
+    ): Promise<TuneResult> {
+        const maxIterations = options?.maxIterations ?? 50;
+        const definitions = this.tunableParams.getDefinitions(domainId);
+        if (definitions.length === 0) {
+            throw new Error(`Domain "${domainId}" has no tunable parameters`);
+        }
+
+        let currentParams = { ...this.tunableParams.getAllForDomain(domainId) };
+        let bestScore = await evaluate(currentParams);
+        let bestParams = { ...currentParams };
+        const history: TuneResult["history"] = [{ params: { ...currentParams }, score: bestScore }];
+
+        for (let iter = 0; iter < maxIterations; iter++) {
+            let improved = false;
+
+            for (const def of definitions) {
+                for (const direction of [1, -1]) {
+                    const candidate = { ...currentParams };
+                    const newVal = candidate[def.name] + direction * def.step;
+                    candidate[def.name] = Math.max(def.min, Math.min(def.max, newVal));
+
+                    if (candidate[def.name] === currentParams[def.name]) continue;
+
+                    const score = await evaluate(candidate);
+                    history.push({ params: { ...candidate }, score });
+
+                    if (score > bestScore) {
+                        bestScore = score;
+                        bestParams = { ...candidate };
+                        currentParams = { ...candidate };
+                        improved = true;
+                        break;
+                    }
+                }
+                if (improved) break;
+            }
+
+            if (!improved) break;
+        }
+
+        await this.saveTunableParams(domainId, bestParams);
+
+        return { bestParams, bestScore, iterations: history.length - 1, history };
     }
 
     async close(): Promise<void> {

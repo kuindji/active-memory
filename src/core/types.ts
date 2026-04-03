@@ -443,3 +443,14 @@ export interface TraversalNode {
     direction: "in" | "out";
     memory?: ScoredMemory;
 }
+
+export interface TuneOptions {
+    maxIterations?: number;
+}
+
+export interface TuneResult {
+    bestParams: Record<string, number>;
+    bestScore: number;
+    iterations: number;
+    history: Array<{ params: Record<string, number>; score: number }>;
+}
