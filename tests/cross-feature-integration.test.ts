@@ -389,26 +389,18 @@ describe("Request context propagation", () => {
         expect(fallbackCaptured!.lang).toBe("en");
     });
 
-    test("ask does not propagate per-request context to search expand hooks (known gap)", async () => {
+    test("ask propagates per-request context to domain buildContext", async () => {
         const llm = engine["llm"] as MockLLMAdapter;
-        let callCount = 0;
-        llm.generate = () => {
-            callCount++;
-            if (callCount === 1) {
-                return Promise.resolve('{ "text": "search terms", "reasoning": "test" }');
-            }
-            return Promise.resolve('{ "answer": "done" }');
-        };
+        llm.synthesizeResult = "done";
 
         await engine.ask("test question", {
             domains: ["ctx-test"],
             context: { userId: "ask-user" },
         });
 
-        // Gap: ask() builds searchQuery at engine.ts:762 without context
-        // The expand hook gets engine default context only
-        expect(capturedExpandContext).toBeDefined();
-        expect(capturedExpandContext!.userId).toBe("ctx-user"); // engine default, not 'ask-user'
+        // ask() uses buildContext which calls domain.buildContext with context
+        expect(capturedBuildContextContext).toBeDefined();
+        expect(capturedBuildContextContext!.userId).toBe("ask-user");
     });
 });
 

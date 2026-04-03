@@ -222,7 +222,7 @@ ${tagBlock}
 Retrieved memories:
 ${memoryList}
 
-Provide a concise, well-structured analytical response that directly addresses the query using the evidence from these memories. Do not invent facts not present in the memories.`;
+Provide a concise, well-structured analytical response that directly addresses the query. Prioritize evidence from the retrieved memories, but you may supplement with your own knowledge where the memories are incomplete or tangential. Always answer the question — never refuse on the grounds that memories are insufficient.`;
 
         return this.run(prompt);
     }

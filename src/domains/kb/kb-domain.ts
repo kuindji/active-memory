@@ -122,12 +122,15 @@ export function createKbDomain(options?: KbDomainOptions): DomainConfig {
             const allMemories: ScoredMemory[] = [];
             const sections: string[] = [];
 
+            const minScore = 0.3;
+
             // Section 1 — [Definitions & Concepts]
             for (const tag of [KB_DEFINITION_TAG, KB_CONCEPT_TAG]) {
                 const result = await context.search({
                     text,
                     tags: [tag],
                     tokenBudget: definitionBudget,
+                    minScore,
                 });
 
                 const entries = result.entries.filter((e) => {
@@ -151,6 +154,7 @@ export function createKbDomain(options?: KbDomainOptions): DomainConfig {
                     text,
                     tags: [tag],
                     tokenBudget: factBudget,
+                    minScore,
                 });
 
                 const entries = result.entries.filter((e) => {
@@ -178,6 +182,7 @@ export function createKbDomain(options?: KbDomainOptions): DomainConfig {
                     text,
                     tags: [tag],
                     tokenBudget: howtoBudget,
+                    minScore,
                 });
 
                 const entries = result.entries.filter((e) => {

@@ -8,7 +8,7 @@ import type { ArchitectureConfig } from "./types.js";
 import { createConfigurableInboxProcessor } from "./configurable-inbox.js";
 import type { DomainConfig } from "../../src/core/types.js";
 
-const llm = new ClaudeCliAdapter({ model: "haiku" });
+const llm = new ClaudeCliAdapter({ model: "haiku", timeout: 180_000 });
 const embedding = new OnnxEmbeddingAdapter();
 
 export function getLlm(): ClaudeCliAdapter {

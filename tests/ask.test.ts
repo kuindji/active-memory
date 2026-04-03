@@ -42,79 +42,27 @@ describe("MemoryEngine.ask", () => {
         expect(result.rounds).toBeGreaterThanOrEqual(1);
     });
 
-    test("performs multi-round search when LLM returns query plan", async () => {
+    test("uses buildContext for memory retrieval", async () => {
         await engine.ingest("Cats are domestic animals", { domains: ["test"] });
         await engine.ingest("Dogs are loyal pets", { domains: ["test"] });
         await engine.processInbox();
         await engine.processInbox();
 
-        let callCount = 0;
-        llm.generateResult = ""; // will be overridden below
-        const originalGenerate = llm.generate.bind(llm);
-        llm.generate = (_prompt: string) => {
-            callCount++;
-            if (callCount === 1) {
-                return Promise.resolve(
-                    '{ "text": "domestic animals", "reasoning": "search for animals" }',
-                );
-            }
-            return Promise.resolve('{ "answer": "Cats and dogs are common pets" }');
-        };
-        void originalGenerate;
-
         llm.synthesizeResult = "Cats and dogs are common domestic pets.";
 
         const result = await engine.ask("What are common pets?");
         expect(result.answer).toBe("Cats and dogs are common domestic pets.");
-        expect(result.rounds).toBeGreaterThanOrEqual(2);
+        // ask() now uses buildContext (single pass), so rounds is always 1
+        expect(result.rounds).toBe(1);
     });
 
-    test("respects max rounds limit", async () => {
-        await engine.ingest("Some data", { domains: ["test"] });
-        await engine.processInbox();
-
-        // LLM always returns query plans, never a final answer
-        llm.generate = () =>
-            Promise.resolve('{ "text": "search terms", "reasoning": "keep searching" }');
-        llm.synthesizeResult = "Final synthesized answer.";
-
-        const result = await engine.ask("endless question");
-        // Max rounds is 3
-        expect(result.rounds).toBe(3);
-        expect(result.answer).toBe("Final synthesized answer.");
-    });
-
-    test("handles malformed LLM JSON gracefully", async () => {
-        await engine.ingest("Some content", { domains: ["test"] });
-        await engine.processInbox();
-
-        // Return invalid JSON — regex finds no {}, so parsed = {} and it falls through
-        // as a query plan for all rounds, then synthesizes at the end
-        llm.generateResult = "not valid json at all";
-        llm.synthesizeResult = "Synthesized from available memories.";
-
-        const result = await engine.ask("question");
-        // Should complete without throwing
-        expect(typeof result.answer).toBe("string");
-        expect(result.rounds).toBe(3);
-    });
-
-    test("deduplicates memories across rounds", async () => {
+    test("deduplicates memories", async () => {
         await engine.ingest("Unique fact about planets", { domains: ["test"] });
         await engine.processInbox();
 
-        let callCount = 0;
-        llm.generate = () => {
-            callCount++;
-            if (callCount <= 2) {
-                return Promise.resolve('{ "text": "planets", "reasoning": "search" }');
-            }
-            return Promise.resolve('{ "answer": "done" }');
-        };
         llm.synthesizeResult = "Answer about planets.";
 
         const result = await engine.ask("Tell me about planets");
-        // Even though we searched multiple rounds, same memory should appear once
         const ids = result.memories.map((m) => m.id);
         const uniqueIds = new Set(ids);
         expect(ids.length).toBe(uniqueIds.size);

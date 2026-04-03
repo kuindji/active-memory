@@ -25,7 +25,6 @@ import type {
     ContextResult,
     AskOptions,
     AskResult,
-    ScoredMemory,
     MemoryFilter,
     RepetitionConfig,
     WriteMemoryEntry,
@@ -1107,107 +1106,21 @@ class MemoryEngine {
 
     async ask(question: string, options?: AskOptions): Promise<AskResult> {
         const budgetTokens = options?.budgetTokens ?? 8000;
-        const limit = options?.limit ?? 30;
-        const maxRounds = options?.maxRounds ?? 3;
 
-        const allMemories = new Map<string, ScoredMemory>();
-        let rounds = 0;
-
-        // Get available top-level tags for the system prompt
-        const topTags = await this.graph.query<{ label: string }[]>(
-            "SELECT label FROM tag WHERE ->child_of->tag IS NONE OR array::len(->child_of->tag) = 0",
-        );
-        const tagList = topTags
-            ? topTags
-                  .map((t) => t.label)
-                  .filter((l) => l !== "inbox")
-                  .join(", ")
-            : "";
-
-        const systemPrompt = `You are a search assistant. Given a question, decide how to search a memory database.
-
-Available search capabilities:
-- "text": fulltext search terms (keywords or phrases)
-- "tags": filter by tag categories (available: ${tagList})
-
-Respond with JSON only. Either:
-1. A query plan: { "text": "search terms", "tags": ["tag1"], "reasoning": "why" }
-2. A final answer: { "answer": "your analytical response" }
-
-If you have enough information from previous search results, respond with an answer.
-Otherwise, respond with a query plan to find more relevant information.`;
-
-        const history: string[] = [`Question: ${question}`];
-
-        for (let round = 0; round < maxRounds; round++) {
-            rounds = round + 1;
-
-            const prompt = `${systemPrompt}\n\n${history.join("\n\n")}`;
-            if (!this.llm.generate) {
-                throw new Error("LLM adapter must implement generate() to use ask()");
-            }
-            const response = await this.llm.generate(prompt);
-
-            // Parse LLM response
-            let parsed: Record<string, unknown>;
-            try {
-                const jsonMatch = response.match(/\{[\s\S]*\}/);
-                parsed = jsonMatch ? (JSON.parse(jsonMatch[0]) as Record<string, unknown>) : {};
-            } catch {
-                // If parsing fails, treat as final answer
-                parsed = { answer: response };
-            }
-
-            // Check if LLM gave a final answer
-            if (typeof parsed.answer === "string") {
-                break;
-            }
-
-            // Execute query plan
-            const searchQuery: SearchQuery = {
-                text: typeof parsed.text === "string" ? parsed.text : question,
-                tags: Array.isArray(parsed.tags) ? (parsed.tags as string[]) : options?.tags,
-                limit,
-                domains: options?.domains,
-            };
-
-            const result = await this.search(searchQuery);
-
-            // Accumulate memories (dedup by ID)
-            for (const entry of result.entries) {
-                if (!allMemories.has(entry.id)) {
-                    allMemories.set(entry.id, entry);
-                }
-            }
-
-            // Add results summary to history for next round
-            const resultSummary = result.entries
-                .slice(0, 10)
-                .map(
-                    (e, i) =>
-                        `  [${i + 1}] (score: ${e.score.toFixed(3)}) ${e.content.slice(0, 200)}`,
-                )
-                .join("\n");
-            history.push(
-                `Round ${rounds} results (${result.entries.length} found):\n${resultSummary}`,
-            );
-        }
-
-        // Apply token budget to accumulated memories
-        const sortedMemories = [...allMemories.values()].sort((a, b) => b.score - a.score);
-
-        const fitted = applyTokenBudget(
-            sortedMemories.map((e) => ({ ...e, tokenCount: countTokens(e.content) })),
+        // Use buildContext to get domain-curated context with structured sections
+        const contextResult = await this.buildContext(question, {
+            domains: options?.domains,
             budgetTokens,
-        );
+            context: options?.context,
+        });
 
-        // Final synthesis
+        // Final synthesis using the curated memories
         if (!this.llm.synthesize) {
             throw new Error("LLM adapter must implement synthesize() to use ask()");
         }
-        const answer = await this.llm.synthesize(question, fitted);
+        const answer = await this.llm.synthesize(question, contextResult.memories);
 
-        return { answer, memories: fitted, rounds };
+        return { answer, memories: contextResult.memories, rounds: 1 };
     }
 
     getGraph(): GraphStore {

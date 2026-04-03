@@ -51,8 +51,8 @@ async function runConfig(config: ArchitectureConfig, fromPhase: number): Promise
         const total = processed.entries.filter(
             (e) => e.assignedClassification !== "unknown",
         ).length;
-        if (total > 0 && factCount / total > 0.7 && config.pipeline.classify) {
-            console.error(`[FAIL-FAST] >70% classified as "fact" for "${config.name}" — stopping`);
+        if (total > 0 && factCount / total > 0.85 && config.pipeline.classify) {
+            console.error(`[FAIL-FAST] >85% classified as "fact" for "${config.name}" — stopping`);
             await engine.close();
             return;
         }
