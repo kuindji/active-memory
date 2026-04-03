@@ -123,17 +123,17 @@ async initialize(config: EngineConfig): Promise<void> {
 
 ### close() change
 
-Call `save()` before closing the database:
+Call `save()` after closing the database (SurrealDB must flush WAL and release file handles before we can safely compress):
 
 ```typescript
 async close(): Promise<void> {
   this.stopProcessing();
-  if (this.adapter) {
-    await this.adapter.save();
-  }
   if (this.db) {
     await this.db.close();
     this.db = null;
+  }
+  if (this.adapter) {
+    await this.adapter.save();
   }
 }
 ```

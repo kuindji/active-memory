@@ -60,6 +60,8 @@ export type {
     ScheduleInfo,
     TraversalNode,
     ModelLevel,
+    ConnectionAdapter,
+    S3AdapterConfig,
 } from "./core/types.ts";
 export type { TopicAttributes, TopicDomainOptions, TopicStatus } from "./domains/topic/types.ts";
 export type { UserDomainOptions } from "./domains/user/types.ts";
@@ -83,6 +85,8 @@ export { createKbDomain, kbDomain } from "./domains/kb/index.ts";
 export { ClaudeCliAdapter } from "./adapters/llm/claude-cli.ts";
 export { OnnxEmbeddingAdapter } from "./adapters/onnx-embedding.ts";
 export type { OnnxEmbeddingConfig } from "./adapters/onnx-embedding.ts";
+export { PassthroughAdapter } from "./adapters/connection/passthrough.ts";
+export { S3ConnectionAdapter } from "./adapters/connection/s3.ts";
 
 // Config
 export { resolveConfigPath, loadConfig } from "./config-loader.ts";

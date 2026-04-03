@@ -87,12 +87,13 @@ describe("Engine adapter integration", () => {
     it("uses provided adapter instead of connection string", async () => {
         const calls: string[] = [];
         const mockAdapter: ConnectionAdapter = {
-            async resolve() {
+            resolve() {
                 calls.push("resolve");
-                return "mem://";
+                return Promise.resolve("mem://");
             },
-            async save() {
+            save() {
                 calls.push("save");
+                return Promise.resolve();
             },
         };
 
@@ -112,13 +113,17 @@ describe("Engine adapter integration", () => {
 
     it("throws if neither connection nor adapter is provided", async () => {
         const engine = new MemoryEngine();
-        await expect(
-            engine.initialize({
+        let threw = false;
+        try {
+            await engine.initialize({
                 namespace: "test",
                 database: "test",
                 llm: new MockLLMAdapter(),
-            }),
-        ).rejects.toThrow();
+            });
+        } catch {
+            threw = true;
+        }
+        expect(threw).toBe(true);
     });
 });
 
