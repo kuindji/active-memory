@@ -1,3 +1,5 @@
+import type { TunableParamDefinition } from "./tunable-params.js";
+
 // --- Core entity types ---
 
 export interface MemoryEntry {
@@ -267,6 +269,7 @@ export interface DomainConfig {
     ): Promise<ContextResult>;
     describe?(): string;
     schedules?: DomainSchedule[];
+    tunableParams?: TunableParamDefinition[];
     bootstrap?(context: DomainContext): Promise<void>;
 }
 
