@@ -1,0 +1,145 @@
+import { existsSync } from "node:fs";
+import { parseArgs } from "node:util";
+import { configs } from "./configs.js";
+import { datasetPath } from "./checkpoint.js";
+import { collectData } from "./phases/0-collect.js";
+import { runIngest } from "./phases/1-ingest.js";
+import { runProcess } from "./phases/2-process.js";
+import { runConsolidate } from "./phases/3-consolidate.js";
+import { runEvaluate } from "./phases/4-evaluate.js";
+import { runScore } from "./phases/5-score.js";
+import { runReport } from "./phases/6-report.js";
+import { runBaseline } from "./phases/baseline.js";
+import type { ArchitectureConfig } from "./types.js";
+
+const { values } = parseArgs({
+    options: {
+        config: { type: "string", short: "c" },
+        "from-phase": { type: "string", short: "f" },
+        "only-phase": { type: "string", short: "o" },
+        baseline: { type: "boolean", short: "b" },
+        report: { type: "boolean", short: "r" },
+        collect: { type: "boolean" },
+    },
+    strict: false,
+});
+
+async function runConfig(config: ArchitectureConfig, fromPhase: number): Promise<void> {
+    console.log(`\n${"=".repeat(60)}`);
+    console.log(`Running config: "${config.name}"`);
+    console.log(`${"=".repeat(60)}`);
+
+    // Phase 1: Ingest (always needed — creates the engine)
+    let engine;
+    if (fromPhase <= 1) {
+        const result = await runIngest(config);
+        engine = result.engine;
+    }
+
+    // Phase 2: Process
+    if (fromPhase <= 2) {
+        if (!engine) {
+            const result = await runIngest(config);
+            engine = result.engine;
+        }
+        const processed = await runProcess(config, engine);
+
+        // Fail-fast: classification check
+        const factCount = processed.entries.filter(
+            (e) => e.assignedClassification === "fact",
+        ).length;
+        const total = processed.entries.filter(
+            (e) => e.assignedClassification !== "unknown",
+        ).length;
+        if (total > 0 && factCount / total > 0.7 && config.pipeline.classify) {
+            console.error(`[FAIL-FAST] >70% classified as "fact" for "${config.name}" — stopping`);
+            await engine.close();
+            return;
+        }
+    }
+
+    // Phase 3: Consolidate
+    if (fromPhase <= 3 && engine) {
+        await runConsolidate(config, engine);
+    }
+
+    // Phase 4: Evaluate
+    if (fromPhase <= 4 && engine) {
+        await runEvaluate(config, engine);
+    }
+
+    // Close engine before scoring
+    if (engine) {
+        await engine.close();
+    }
+
+    // Phase 5: Score
+    if (fromPhase <= 5) {
+        await runScore(config);
+    }
+}
+
+async function main(): Promise<void> {
+    const fromPhase = values["from-phase"] ? parseInt(values["from-phase"] as string, 10) : 0;
+    const onlyPhase = values["only-phase"] ? parseInt(values["only-phase"] as string, 10) : null;
+
+    // Phase 0: Collect
+    if (values.collect || (!existsSync(datasetPath()) && fromPhase <= 0 && onlyPhase === null)) {
+        await collectData();
+        if (values.collect) return;
+    }
+
+    // Baseline
+    if (values.baseline) {
+        await runBaseline();
+        await runScore({
+            name: "baseline-no-kb",
+            pipeline: {
+                classify: false,
+                tagAssign: false,
+                topicLink: false,
+                supersede: false,
+                relateKnowledge: false,
+            },
+            search: {
+                mode: "hybrid",
+                weights: { vector: 0.5, fulltext: 0.3, graph: 0.2 },
+            },
+            consolidate: false,
+            contextBudget: 2000,
+        });
+        return;
+    }
+
+    // Report only
+    if (values.report) {
+        runReport();
+        return;
+    }
+
+    // Run specific config or all
+    const targetConfigs = values.config
+        ? configs.filter((c) => c.name === values.config)
+        : configs.filter((c) => c.name !== "baseline-no-kb");
+
+    if (targetConfigs.length === 0) {
+        console.error(
+            `Config "${values.config}" not found. Available: ${configs.map((c) => c.name).join(", ")}`,
+        );
+        process.exit(1);
+    }
+
+    for (const config of targetConfigs) {
+        await runConfig(config, onlyPhase ?? fromPhase);
+    }
+
+    // Generate report if we ran multiple configs
+    if (targetConfigs.length > 1) {
+        runReport();
+    }
+}
+
+main().catch((err) => {
+    console.error(err);
+    process.exit(1);
+});
