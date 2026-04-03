@@ -1,8 +1,12 @@
 import { describe, it, expect } from "bun:test";
 import type { ConnectionAdapter, S3AdapterConfig } from "../src/core/types.ts";
 import { PassthroughAdapter } from "../src/adapters/connection/passthrough.ts";
+import { S3ConnectionAdapter } from "../src/adapters/connection/s3.ts";
 import { MemoryEngine } from "../src/core/engine.ts";
 import { MockLLMAdapter } from "./helpers.ts";
+import { mkdirSync, writeFileSync, existsSync, rmSync, readFileSync } from "fs";
+import { join } from "path";
+import * as tar from "tar";
 
 describe("ConnectionAdapter types", () => {
     it("ConnectionAdapter has resolve and save methods", () => {
@@ -115,5 +119,119 @@ describe("Engine adapter integration", () => {
                 llm: new MockLLMAdapter(),
             }),
         ).rejects.toThrow();
+    });
+});
+
+describe("S3ConnectionAdapter", () => {
+    it("derives deterministic localDir from bucket+key", () => {
+        const adapter1 = new S3ConnectionAdapter({
+            bucket: "my-bucket",
+            key: "path/db.tar.gz",
+            region: "us-east-1",
+        });
+        const adapter2 = new S3ConnectionAdapter({
+            bucket: "my-bucket",
+            key: "path/db.tar.gz",
+            region: "us-east-1",
+        });
+        expect(adapter1.getLocalDir()).toBe(adapter2.getLocalDir());
+    });
+
+    it("uses configured localDir when provided", () => {
+        const adapter = new S3ConnectionAdapter({
+            bucket: "my-bucket",
+            key: "path/db.tar.gz",
+            region: "us-east-1",
+            localDir: "/tmp/custom-dir",
+        });
+        expect(adapter.getLocalDir()).toBe("/tmp/custom-dir");
+    });
+
+    it("resolve returns surrealkv connection string", async () => {
+        const localDir = `/tmp/memory-domain-test-${Date.now()}`;
+        const adapter = new S3ConnectionAdapter({
+            bucket: "nonexistent-bucket",
+            key: "nonexistent.tar.gz",
+            region: "us-east-1",
+            localDir,
+        });
+
+        adapter._setDownloader(() => Promise.resolve(null));
+
+        const connectionString = await adapter.resolve();
+        expect(connectionString).toBe(`surrealkv://${localDir}/db`);
+        expect(existsSync(localDir)).toBe(true);
+
+        rmSync(localDir, { recursive: true, force: true });
+    });
+
+    it("resolve extracts downloaded archive", async () => {
+        const localDir = `/tmp/memory-domain-test-extract-${Date.now()}`;
+        const archivePath = `/tmp/memory-domain-test-archive-${Date.now()}.tar.gz`;
+
+        const sourceDir = `/tmp/memory-domain-test-source-${Date.now()}`;
+        mkdirSync(join(sourceDir, "db"), { recursive: true });
+        writeFileSync(join(sourceDir, "db", "testfile"), "hello");
+        await tar.create({ gzip: true, file: archivePath, cwd: sourceDir }, ["db"]);
+
+        const adapter = new S3ConnectionAdapter({
+            bucket: "test",
+            key: "test.tar.gz",
+            region: "us-east-1",
+            localDir,
+        });
+
+        const archiveBuffer = readFileSync(archivePath);
+        adapter._setDownloader(() => Promise.resolve(archiveBuffer));
+
+        const connectionString = await adapter.resolve();
+        expect(connectionString).toBe(`surrealkv://${localDir}/db`);
+        expect(existsSync(join(localDir, "db", "testfile"))).toBe(true);
+
+        rmSync(localDir, { recursive: true, force: true });
+        rmSync(sourceDir, { recursive: true, force: true });
+        rmSync(archivePath, { force: true });
+    });
+
+    it("save does nothing when save config is false", async () => {
+        let uploaded = false;
+        const adapter = new S3ConnectionAdapter({
+            bucket: "test",
+            key: "test.tar.gz",
+            region: "us-east-1",
+            save: false,
+        });
+        adapter._setUploader(() => {
+            uploaded = true;
+            return Promise.resolve();
+        });
+
+        await adapter.save();
+        expect(uploaded).toBe(false);
+    });
+
+    it("save compresses and uploads when save config is true", async () => {
+        const localDir = `/tmp/memory-domain-test-save-${Date.now()}`;
+        mkdirSync(join(localDir, "db"), { recursive: true });
+        writeFileSync(join(localDir, "db", "testfile"), "data");
+
+        let uploadedData: Buffer | null = null;
+        const adapter = new S3ConnectionAdapter({
+            bucket: "test",
+            key: "test.tar.gz",
+            region: "us-east-1",
+            localDir,
+            save: true,
+        });
+        adapter._setUploader((data: Buffer) => {
+            uploadedData = data;
+            return Promise.resolve();
+        });
+
+        await adapter.save();
+        expect(uploadedData).not.toBeNull();
+        expect(uploadedData!.length).toBeGreaterThan(0);
+
+        rmSync(localDir, { recursive: true, force: true });
     });
 });
