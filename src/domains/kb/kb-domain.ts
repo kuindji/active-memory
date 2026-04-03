@@ -9,6 +9,7 @@ import type {
     SearchQuery,
     ScoredMemory,
     ContextResult,
+    LLMAdapter,
 } from "../../core/types.js";
 import { countTokens } from "../../core/scoring.js";
 import { TOPIC_TAG } from "../topic/types.js";
@@ -82,6 +83,49 @@ function buildSchedules(options?: KbDomainOptions): DomainSchedule[] {
     }
 
     return schedules;
+}
+
+async function llmRerankMemories(
+    query: string,
+    memories: ScoredMemory[],
+    llm: LLMAdapter,
+): Promise<ScoredMemory[]> {
+    if (memories.length === 0) return memories;
+    if (!llm.generate) return memories;
+
+    const numbered = memories.map((m, i) => `[${i}] ${m.content.substring(0, 200)}`).join("\n");
+
+    const prompt = `Given the query: "${query}"
+
+Score each memory's relevance (0-5). Only include memories scoring 3+.
+
+Memories:
+${numbered}
+
+Respond with ONLY a JSON array of objects: [{"index": 0, "score": 5}, ...]
+Include only memories with score >= 3.`;
+
+    try {
+        const response = await llm.generate(prompt);
+        const match = response.match(/\[[\s\S]*\]/);
+        if (!match) return memories;
+
+        const scores = JSON.parse(match[0]) as Array<{ index: number; score: number }>;
+        const result: ScoredMemory[] = [];
+
+        for (const s of scores) {
+            if (s.index >= 0 && s.index < memories.length && s.score >= 3) {
+                result.push({ ...memories[s.index], score: s.score / 5 });
+            }
+        }
+
+        result.sort((a, b) => b.score - a.score);
+
+        // Fallback: if LLM filtered everything, return original
+        return result.length > 0 ? result : memories;
+    } catch {
+        return memories;
+    }
 }
 
 export function createKbDomain(options?: KbDomainOptions): DomainConfig {
@@ -165,7 +209,7 @@ export function createKbDomain(options?: KbDomainOptions): DomainConfig {
             const howtoPct = Math.max(0.1, 1.0 - defPct - factPct);
             const topicBoost = context.getTunableParam("topicBoostFactor") ?? 1.5;
             const useEmbeddingRerank = (context.getTunableParam("embeddingRerank") ?? 1) > 0;
-            const _useLlmRerank = (context.getTunableParam("llmRerank") ?? 0) > 0;
+            const useLlmRerank = (context.getTunableParam("llmRerank") ?? 0) > 0;
 
             const definitionBudget = Math.floor(budgetTokens * defPct);
             const factBudget = Math.floor(budgetTokens * factPct);
@@ -296,6 +340,58 @@ export function createKbDomain(options?: KbDomainOptions): DomainConfig {
             if (hasTopicFilter && allMemories.length === 0 && bestNonTopicFallback) {
                 allMemories.push(bestNonTopicFallback);
                 sections.push(bestNonTopicFallback.content);
+            }
+
+            // LLM re-rank: filter memories by semantic relevance
+            if (useLlmRerank) {
+                const allCollected = deduplicateMemories(allMemories);
+                const reranked = await llmRerankMemories(text, allCollected, context.llm);
+
+                if (reranked.length < allCollected.length) {
+                    // Rebuild context from reranked memories only
+                    sections.length = 0;
+                    const rerankedDefs = reranked.filter((m) =>
+                        definitionMemories.some((d) => d.id === m.id),
+                    );
+                    if (rerankedDefs.length > 0) {
+                        const lines = truncateToTokenBudget(rerankedDefs, definitionBudget);
+                        if (lines.length > 0) {
+                            sections.push(`[Definitions & Concepts]\n${lines.join("\n")}`);
+                        }
+                    }
+
+                    const rerankedFacts = reranked.filter(
+                        (m) =>
+                            !rerankedDefs.some((d) => d.id === m.id) &&
+                            dedupedFacts.some((f) => f.id === m.id),
+                    );
+                    if (rerankedFacts.length > 0) {
+                        const lines = truncateToTokenBudget(rerankedFacts, factBudget);
+                        if (lines.length > 0) {
+                            sections.push(`[Facts & References]\n${lines.join("\n")}`);
+                        }
+                    }
+
+                    const rerankedOther = reranked.filter(
+                        (m) =>
+                            !rerankedDefs.some((d) => d.id === m.id) &&
+                            !rerankedFacts.some((f) => f.id === m.id),
+                    );
+                    if (rerankedOther.length > 0) {
+                        const lines = truncateToTokenBudget(rerankedOther, howtoBudget);
+                        if (lines.length > 0) {
+                            sections.push(`[How-Tos & Insights]\n${lines.join("\n")}`);
+                        }
+                    }
+
+                    const finalContext = sections.join("\n\n");
+                    const totalTokens = countTokens(finalContext);
+                    return {
+                        context: finalContext,
+                        memories: reranked,
+                        totalTokens,
+                    };
+                }
             }
 
             const finalContext = sections.join("\n\n");
