@@ -116,6 +116,16 @@ export interface ScoresData {
     classificationAccuracy: number;
 }
 
+export interface TuningData {
+    configName: string;
+    initialParams: Record<string, number>;
+    bestParams: Record<string, number>;
+    initialScore: number;
+    bestScore: number;
+    iterations: number;
+    history: Array<{ params: Record<string, number>; score: number }>;
+}
+
 export interface ReportRow {
     config: string;
     avgScore: number;

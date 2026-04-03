@@ -9,6 +9,7 @@ import { runConsolidate } from "./phases/3-consolidate.js";
 import { runEvaluate } from "./phases/4-evaluate.js";
 import { runScore } from "./phases/5-score.js";
 import { runReport } from "./phases/6-report.js";
+import { runTune } from "./phases/7-tune.js";
 import { runBaseline } from "./phases/baseline.js";
 import type { ArchitectureConfig } from "./types.js";
 
@@ -20,6 +21,7 @@ const { values } = parseArgs({
         baseline: { type: "boolean", short: "b" },
         report: { type: "boolean", short: "r" },
         collect: { type: "boolean" },
+        tune: { type: "string", short: "t" },
     },
     strict: false,
 });
@@ -87,6 +89,19 @@ async function main(): Promise<void> {
     if (values.collect || (!existsSync(datasetPath()) && fromPhase <= 0 && onlyPhase === null)) {
         await collectData();
         if (values.collect) return;
+    }
+
+    // Tune
+    if (values.tune) {
+        const tuneConfig = configs.find((c) => c.name === values.tune);
+        if (!tuneConfig) {
+            console.error(
+                `Config "${values.tune}" not found. Available: ${configs.map((c) => c.name).join(", ")}`,
+            );
+            process.exit(1);
+        }
+        await runTune(tuneConfig);
+        return;
     }
 
     // Baseline
