@@ -1,0 +1,522 @@
+{
+    "entries": [
+        {
+            "id": "wiki-justinian_i-0",
+            "content": "Justinian I, also known as Justinian the Great, was Eastern Roman emperor from 527 to 565.",
+            "expectedClassification": "fact"
+        },
+        {
+            "id": "wiki-nika_riots-0",
+            "content": "The Nika riots, Nika revolt or Nika sedition took place against Byzantine emperor Justinian I in Constantinople over the course of a week in 532 AD. They are often regarded as the most violent riots in the city's history, with nearly half of Constantinople being burned or destroyed and tens of thousands of people killed.",
+            "expectedClassification": "fact"
+        },
+        {
+            "id": "wiki-battle_of_manzikert-0",
+            "content": "The Battle of Manzikert or Malazgirt was fought between the Byzantine Empire and the Seljuk Empire on 26 August 1071 near Manzikert, Iberia. The decisive defeat of the Byzantine army and the capture of the emperor Romanos IV Diogenes played an important role in undermining Byzantine authority in Anatolia and Armenia, and allowed for the gradual Turkification of Anatolia. Many Turks, travelling westward during the 11th century, saw the victory at Manzikert as an entrance to Asia Minor.",
+            "expectedClassification": "fact"
+        },
+        {
+            "id": "wiki-corpus_juris_civilis-0",
+            "content": "The Corpus Juris Civilis is the modern name for a collection of fundamental works in jurisprudence, enacted from 529 to 534 by order of Roman Emperor Justinian I. It is also sometimes referred to metonymically after one of its parts, the Code of Justinian.",
+            "expectedClassification": "reference"
+        },
+        {
+            "id": "wiki-byzantine_iconoclasm-0",
+            "content": "The Byzantine Iconoclasm are two periods in the history of the Byzantine Empire when the use of religious images or icons was opposed by religious and imperial authorities within the Ecumenical Patriarchate and the temporal imperial hierarchy. The First Iconoclasm, as it is sometimes called, occurred between about 726 and 787, while the Second Iconoclasm occurred between 814 and 842. According to the traditional view, Byzantine Iconoclasm was started by a ban on religious images promulgated by the Byzantine Emperor Leo III the Isaurian, and continued under his successors. It was accompanied by widespread destruction of religious images and persecution of supporters of the veneration of images.",
+            "expectedClassification": "concept"
+        },
+        {
+            "id": "wiki-byzantine_iconoclasm-1",
+            "content": "The Papacy remained firmly in support of the use of religious images throughout the period, and the whole episode widened the growing divergence between the Byzantine and Carolingian traditions in what was still a unified European Church, as well as facilitating the reduction or removal of Byzantine political control over parts of the Italian Peninsula.",
+            "expectedClassification": "fact"
+        },
+        {
+            "id": "wiki-basil_ii-0",
+            "content": "Basil II Porphyrogenitus, given the epithet the Bulgar Slayer, was the senior Byzantine emperor from 976 to 1025. He and his brother Constantine VIII were crowned before their father Romanos II died in 963, but they were too young to rule. The throne thus went to two generals, Nikephoros Phokas and John Tzimiskes before Basil became senior emperor, though his influential great-uncle Basil Lekapenos remained as the de facto ruler until 985. His reign of 49 years and 11 months was the longest of any Roman emperor.",
+            "expectedClassification": "fact"
+        },
+        {
+            "id": "wiki-fall_of_constantinople-0",
+            "content": "The Fall of Constantinople, also known as the Conquest of Constantinople, was the capture of the capital of the Byzantine Empire by the Ottoman Empire. The city was captured on 29 May 1453 as part of the culmination of a 53-day siege which had begun on 6 April.",
+            "expectedClassification": "fact"
+        },
+        {
+            "id": "wiki-theme_(byzantine_district)-0",
+            "content": "The themes or thémata were the main military and administrative divisions of the Byzantine Empire. They were established in the mid-7th century in the aftermath of the Slavic migrations to the Balkans and Muslim conquests of parts of Eastern Roman territory, and replaced the earlier ancient provincial system established by Diocletian and Constantine the Great. In their origin, the first themes were created from the areas of encampment of the field armies of the East Roman army, and their names corresponded to the military units that had existed in those areas. The theme system reached its apogee in the 9th and 10th centuries, as older themes were split up and the conquest of territory resulted in the creation of new ones.",
+            "expectedClassification": "definition"
+        },
+        {
+            "id": "wiki-theme_(byzantine_district)-1",
+            "content": "The original theme system underwent significant changes in the 11th and 12th centuries, but the term remained in use as a provincial and financial circumscription until the very end of the Empire.",
+            "expectedClassification": "concept"
+        },
+        {
+            "id": "wiki-byzantine_economy-0",
+            "content": "The Byzantine economy was among the most robust economies in the Mediterranean and the world for many centuries. Constantinople was a prime hub in a trading network that at various times extended across nearly all of Eurasia and North Africa. It could be argued that up until the 7th century, the Eastern Roman Empire had the most powerful economy in the world. The Arab conquests, however, would represent a substantial reversal of fortunes contributing to a period of decline and stagnation. The Byzantine state restructured its administrative and fiscal systems, introducing the theme system, which organized land and military service in a way that ensured both local defense and agricultural productivity. Rural life revived as new lands were brought under cultivation, and local economies became more self-sufficient, reducing dependence on long-distance trade that had been curtailed by the loss of eastern territories.",
+            "expectedClassification": "fact"
+        },
+        {
+            "id": "wiki-byzantine_economy-1",
+            "content": "By the 9th and 10th centuries, the empire experienced a notable resurgence: agricultural output increased, population levels rose, and the circulation of coinage expanded once again. However, by the 12th and 13th centuries, the economic balance began to shift. Western maritime republics such as Venice and Genoa gradually overtook Byzantine merchants, largely due to the tax exemptions and trading privileges granted to them under the Komnenian emperors. This process accelerated after the Fourth Crusade and the establishment of the Latin Empire, during which Venetian traders gained control over key ports and commercial networks once held by the Byzantines. The Byzantines continued to face economic challenges during the Palaiologan era until its fall in 1453.",
+            "expectedClassification": "concept"
+        },
+        {
+            "id": "wiki-hagia_sophia-0",
+            "content": "Hagia Sophia, officially the Hagia Sophia Grand Mosque, is a mosque and a major cultural and historical site in Istanbul, Turkey. It was formerly a church (360–1453) and a museum (1935–2020). The last of three church buildings to be successively erected on the site by the Eastern Roman Empire, it was completed in AD 537, becoming the world's largest interior space and among the first to employ a fully pendentive dome. It is considered the epitome of Byzantine architecture and is said to have \"changed the history of architecture\". From its dedication in 360 until 1453 Hagia Sophia served as the cathedral of Constantinople in the Byzantine liturgical tradition, except for the period 1204–1261 when the Latin Crusaders installed their own hierarchy. After the fall of Constantinople in 1453, it served as a mosque, having its minarets added soon after. The site became a museum in 1935, and was redesignated as a mosque in 2020.",
+            "expectedClassification": "fact"
+        },
+        {
+            "id": "wiki-belisarius-0",
+            "content": "Flavius Belisarius was a military commander of the Byzantine Empire under Emperor Justinian I. Belisarius was instrumental in the reconquest of much of the Mediterranean territory belonging to the former Western Roman Empire, which had been lost less than a century prior. He is considered one of the greatest military commanders of Byzantium and in history generally.",
+            "expectedClassification": "fact"
+        },
+        {
+            "id": "wiki-varangian_guard-0",
+            "content": "The Varangian Guard was an elite unit of the Byzantine army from the 10th to the 14th century who served as personal bodyguards to the Byzantine emperors. The Varangian Guard was known for being primarily composed of recruits from Northern Europe, including mainly Norsemen from Scandinavia but also Anglo-Saxons from England. The recruitment of distant fighters from outside Byzantium to serve as the emperor's personal guard was pursued as a deliberate policy, as they lacked local political loyalties and could be counted upon to suppress revolts by disloyal Byzantine factions.",
+            "expectedClassification": "fact"
+        },
+        {
+            "id": "wiki-fourth_crusade-0",
+            "content": "The Fourth Crusade (1202–1204) was a Latin Christian armed expedition called by Pope Innocent III. The stated intent of the expedition was to recapture the Muslim-controlled city of Jerusalem, by first defeating the powerful Egyptian Ayyubid Sultanate. However, a sequence of economic and political events culminated in the Crusader army's 1202 siege of Zara and the 1204 sack of Constantinople, rather than the conquest of Egypt as originally planned. This led to the partition of the Byzantine Empire by the Crusaders and their Venetian allies, leading to a period known as the Frankokratia.",
+            "expectedClassification": "fact"
+        },
+        {
+            "id": "wiki-greek_fire-0",
+            "content": "Greek fire was an incendiary weapon used by the Byzantine Empire from the seventh to the fourteenth centuries. The recipe for Greek fire was a closely-guarded state secret. Historians have variously speculated that it was based on saltpeter, sulfur, or quicklime, but most modern scholars agree that it was based on petroleum mixed with resins, comparable in composition to modern napalm. Byzantine sailors would toss grenades loaded with Greek fire onto enemy ships or spray it from tubes. Its ability to burn on water made it an effective and destructive naval incendiary weapon, and rival powers tried unsuccessfully to copy the material.",
+            "expectedClassification": "definition"
+        },
+        {
+            "id": "wiki-filioque-0",
+            "content": "Filioque, a Latin term meaning \"and from the Son\", was added to the original Nicene Creed, and has been the subject of great controversy between Eastern and Western Christianity. The term refers to the Son, Jesus Christ, with the Father, as the one shared origin of the Holy Spirit. It is not in the original text of the Creed, attributed to the First Council of Constantinople (381), which says that the Holy Spirit proceeds \"from the Father\" without the addition \"and the Son\".",
+            "expectedClassification": "concept"
+        },
+        {
+            "id": "wiki-theodora_(wife_of_justinian_i)-0",
+            "content": "Theodora was Eastern Roman empress and wife of emperor Justinian I. She was of humble origins and became empress when her husband became emperor in 527. Theodora was one of his chief political advisers. She is recognized as a saint in the Oriental Orthodox Churches, and commemorated on 14 November.",
+            "expectedClassification": "concept"
+        },
+        {
+            "id": "wiki-byzantine_art-0",
+            "content": "Byzantine art comprises the body of artistic products of the Eastern Roman Empire, as well as the nations and states that inherited culturally from the empire. Though the empire itself emerged from the decline of western Rome and lasted until the Fall of Constantinople in 1453, the start date of the Byzantine period is rather clearer in art history than in political history, if still imprecise. Many Eastern Orthodox states in Eastern Europe, as well as to some degree the Islamic states of the eastern Mediterranean, preserved many aspects of the empire's culture and art for centuries afterward.",
+            "expectedClassification": "concept"
+        },
+        {
+            "id": "wiki-byzantine_music-0",
+            "content": "Byzantine music originally consisted of the songs and hymns composed for the courtly and religious ceremonial of the Byzantine Empire and continued, after the fall of Constantinople in 1453, in the traditions of the sung Byzantine chant of Eastern Orthodox liturgy. The ecclesiastical forms of Byzantine music are the best known forms today, because different Orthodox traditions still identify with the heritage of Byzantine music, when their cantors sing monodic chant out of the traditional chant books such as the Sticherarion and the Irmologion.",
+            "expectedClassification": "reference"
+        },
+        {
+            "id": "wiki-byzantine_navy-0",
+            "content": "The Byzantine navy was the naval force of the Byzantine Empire. Like the state it served, it was a direct continuation from its Roman predecessor, but played a far greater role in the defence and survival of the state than its earlier iteration. While the fleets of the Roman Empire faced few great naval threats, operating as a policing force vastly inferior in power and prestige to the army, command of the sea became vital to the very existence of the Byzantine state, which several historians have called a \"maritime empire\".",
+            "expectedClassification": "fact"
+        },
+        {
+            "id": "wiki-walls_of_constantinople-0",
+            "content": "The walls of Constantinople are a series of defensive stone walls that have surrounded and protected the city of Constantinople since its founding as the new capital of the Roman Empire by Constantine the Great. With numerous additions and modifications during their history, they were the last great fortification system of antiquity, and one of the most complex and elaborate systems ever built.",
+            "expectedClassification": "reference"
+        },
+        {
+            "id": "wiki-siege_of_constantinople_(717–718)-0",
+            "content": "In 717–718, Constantinople, the capital of the Byzantine Empire, was besieged by the Muslim Arabs of the Umayyad Caliphate. The campaign marked the culmination of twenty years of attacks and progressive Arab occupation of the Byzantine borderlands, while Byzantine strength was sapped by prolonged internal turmoil. In 716, after years of preparations, the Arabs, led by Maslama ibn Abd al-Malik, invaded Byzantine Asia Minor. The Arabs initially hoped to exploit Byzantine civil strife and made common cause with the general Leo III the Isaurian, who had risen up against Emperor Theodosius III. Leo, however, deceived them and secured the Byzantine throne for himself.",
+            "expectedClassification": "fact"
+        },
+        {
+            "id": "wiki-byzantine_medicine-0",
+            "content": "Byzantine medicine encompasses the common medical practices of the Byzantine Empire from c. 400 AD to 1453 AD. Byzantine medicine was notable for building upon the knowledge base developed by its Greco-Roman predecessors. In preserving medical practices from antiquity, Byzantine medicine influenced Islamic medicine and fostered the Western rebirth of medicine during the Renaissance. The concept of the hospital appeared in Byzantine Empire as an institution to offer medical care and possibility of a cure for the patients because of the ideals of Christian charity.",
+            "expectedClassification": "reference"
+        },
+        {
+            "id": "wiki-macedonian_dynasty-0",
+            "content": "The Macedonian dynasty ruled the Byzantine Empire from 867 to 1056, following the Amorian dynasty. During this period, the Byzantine state reached its greatest extent since the early Muslim conquests, and the Macedonian Renaissance in letters and arts began. The dynasty was named after its founder, Basil I the Macedonian, who came from the theme of Macedonia in the region of Thrace.",
+            "expectedClassification": "concept"
+        },
+        {
+            "id": "wiki-latin_empire-0",
+            "content": "The Latin Empire, also referred to as the Latin Empire of Constantinople or the Constantinopolitan Empire, was a feudal Crusader state founded by the leaders of the Fourth Crusade on lands captured from the Byzantine Empire. The Latin Empire was intended to replace the Byzantine Empire as the Western-recognized Roman Empire in the east, with a Catholic emperor enthroned in place of the Eastern Orthodox Roman emperors. The main objective to form a Latin Empire was planned over the course of the Fourth Crusade, promoted by crusade leaders such as Boniface I of Montferrat, as well as the Republic of Venice.",
+            "expectedClassification": "fact"
+        },
+        {
+            "id": "wiki-constantinople-0",
+            "content": "Constantinople was a historical city located on the Bosporus, which served as the capital of the Roman, Byzantine, Latin, and Ottoman empires between its consecration in 330 and the formal abolition of the Ottoman sultanate in 1922. Constantinople was founded in 324, initially as New Rome, during the reign of Constantine the Great on the site of the existing settlement of Byzantium and in 330 became the capital of the Roman Empire. Following the collapse of the Western Roman Empire in the late 5th century, Constantinople remained the capital of the Eastern Roman Empire, the Latin Empire (1204–1261), and the Ottoman Empire (1453–1922). In the aftermath of the Turkish War of Independence, the Turkish capital moved to Ankara. The city was officially renamed Istanbul on 28 March 1930.",
+            "expectedClassification": "definition"
+        },
+        {
+            "id": "wiki-constantinople-1",
+            "content": "As of December 2025, it is the most populous city in Europe, with a population of more than 16 million residents, straddling the Bosporus Strait and lying in both Europe and Asia, and is the financial beneficiary of Turkey.",
+            "expectedClassification": "fact"
+        },
+        {
+            "id": "wiki-byzantine–sasanian_wars-0",
+            "content": "The Roman–Persian wars, also called the Roman–Iranian wars, took place between the Greco-Roman world and the Iranian world, beginning with the Roman Republic and the Parthian Empire in 54 BC and ending with the Byzantine and the Sasanian empires in 628 AD. While the conflict between the two civilizations did involve direct military engagements, a significant role was played by a plethora of vassal kingdoms and allied nomadic tribes, which served as buffer states or proxies for either side. Despite nearly seven centuries of hostility, the Roman–Persian wars had an entirely inconclusive outcome, as both the Byzantines and the Sasanians were attacked by the Rashidun Caliphate as part of the early Muslim conquests. The Rashidun offensives resulted in the collapse of the Sasanian Empire and largely confined the Byzantine Empire to Anatolia and southeastern Europe for the ensuing Arab–Byzantine wars.",
+            "expectedClassification": "fact"
+        },
+        {
+            "id": "wiki-ecumenical_patriarch_of_constantinople-0",
+            "content": "The Ecumenical Patriarch of Constantinople is the archbishop of Constantinople and primus inter pares among the heads of the several autocephalous churches that comprise the Eastern Orthodox Church. The ecumenical patriarch is regarded as the representative and spiritual leader of the Eastern Orthodox Christians worldwide. The term ecumenical in the title is a historical reference to the Ecumene, a Greek designation for the civilised world, i.e. the Roman Empire, and it stems from Canon 28 of the Council of Chalcedon.",
+            "expectedClassification": "definition"
+        },
+        {
+            "id": "wiki-byzantine_dress-0",
+            "content": "Byzantine dress changed considerably over the thousand years of the Empire, but was essentially conservative. The Byzantines liked colour and pattern, and made and exported very richly patterned cloth, especially Byzantine silk, woven and embroidered for the upper classes, and resist-dyed and printed for the lower. A different border or trimming round the edges was very common, and many single stripes down the body or around the upper arm are seen, often denoting class or rank. Taste for the middle and upper classes followed the latest fashions at the Imperial Court.",
+            "expectedClassification": "reference"
+        },
+        {
+            "id": "wiki-east–west_schism-0",
+            "content": "The East–West Schism, also known as the Great Schism or the Schism of 1054, is the break of communion between the Catholic Church and the Eastern Orthodox Church since 1054. A series of ecclesiastical differences, theological disputes and geopolitical tensions between the Greek East and Latin West preceded the formal split in 1054. Prominent among these were the procession of the Holy Spirit, whether leavened or unleavened bread should be used in the Eucharist, iconoclasm, the coronation of Charlemagne as emperor of the Romans in 800, the pope's claim to universal jurisdiction, and the place of the See of Constantinople in relation to the pentarchy. Although 1054 has become conventional, various scholars have proposed different dates for the Great Schism, including 1009, 1204, 1277, and 1484.",
+            "expectedClassification": "concept"
+        },
+        {
+            "id": "wiki-procopius-0",
+            "content": "Procopius of Caesarea was a prominent Byzantine Greek scholar and historian from Caesarea Maritima. Accompanying the Byzantine general Belisarius in Emperor Justinian's wars, Procopius became the principal historian of the 6th century, writing the History of the Wars, the Buildings, and the Secret History.",
+            "expectedClassification": "fact"
+        },
+        {
+            "id": "wiki-hippodrome_of_constantinople-0",
+            "content": "The Hippodrome of Constantinople was a circus that was the sporting and social centre of Constantinople, capital of the Eastern Roman Empire. Today it is a square in Istanbul, Turkey, known as Sultanahmet Square.",
+            "expectedClassification": "reference"
+        },
+        {
+            "id": "wiki-byzantine_senate-0",
+            "content": "The Byzantine senate or Eastern Roman senate was a continuation of the Roman Senate, established in the 4th century by Constantine I. It survived for centuries, but the senate's powers varied greatly during its history and gradually diminished until its eventual disappearance in the 13th century.",
+            "expectedClassification": "definition"
+        },
+        {
+            "id": "wiki-komnenian_restoration-0",
+            "content": "The Komnenian restoration (1081–1185) is the term used by historians to describe the military, financial, and territorial recovery of the Byzantine Empire under the Komnenian dynasty, from the accession of Alexios I Komnenos in 1081 to the death of Andronikos I Komnenos in 1185. At the onset of the reign of Alexios I, the empire was reeling from its defeat by the Seljuk Turks at the Battle of Manzikert in 1071. The empire was also being threatened by the Normans of Robert Guiscard, who were invading the Balkans from their base in southern Italy. All this occurred as the empire's military institution was in disarray and had grown increasingly reliant on mercenaries. Previous emperors had also squandered the large gold deposits of Constantinople, so the defense of the empire had broken down, and there were few troops to fill the gaps.",
+            "expectedClassification": "concept"
+        },
+        {
+            "id": "wiki-palaiologos-0",
+            "content": "The House of Palaiologos, also found in English-language literature as Palaeologus or Palaeologue, was a Byzantine Greek noble family that rose to power and produced the last and longest-ruling dynasty in the history of the Roman Empire. Their rule as Byzantine emperors lasted almost two hundred years, from 1259 to the fall of Constantinople in 1453.",
+            "expectedClassification": "fact"
+        },
+        {
+            "id": "wiki-byzantine_coinage-0",
+            "content": "Byzantine currency, money used in the Eastern Roman Empire after the fall of the West, consisted of mainly two types of coins: gold solidi and hyperpyra and a variety of clearly valued bronze coins. By the 15th century, the currency was issued only in debased silver stavrata and minor copper coins with no gold issue. The Byzantine Empire established and operated several mints throughout its history. Aside from the main metropolitan mint in the capital, Constantinople, a varying number of provincial mints were also established in other urban centres, especially during the 6th century.",
+            "expectedClassification": "reference"
+        },
+        {
+            "id": "wiki-heraclius-0",
+            "content": "Heraclius was Byzantine emperor from 610 to 641. His rise to power began in 608, when he and his father, Heraclius the Elder, the Exarch of Africa, led a revolt against the unpopular emperor Phocas.",
+            "expectedClassification": "fact"
+        },
+        {
+            "id": "supersession-manzikert-wrong",
+            "content": "The Battle of Manzikert in 1071 was fought between the Byzantine Empire and the Seljuk Turks. Emperor Romanos IV Diogenes led approximately 40,000 troops and was decisively defeated, losing half his army.",
+            "expectedClassification": "fact",
+            "supersessionGroup": "manzikert-casualties"
+        },
+        {
+            "id": "supersession-manzikert-correct",
+            "content": "The Battle of Manzikert (1071) between Emperor Romanos IV Diogenes and Sultan Alp Arslan resulted in a Byzantine defeat, but modern scholarship estimates Byzantine forces at 20,000-30,000, not the 40,000 often cited. The defeat was due more to desertions by Andronikos Doukas than battlefield losses.",
+            "expectedClassification": "fact",
+            "supersessionGroup": "manzikert-casualties"
+        },
+        {
+            "id": "supersession-hagia-wrong",
+            "content": "Hagia Sophia served as a mosque from 1453 until 1934, when it was converted into a museum by the Republic of Turkey under Ataturk's secularization reforms.",
+            "expectedClassification": "fact",
+            "supersessionGroup": "hagia-sophia-status"
+        },
+        {
+            "id": "supersession-hagia-correct",
+            "content": "Hagia Sophia served as a mosque from 1453 to 1934, then as a museum until July 2020, when it was reconverted into a mosque by a Turkish presidential decree. It remains an active mosque while also being open to tourists outside prayer times.",
+            "expectedClassification": "fact",
+            "supersessionGroup": "hagia-sophia-status"
+        },
+        {
+            "id": "related-silk-monopoly",
+            "content": "The Byzantine Empire held a strict monopoly on silk production in Europe from the 6th century onward. Emperor Justinian I allegedly sent two Nestorian monks to smuggle silkworm eggs from China hidden inside hollow bamboo canes around 552 CE, breaking China's ancient monopoly.",
+            "expectedClassification": "fact",
+            "relatedGroup": "silk-industry"
+        },
+        {
+            "id": "related-silk-guilds",
+            "content": "Byzantine silk production was managed by imperial guilds regulated under the Book of the Eparch (10th century). The guilds controlled every stage: raw silk purchase (metaxopratai), dyeing (katartarioi), and weaving (serikarioi). Purple silk was reserved exclusively for the imperial family.",
+            "expectedClassification": "reference",
+            "relatedGroup": "silk-industry"
+        },
+        {
+            "id": "related-silk-diplomacy",
+            "content": "Silk served as a key instrument of Byzantine diplomacy. Imperial silk garments were given as gifts to foreign rulers and ambassadors, functioning as both luxury items and symbols of Byzantine cultural superiority. The Liudprand of Cremona embassy accounts (968 CE) describe strict export controls on purple-dyed silk.",
+            "expectedClassification": "insight",
+            "relatedGroup": "silk-industry"
+        },
+        {
+            "id": "hard-bezant",
+            "content": "The Byzantine gold solidus (bezant) maintained nearly constant weight and purity (4.48g, 24 karats) for over 700 years from Constantine I (309 CE) until Emperor Constantine IX began debasement in 1034 CE. The nomisma histamenon eventually fell to 8 karats under Nikephoros III Botaneiates (1078-1081).",
+            "expectedClassification": "fact"
+        },
+        {
+            "id": "hard-varangian-guard",
+            "content": "The Varangian Guard was established around 988 CE when Prince Vladimir I of Kyiv sent 6,000 warriors to Emperor Basil II as part of a military alliance sealed by Vladimir's marriage to Basil's sister Anna. After the Norman Conquest of 1066, many Anglo-Saxon nobles joined the Guard, eventually becoming its dominant contingent.",
+            "expectedClassification": "fact"
+        },
+        {
+            "id": "hard-themes",
+            "content": "The Theme system replaced the late Roman provincial structure beginning under Emperor Heraclius (610-641) or possibly Constans II (641-668). The original four themes were Anatolikon, Armeniakon, Opsikion, and the naval Karabisianoi. Each theme was governed by a strategos who held both military and civil authority, fundamentally different from the Roman separation of powers.",
+            "expectedClassification": "definition"
+        },
+        {
+            "id": "hard-iconoclasm-dates",
+            "content": "Byzantine Iconoclasm had two distinct phases: the First Iconoclasm (726-787 CE) initiated by Emperor Leo III the Isaurian and ended by the Second Council of Nicaea under Empress Irene; the Second Iconoclasm (814-842 CE) began under Emperor Leo V the Armenian and ended definitively on the first Sunday of Lent 843 CE, now celebrated as the Feast of Orthodoxy.",
+            "expectedClassification": "fact"
+        },
+        {
+            "id": "hard-greek-fire",
+            "content": "Greek fire was invented around 672 CE, traditionally attributed to Kallinikos, a refugee from Heliopolis (modern Baalbek, Lebanon). The exact composition remains unknown, but likely included naphtha, quicklime, sulfur, and possibly saltpeter. It was deployed through bronze siphons mounted on ship prows and could burn on water. Its use was decisive in repelling the Arab sieges of Constantinople in 674-678 and 717-718 CE.",
+            "expectedClassification": "reference"
+        },
+        {
+            "id": "hard-fourth-crusade",
+            "content": "The Fourth Crusade's sack of Constantinople in April 1204 was preceded by a complex chain of events: the crusaders diverted to Constantinople to support Alexios IV Angelos' claim to the throne, installed him as co-emperor, then attacked when he couldn't pay the promised 200,000 marks of silver. The resulting Latin Empire lasted only until 1261 when Michael VIII Palaiologos recaptured the city from Baldwin II.",
+            "expectedClassification": "fact"
+        },
+        {
+            "id": "hard-filioque",
+            "content": "The Filioque controversy centered on whether the Holy Spirit proceeds from the Father alone (Eastern position) or from the Father 'and the Son' (Filioque, Western position). The original Niceno-Constantinopolitan Creed of 381 CE stated 'proceeds from the Father.' The Filioque was first added at the Third Council of Toledo in 589 CE. It became a key factor in the Great Schism of 1054 when Cardinal Humbert excommunicated Patriarch Michael Cerularius.",
+            "expectedClassification": "concept"
+        },
+        {
+            "id": "howto-identify-coins",
+            "content": "To identify a Byzantine coin's era: examine the cross on the obverse — a simple cross suggests pre-7th century, a cross on steps indicates 7th-8th century, and Christ's portrait appears from the late 7th century onward. The reverse typically shows the emperor's title and regnal year in Greek numerals. Coins with facing portraits (rather than profile) generally date after Justinian II's second reign (705-711 CE).",
+            "expectedClassification": "how-to"
+        },
+        {
+            "id": "insight-bureaucracy",
+            "content": "The Byzantine Empire's longevity (over 1,100 years) owed much to its sophisticated bureaucratic system rather than military might alone. The civil service was merit-based with examinations, officials rotated to prevent local power bases, and the tax system (based on the Roman capitatio-iugatio) adapted remarkably to territorial losses. When the empire lost Anatolia after 1071, it was the collapse of the tax base — not the military defeat itself — that proved fatal.",
+            "expectedClassification": "insight"
+        },
+        {
+            "id": "theodora-political-influence",
+            "content": "Empress Theodora (c. 500–548 CE) wielded extraordinary political influence as co-ruler with Justinian I. A former actress from humble origins, she became one of the most powerful women in Byzantine history. During the Nika riots of 532, when Justinian considered fleeing Constantinople, Theodora's famous speech convinced him to stay and fight. She championed women's rights, closing forced prostitution houses and expanding divorce and property rights for women.",
+            "expectedClassification": "concept"
+        },
+        {
+            "id": "theodosian-walls",
+            "content": "The Theodosian Walls were built between 408-413 CE under Emperor Theodosius II. The triple-wall system stretched 6.5 kilometers across the peninsula, featuring an inner wall 5 meters thick and 12 meters high, an outer wall, and a 20-meter-wide moat. These walls successfully defended Constantinople for over a thousand years until the Ottoman siege of 1453 when Sultan Mehmed II breached them using massive cannons, particularly the great bombard built by the Hungarian engineer Orban.",
+            "expectedClassification": "reference"
+        },
+        {
+            "id": "byzantine-hospitals",
+            "content": "The Pantokrator monastery hospital complex in Constantinople, founded in 1136 by Emperor John II Komnenos, was one of the most advanced medical facilities in the medieval world. It had 50 beds divided into five specialized wards: surgical, ophthalmological, gynecological, and two for general ailments. The hospital employed a staff hierarchy including chief physicians, surgeons, female doctors for women's wards, pharmacists, and orderlies, establishing a model for institutional healthcare.",
+            "expectedClassification": "fact"
+        },
+        {
+            "id": "byzantine-sasanian-treaty",
+            "content": "The Eternal Peace of 532 CE between Emperor Justinian I and Khosrau I of Sassanid Persia ended decades of Roman-Persian conflict. Justinian agreed to pay 11,000 pounds of gold to secure his eastern frontier, freeing him to pursue reconquest of the western Mediterranean. The peace lasted only eight years before Khosrau broke it in 540 CE by sacking Antioch, one of the empire's wealthiest cities.",
+            "expectedClassification": "fact"
+        },
+        {
+            "id": "byzantine-717-siege",
+            "content": "The Arab siege of Constantinople in 717-718 CE was one of the most decisive battles in world history. The massive Arab fleet of over 1,800 ships and 120,000 troops besieged the city by land and sea. The Byzantines under Emperor Leo III used Greek fire to devastating effect against the Arab fleet, while a harsh winter and Bulgarian attacks on the Arab land forces led to catastrophic losses. The failed siege halted Arab expansion into Europe for centuries.",
+            "expectedClassification": "fact"
+        },
+        {
+            "id": "byzantine-education-system",
+            "content": "The University of Constantinople, refounded by Emperor Constantine IX Monomachos in 1045 CE, was organized into faculties of philosophy and law. The philosophy faculty was headed by Michael Psellos, one of the greatest Byzantine intellectuals. Unlike Western universities which were church-controlled, Byzantine higher education remained under imperial patronage and emphasized classical Greek literature, rhetoric, and Aristotelian philosophy alongside Christian theology.",
+            "expectedClassification": "concept"
+        },
+        {
+            "id": "byzantine-hippodrome-factions",
+            "content": "The Hippodrome of Constantinople was far more than a chariot racing venue — it was the center of Byzantine political life. The four racing factions (Blues, Greens, Reds, and Whites) evolved into powerful political parties. The Blues generally represented the aristocratic and orthodox faction, while the Greens drew support from merchants and monophysites. The emperor's appearance in the imperial box (kathisma) was a key ritual of imperial legitimacy, and crowd reactions served as a form of public opinion polling.",
+            "expectedClassification": "concept"
+        },
+        {
+            "id": "byzantine-diplomacy-methods",
+            "content": "Byzantine diplomacy was arguably the most sophisticated in the medieval world. The empire maintained a dedicated bureau of barbarians (the Office of Barbarians) to manage foreign relations, employing translators, intelligence agents, and protocol experts. Key tactics included strategic marriages of imperial princesses to foreign rulers, subsidies and tribute payments to buy peace, playing rival neighbors against each other, and converting foreign peoples to Orthodox Christianity to create cultural allies.",
+            "expectedClassification": "reference"
+        },
+        {
+            "id": "heraclius-reforms",
+            "content": "Emperor Heraclius (r. 610-641 CE) transformed the Byzantine Empire after defeating the Sasanian Persians in 628 CE. He replaced Latin with Greek as the official language of administration, adopted the Greek title Basileus instead of the Latin Augustus, and began reorganizing provinces into military themes. His reign marked the transition from a late Roman to a distinctly medieval Greek state, though his final years were overshadowed by the catastrophic Arab conquests that stripped away Syria, Egypt, and North Africa.",
+            "expectedClassification": "fact"
+        }
+    ],
+    "questions": [
+        {
+            "id": "q-manzikert-forces",
+            "question": "How many troops did Emperor Romanos IV have at the Battle of Manzikert, and what was the main cause of defeat?",
+            "expectedAnswer": "Modern scholarship estimates Byzantine forces at 20,000-30,000 (not 40,000). The defeat was primarily caused by the desertion of Andronikos Doukas, not battlefield losses.",
+            "requiredEntryIds": ["supersession-manzikert-correct"],
+            "excludedEntryIds": ["supersession-manzikert-wrong"],
+            "difficulty": "hard"
+        },
+        {
+            "id": "q-hagia-status",
+            "question": "What is the current status of Hagia Sophia? When did it last change?",
+            "expectedAnswer": "Hagia Sophia is currently an active mosque, reconverted from a museum in July 2020 by Turkish presidential decree. It is open to tourists outside prayer times.",
+            "requiredEntryIds": ["supersession-hagia-correct"],
+            "excludedEntryIds": ["supersession-hagia-wrong"],
+            "difficulty": "medium"
+        },
+        {
+            "id": "q-silk-smuggle",
+            "question": "How did the Byzantine Empire acquire silkworm production capability, and who managed the industry?",
+            "expectedAnswer": "Justinian I sent two Nestorian monks to smuggle silkworm eggs from China in hollow bamboo canes around 552 CE. Production was managed by imperial guilds regulated under the Book of the Eparch: metaxopratai (raw silk), katartarioi (dyeing), and serikarioi (weaving).",
+            "requiredEntryIds": ["related-silk-monopoly", "related-silk-guilds"],
+            "excludedEntryIds": [],
+            "difficulty": "hard"
+        },
+        {
+            "id": "q-bezant-debasement",
+            "question": "When did the Byzantine gold solidus start being debased, and how far did it fall?",
+            "expectedAnswer": "The solidus maintained 4.48g at 24 karats for over 700 years until Constantine IX began debasement in 1034 CE. It fell to 8 karats under Nikephoros III Botaneiates (1078-1081).",
+            "requiredEntryIds": ["hard-bezant"],
+            "excludedEntryIds": [],
+            "difficulty": "hard"
+        },
+        {
+            "id": "q-varangian-origin",
+            "question": "When was the Varangian Guard established and what was the arrangement?",
+            "expectedAnswer": "Established around 988 CE when Prince Vladimir I of Kyiv sent 6,000 warriors to Emperor Basil II, as part of a military alliance sealed by Vladimir's marriage to Basil's sister Anna. After 1066, Anglo-Saxon nobles became the dominant contingent.",
+            "requiredEntryIds": ["hard-varangian-guard"],
+            "excludedEntryIds": [],
+            "difficulty": "hard"
+        },
+        {
+            "id": "q-theme-system",
+            "question": "What were the original four Byzantine themes and how did the strategos role differ from Roman governance?",
+            "expectedAnswer": "The four original themes were Anatolikon, Armeniakon, Opsikion, and the naval Karabisianoi. Each strategos held both military and civil authority, unlike the Roman separation of powers.",
+            "requiredEntryIds": ["hard-themes"],
+            "excludedEntryIds": [],
+            "difficulty": "hard"
+        },
+        {
+            "id": "q-iconoclasm-phases",
+            "question": "What were the exact dates of the two phases of Byzantine Iconoclasm?",
+            "expectedAnswer": "First Iconoclasm: 726-787 CE (Leo III to Second Council of Nicaea under Irene). Second Iconoclasm: 814-842 CE (Leo V to the Feast of Orthodoxy on the first Sunday of Lent 843 CE).",
+            "requiredEntryIds": ["hard-iconoclasm-dates"],
+            "excludedEntryIds": [],
+            "difficulty": "hard"
+        },
+        {
+            "id": "q-greek-fire-inventor",
+            "question": "Who invented Greek fire, where were they from, and when was it used decisively?",
+            "expectedAnswer": "Attributed to Kallinikos, a refugee from Heliopolis (modern Baalbek, Lebanon), around 672 CE. It was decisive in repelling Arab sieges of Constantinople in 674-678 and 717-718 CE.",
+            "requiredEntryIds": ["hard-greek-fire"],
+            "excludedEntryIds": [],
+            "difficulty": "hard"
+        },
+        {
+            "id": "q-fourth-crusade-payment",
+            "question": "How much did Alexios IV promise the crusaders, and when did the Latin Empire end?",
+            "expectedAnswer": "Alexios IV promised 200,000 marks of silver. The Latin Empire lasted from 1204 until 1261 when Michael VIII Palaiologos recaptured Constantinople from Baldwin II.",
+            "requiredEntryIds": ["hard-fourth-crusade"],
+            "excludedEntryIds": [],
+            "difficulty": "hard"
+        },
+        {
+            "id": "q-filioque-origin",
+            "question": "When was the Filioque clause first added to the Creed, and what role did it play in the Great Schism?",
+            "expectedAnswer": "First added at the Third Council of Toledo in 589 CE to the original 381 CE Niceno-Constantinopolitan Creed. In 1054, Cardinal Humbert excommunicated Patriarch Michael Cerularius, making it a key factor in the Great Schism.",
+            "requiredEntryIds": ["hard-filioque"],
+            "excludedEntryIds": [],
+            "difficulty": "hard"
+        },
+        {
+            "id": "q-coin-dating",
+            "question": "How can you determine the era of a Byzantine coin from its imagery?",
+            "expectedAnswer": "Simple cross = pre-7th century, cross on steps = 7th-8th century, Christ's portrait = late 7th century onward. Facing portraits (not profile) generally date after Justinian II's second reign (705-711 CE).",
+            "requiredEntryIds": ["howto-identify-coins"],
+            "excludedEntryIds": [],
+            "difficulty": "hard"
+        },
+        {
+            "id": "q-empire-longevity",
+            "question": "What was more important to the Byzantine Empire's longevity — military or bureaucracy?",
+            "expectedAnswer": "The bureaucratic system was more important: merit-based civil service with examinations, rotating officials, and an adaptable tax system. After 1071, it was the collapse of the tax base from losing Anatolia, not the military defeat itself, that proved fatal.",
+            "requiredEntryIds": ["insight-bureaucracy"],
+            "excludedEntryIds": [],
+            "difficulty": "medium"
+        },
+        {
+            "id": "q-silk-diplomacy",
+            "question": "How was silk used in Byzantine diplomacy?",
+            "expectedAnswer": "Silk garments were given as gifts to foreign rulers as luxury items and symbols of cultural superiority. Purple-dyed silk had strict export controls, as documented in Liudprand of Cremona's embassy accounts (968 CE).",
+            "requiredEntryIds": ["related-silk-diplomacy"],
+            "excludedEntryIds": [],
+            "difficulty": "hard"
+        },
+        {
+            "id": "q-justinian-legal",
+            "question": "What was the full name of Justinian's legal code and what did it contain?",
+            "expectedAnswer": "The Corpus Juris Civilis, which codified Roman law into a systematic collection including the Codex Justinianus, the Digest (Pandects), the Institutes, and the Novellae.",
+            "requiredEntryIds": [],
+            "excludedEntryIds": [],
+            "difficulty": "easy"
+        },
+        {
+            "id": "q-nika-riots",
+            "question": "What triggered the Nika riots and how many people were killed?",
+            "expectedAnswer": "The Nika riots of 532 CE were triggered by public anger over taxes and the arrest of chariot racing faction members. Justinian nearly fled but Theodora convinced him to stay. General Belisarius trapped the rioters in the Hippodrome and killed an estimated 30,000 people.",
+            "requiredEntryIds": [],
+            "excludedEntryIds": [],
+            "difficulty": "medium"
+        },
+        {
+            "id": "q-theodora-role",
+            "question": "What role did Empress Theodora play during the Nika riots, and what were her social reforms?",
+            "expectedAnswer": "During the Nika riots of 532 CE, Empress Theodora delivered a famous speech convincing Justinian I not to flee Constantinople, which proved decisive in saving his reign. As co-ruler, she championed women's rights by closing forced prostitution houses and expanding divorce and property rights for women. She rose from humble origins as a former actress to become one of the most powerful women in Byzantine history.",
+            "requiredEntryIds": ["theodora-political-influence"],
+            "excludedEntryIds": [],
+            "difficulty": "medium"
+        },
+        {
+            "id": "q-theodosian-walls",
+            "question": "When were the Theodosian Walls built and how were they eventually breached?",
+            "expectedAnswer": "The Theodosian Walls were built between 408-413 CE under Emperor Theodosius II. The triple-wall system stretched 6.5 km with an inner wall 5 meters thick and 12 meters high, an outer wall, and a 20-meter-wide moat. They defended Constantinople for over a thousand years until 1453, when Ottoman Sultan Mehmed II breached them using massive cannons, particularly the great bombard built by Hungarian engineer Orban.",
+            "requiredEntryIds": ["theodosian-walls"],
+            "excludedEntryIds": [],
+            "difficulty": "medium"
+        },
+        {
+            "id": "q-pantokrator-hospital",
+            "question": "Describe the Pantokrator monastery hospital and its significance in medical history.",
+            "expectedAnswer": "The Pantokrator monastery hospital in Constantinople was founded in 1136 by Emperor John II Komnenos. It had 50 beds in five specialized wards (surgical, ophthalmological, gynecological, and two general). It employed chief physicians, surgeons, female doctors for women's wards, pharmacists, and orderlies. It was one of the most advanced medieval medical facilities and established a model for institutional healthcare.",
+            "requiredEntryIds": ["byzantine-hospitals"],
+            "excludedEntryIds": [],
+            "difficulty": "hard"
+        },
+        {
+            "id": "q-eternal-peace",
+            "question": "What was the Eternal Peace of 532, and how long did it last?",
+            "expectedAnswer": "The Eternal Peace of 532 CE was a treaty between Emperor Justinian I and Sassanid Persian King Khosrau I. Justinian paid 11,000 pounds of gold to secure the eastern frontier, freeing resources for his western reconquest campaigns. Despite its name, it lasted only eight years — Khosrau broke it in 540 CE by sacking Antioch, one of the empire's wealthiest cities.",
+            "requiredEntryIds": ["byzantine-sasanian-treaty"],
+            "excludedEntryIds": [],
+            "difficulty": "hard"
+        },
+        {
+            "id": "q-717-siege",
+            "question": "How was the Arab siege of Constantinople in 717-718 defeated?",
+            "expectedAnswer": "The Arab siege of 717-718 CE involved over 1,800 ships and 120,000 troops. Emperor Leo III used Greek fire to destroy much of the Arab fleet. A harsh winter decimated the besieging forces, and Bulgarian attacks on the Arab land army compounded their losses. The failed siege was one of the most decisive battles in world history, halting Arab expansion into Europe for centuries.",
+            "requiredEntryIds": ["byzantine-717-siege"],
+            "excludedEntryIds": [],
+            "difficulty": "hard"
+        },
+        {
+            "id": "q-basil-ii",
+            "question": "What military achievements made Basil II known as 'the Bulgar Slayer'?",
+            "expectedAnswer": "Basil II earned the epithet 'Bulgar Slayer' (Boulgaroktonos) for his decisive campaigns against the Bulgarian Empire. After the Battle of Kleidion in 1014, he allegedly blinded 99 out of every 100 captured Bulgarian soldiers, sending them back led by the hundredth who was left with one eye. This led to the complete conquest of Bulgaria by 1018, expanding the Byzantine Empire to its greatest territorial extent since Justinian I.",
+            "requiredEntryIds": [],
+            "excludedEntryIds": [],
+            "difficulty": "hard"
+        },
+        {
+            "id": "q-byzantine-navy",
+            "question": "What was the role of the Byzantine navy and what technology gave it an advantage?",
+            "expectedAnswer": "The Byzantine navy was crucial for defending Constantinople and controlling Mediterranean trade routes. Its primary technological advantage was Greek fire, a napalm-like incendiary weapon deployed through pressurized siphons mounted on warships called dromons. The navy played decisive roles in the Arab sieges of Constantinople (674-678 and 717-718) and maintained Byzantine control of the Aegean Sea for centuries.",
+            "requiredEntryIds": [],
+            "excludedEntryIds": [],
+            "difficulty": "medium"
+        },
+        {
+            "id": "q-latin-empire",
+            "question": "What was the Latin Empire and how did it affect Byzantine civilization?",
+            "expectedAnswer": "The Latin Empire (1204-1261) was a Crusader state established after the Fourth Crusade's sack of Constantinople. It replaced Byzantine governance with Western feudal structures and Catholic ecclesiastical authority. The Latin occupation weakened Constantinople's defenses, depleted its wealth and art treasures, and permanently damaged the empire's ability to recover. Michael VIII Palaiologos recaptured the city in 1261, but the restored Byzantine Empire never regained its former strength.",
+            "requiredEntryIds": [],
+            "excludedEntryIds": [],
+            "difficulty": "medium"
+        }
+    ]
+}

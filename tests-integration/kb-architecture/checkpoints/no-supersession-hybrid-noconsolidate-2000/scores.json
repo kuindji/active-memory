@@ -1,0 +1,202 @@
+{
+    "phase": 5,
+    "config": "no-supersession-hybrid-noconsolidate-2000",
+    "timestamp": "2026-04-03T18:58:27.910Z",
+    "durationMs": 223999.0603339998,
+    "status": "success",
+    "data": {
+        "entries": [
+            {
+                "questionId": "q-manzikert-forces",
+                "score": 4,
+                "reasoning": "Correctly identifies both key points (modern 20,000-30,000 estimate vs. outdated 40,000 figure, and Andronikos Doukas desertion as primary cause) with appropriate historiographical context, though the added political analysis goes slightly beyond the stated ground truth.",
+                "contextRelevance": 1,
+                "contextNoise": 0.875,
+                "supersessionCorrect": false
+            },
+            {
+                "questionId": "q-hagia-status",
+                "score": 5,
+                "reasoning": "Answer correctly identifies Hagia Sophia as an active mosque reconverted in July 2020, mentions tourist access outside prayer times, and provides comprehensive historical context with no inaccuracies.",
+                "contextRelevance": 1,
+                "contextNoise": 0.8571428571428571,
+                "supersessionCorrect": true
+            },
+            {
+                "questionId": "q-silk-smuggle",
+                "score": 5,
+                "reasoning": "Answer accurately includes all key facts: Justinian I, 552 CE, two Nestorian monks, hollow bamboo canes, Book of the Eparch, and the three guilds (metaxopratai, katartarioi, serikarioi) with correct descriptions of their functions.",
+                "contextRelevance": 1,
+                "contextNoise": 0.75,
+                "supersessionCorrect": true
+            },
+            {
+                "questionId": "q-bezant-debasement",
+                "score": 5,
+                "reasoning": "All key facts match perfectly: Constantine IX initiated debasement in 1034 CE after 700+ years of stability at 4.48g/24 karats, falling to 8 karats under Nikephoros III (1078-1081), with correctly calculated 66% loss in purity; additional context strengthens the answer.",
+                "contextRelevance": 1,
+                "contextNoise": 0.8571428571428571,
+                "supersessionCorrect": true
+            },
+            {
+                "questionId": "q-varangian-origin",
+                "score": 5,
+                "reasoning": "Answer correctly covers all ground truth elements (988 CE establishment, Vladimir's 6,000 warriors, marriage to Anna, post-1066 Anglo-Saxon dominance) and adds well-sourced contextual detail about their strategic role as politically-neutral elite guards.",
+                "contextRelevance": 1,
+                "contextNoise": 0.8571428571428571,
+                "supersessionCorrect": true
+            },
+            {
+                "questionId": "q-theme-system",
+                "score": 5,
+                "reasoning": "Answer correctly identifies all four original themes and accurately explains the strategos' dual military-civil authority as a departure from Roman separation of powers, with comprehensive historical context.",
+                "contextRelevance": 1,
+                "contextNoise": 0.8571428571428571,
+                "supersessionCorrect": true
+            },
+            {
+                "questionId": "q-iconoclasm-phases",
+                "score": 5,
+                "reasoning": "The answer correctly provides all exact dates (726-787 CE and 814-843 CE), accurate emperors, key councils/events, and additional contextual detail about the Feast of Orthodoxy that aligns with the ground truth.",
+                "contextRelevance": 1,
+                "contextNoise": 0.8571428571428571,
+                "supersessionCorrect": true
+            },
+            {
+                "questionId": "q-greek-fire-inventor",
+                "score": 5,
+                "reasoning": "Answer correctly identifies Kallinikos from Heliopolis around 672 CE and accurately cites decisive use in Arab sieges of Constantinople 674-678 and 717-718 CE, with comprehensive supporting details on composition, deployment, and strategic impact.",
+                "contextRelevance": 1,
+                "contextNoise": 0.8571428571428571,
+                "supersessionCorrect": true
+            },
+            {
+                "questionId": "q-fourth-crusade-payment",
+                "score": 5,
+                "reasoning": "Accurately states both required facts (200,000 marks of silver and 1261 end date with Michael VIII's recapture) and enhances with well-contextualized historical detail about Alexios IV's other promises, political instability, and the Latin Empire's weakness.",
+                "contextRelevance": 0,
+                "contextNoise": 1,
+                "supersessionCorrect": true
+            },
+            {
+                "questionId": "q-filioque-origin",
+                "score": 5,
+                "reasoning": "Answer contains all core facts (Third Council of Toledo 589 CE, 381 CE original creed, 1054 schism, Cardinal Humbert/Patriarch Cerularius) with accurate detail, good structure, and helpful theological context.",
+                "contextRelevance": 1,
+                "contextNoise": 0.8571428571428571,
+                "supersessionCorrect": true
+            },
+            {
+                "questionId": "q-coin-dating",
+                "score": 5,
+                "reasoning": "Answer correctly identifies all four primary dating markers from the expected answer (simple cross, cross on steps, Christ's portrait, facing portraits post-705 CE) with accurate dates and adds well-integrated supporting details about reverse elements and analytical framework.",
+                "contextRelevance": 1,
+                "contextNoise": 0.8571428571428571,
+                "supersessionCorrect": true
+            },
+            {
+                "questionId": "q-empire-longevity",
+                "score": 4,
+                "reasoning": "Correct core thesis with strong supporting details (bureaucracy primacy, merit-based system, rotating officials, adaptive taxation, 1071 tax-base collapse), but hallucinated memory citations undermine credibility and 'examinations' is not explicitly mentioned despite merit-based system implying it.",
+                "contextRelevance": 1,
+                "contextNoise": 0.8571428571428571,
+                "supersessionCorrect": true
+            },
+            {
+                "questionId": "q-silk-diplomacy",
+                "score": 5,
+                "reasoning": "The answer correctly covers all ground truth elements (silk as diplomatic gift, cultural superiority symbol, purple-dyed silk export controls, Liudprand 968 CE) while adding well-documented historical detail about imperial guild monopolies and production control that enriches the explanation without introducing inaccuracies.",
+                "contextRelevance": 1,
+                "contextNoise": 0.875,
+                "supersessionCorrect": true
+            },
+            {
+                "questionId": "q-justinian-legal",
+                "score": 5,
+                "reasoning": "The answer correctly identifies the Corpus Juris Civilis and comprehensively lists all four components (Codex, Digest/Pandects, Institutes, Novellae) with accurate, well-organized explanations that exceed the expected answer's specificity.",
+                "contextRelevance": 1,
+                "contextNoise": 1,
+                "supersessionCorrect": true
+            },
+            {
+                "questionId": "q-nika-riots",
+                "score": 3,
+                "reasoning": "Correctly identifies chariot faction tensions and taxation as triggers, accurately describes Theodora's role, but omits General Belisarius and the Hippodrome specifics, and vaguely states 'tens of thousands' rather than the precise '30,000' figure.",
+                "contextRelevance": 1,
+                "contextNoise": 1,
+                "supersessionCorrect": true
+            },
+            {
+                "questionId": "q-theodora-role",
+                "score": 5,
+                "reasoning": "Actual answer correctly covers all key points from expected answer (532 CE timing, famous speech preventing Justinian's flight, co-ruler status, women's rights reforms including prostitution houses, divorce and property rights, humble actress origins, status as powerful Byzantine woman) with well-organized structure and substantial supporting detail.",
+                "contextRelevance": 1,
+                "contextNoise": 0.875,
+                "supersessionCorrect": true
+            },
+            {
+                "questionId": "q-theodosian-walls",
+                "score": 5,
+                "reasoning": "The answer is comprehensive and accurate: all construction dates, dimensions, defensive duration, breach date, and key figures (Theodosius II, Mehmed II, Orban) match the expected answer with no factual errors or omissions.",
+                "contextRelevance": 1,
+                "contextNoise": 0.875,
+                "supersessionCorrect": true
+            },
+            {
+                "questionId": "q-pantokrator-hospital",
+                "score": 5,
+                "reasoning": "Answer is accurate on all key facts (founding date, emperor, bed count, five wards, all staff roles), comprehensive in organization and analysis, and adds valuable historical context without errors.",
+                "contextRelevance": 1,
+                "contextNoise": 0.875,
+                "supersessionCorrect": true
+            },
+            {
+                "questionId": "q-eternal-peace",
+                "score": 4,
+                "reasoning": "Comprehensive and accurate on all key points (treaty parties, 11,000 pounds of gold, eight-year duration, resource reallocation for western campaigns), with additional valuable context, but lacks the specific detail about Khosrau sacking Antioch in 540 as the treaty's breaking point.",
+                "contextRelevance": 0,
+                "contextNoise": 1,
+                "supersessionCorrect": true
+            },
+            {
+                "questionId": "q-717-siege",
+                "score": 4,
+                "reasoning": "Covers all major factors (Greek fire, harsh winter, Bulgarian attacks, historical significance) with good detail and organization, but omits the specific troop count (120,000) mentioned in the expected answer.",
+                "contextRelevance": 1,
+                "contextNoise": 0.875,
+                "supersessionCorrect": true
+            },
+            {
+                "questionId": "q-basil-ii",
+                "score": 3,
+                "reasoning": "Correctly identifies the epithet, major campaigns (986-1018), Battle of Kleidion (1014), and conquest completion (1018), but omits the specific \"99 out of 100\" blinding detail with one-eyed guide and fails to mention the expansion to greatest extent since Justinian I.",
+                "contextRelevance": 1,
+                "contextNoise": 1,
+                "supersessionCorrect": true
+            },
+            {
+                "questionId": "q-byzantine-navy",
+                "score": 4,
+                "reasoning": "The answer correctly identifies the Byzantine navy's crucial defensive and trade-protection roles, accurately describes Greek fire's technology and devastating effect, and establishes its strategic dominance, but omits specific terminology (dromons, pressurized siphons) and the precise historical sieges (674-678, 717-718) mentioned in the expected answer.",
+                "contextRelevance": 1,
+                "contextNoise": 1,
+                "supersessionCorrect": true
+            },
+            {
+                "questionId": "q-latin-empire",
+                "score": 4,
+                "reasoning": "Comprehensive and accurate on the Latin Empire's definition, timeframe, and major impacts (religious, cultural, political), but omits the specific name Michael VIII Palaiologos and doesn't explicitly mention the plundering of wealth and art treasures mentioned in the expected answer.",
+                "contextRelevance": 1,
+                "contextNoise": 1,
+                "supersessionCorrect": true
+            }
+        ],
+        "avgScore": 4.565217391304348,
+        "avgTime": 12.037664902086977,
+        "qualityPerSecond": 0.37924443224141197,
+        "contextRelevance": 0.9130434782608695,
+        "contextNoise": 0.9006211180124224,
+        "supersessionAccuracy": 0.9565217391304348,
+        "classificationAccuracy": 0.5384615384615384
+    }
+}
