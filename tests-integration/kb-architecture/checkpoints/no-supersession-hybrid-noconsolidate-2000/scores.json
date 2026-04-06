@@ -1,146 +1,146 @@
 {
-  "phase": 5,
-  "config": "no-supersession-hybrid-noconsolidate-2000",
-  "timestamp": "2026-04-06T10:27:08.749Z",
-  "durationMs": 176432.00145899993,
-  "status": "success",
-  "data": {
-    "entries": [
-      {
-        "questionId": "q-what-is-thefloorr",
-        "score": 5,
-        "reasoning": "Answer is correct and comprehensive, covering all ground truth elements (luxury styling platform, no direct product sales, affiliate commission model, revenue sharing with stylists) while adding substantial accurate detail about commission splits, unmatched orders, and affiliate payment mechanics.",
-        "contextRelevance": 0,
-        "contextNoise": 1,
-        "supersessionCorrect": true
-      },
-      {
-        "questionId": "q-affiliate-networks",
-        "score": 1,
-        "reasoning": "The answer correctly identifies that the information is unavailable in the retrieved context, but provides zero of the four required network names (Rakuten, Commission Junction, Partnerize, ProductsUp) and instead discusses generic affiliate operations, completely failing to answer the specific question.",
-        "contextRelevance": 0,
-        "contextNoise": 1,
-        "supersessionCorrect": true
-      },
-      {
-        "questionId": "q-what-is-moodboard",
-        "score": 1,
-        "reasoning": "The answer admits lacking direct information and provides speculative inference rather than factual knowledge, missing all specific details about public/private status, sharing capabilities, template usage, and catalogue products with notes.",
-        "contextRelevance": 0,
-        "contextNoise": 1,
-        "supersessionCorrect": true
-      },
-      {
-        "questionId": "q-how-stylist-earns",
-        "score": 3,
-        "reasoning": "Correctly explains the 80/20 split and affiliate network verification process with good procedural detail, but omits how referrals are generated (Moodboards/trackable links), fails to mention that commission rates vary by retailer and item type, and doesn't specify the customer must purchase at the retailer's website via the tracked link.",
-        "contextRelevance": 0,
-        "contextNoise": 1,
-        "supersessionCorrect": true
-      },
-      {
-        "questionId": "q-payment-delayed",
-        "score": 2,
-        "reasoning": "Answer correctly identifies pending network confirmation and return recalculation but omits 4 of 6 major causes: network payment to TheFloorr, admin system approval, Revolut batching, and in-progress transfers.",
-        "contextRelevance": 0,
-        "contextNoise": 1,
-        "supersessionCorrect": true
-      },
-      {
-        "questionId": "q-partial-return",
-        "score": 3,
-        "reasoning": "Correctly explains item-level accounting and commission impact, but misses key expected details: the gross/net sale amount distinction (gross stays same, net decreases), and the 'mixed' order status outcome.",
-        "contextRelevance": 0,
-        "contextNoise": 1,
-        "supersessionCorrect": true
-      },
-      {
-        "questionId": "q-attribution",
-        "score": 4,
-        "reasoning": "Answer correctly explains attribution as purchase-to-link connection and commission distribution impact, covers all expected points, but adds specifics (80% split) not in ground truth while being otherwise comprehensive and well-structured.",
-        "contextRelevance": 0,
-        "contextNoise": 1,
-        "supersessionCorrect": true
-      },
-      {
-        "questionId": "q-order-statuses",
-        "score": 2,
-        "reasoning": "Correctly identifies affiliate order statuses but misses the core architectural answer: three independent status dimensions (Affiliate, Internal, and Manual), specifically omitting Internal Order Status and Manual Status override—the expected answer's key insight.",
-        "contextRelevance": 0,
-        "contextNoise": 1,
-        "supersessionCorrect": true
-      },
-      {
-        "questionId": "q-return-after-payment",
-        "score": 2,
-        "reasoning": "Correctly identifies the deduction mechanism for post-payment returns, but reverses the stylist/TheFloorr commission split (stylist should get 40 pounds at 80%, TheFloorr 10 pounds, not vice versa), making all subsequent financial figures incorrect.",
-        "contextRelevance": 0,
-        "contextNoise": 1,
-        "supersessionCorrect": true
-      },
-      {
-        "questionId": "q-rakuten-vs-cj",
-        "score": 1,
-        "reasoning": "Vaguely addresses order handling and network processes but completely misses all three key specific differences (Rakuten approval-via-payment vs CJ approval flow, historical snapshots vs correction records, separate payment tables) and explicitly admits lack of TheFloorr-specific knowledge rather than providing the factual answer.",
-        "contextRelevance": 0,
-        "contextNoise": 1,
-        "supersessionCorrect": true
-      },
-      {
-        "questionId": "q-three-status-dimensions",
-        "score": 3,
-        "reasoning": "Correctly identifies and explains the three status types with appropriate examples and layering, but lacks the specific technical details about internal status calculation rules (all items returned → internally returned, closed/locked → approved, etc.) and the complete list of affiliate statuses from the expected answer.",
-        "contextRelevance": 0,
-        "contextNoise": 1,
-        "supersessionCorrect": true
-      },
-      {
-        "questionId": "q-deprecated-features",
-        "score": 2,
-        "reasoning": "Correctly identifies three deprecated features (Looks, Consultations, PSE direct communication) but entirely misses the critical naming convention deprecations (FRI, GPS renamed to PSE) and order status terminology change (rejected → returned), which constitute half the expected answer.",
-        "contextRelevance": 0.3333333333333333,
-        "contextNoise": 0.6666666666666666,
-        "supersessionCorrect": true
-      },
-      {
-        "questionId": "q-pse-payment-stages",
-        "score": 2,
-        "reasoning": "Captures initial order approval and final payout stages but misses critical middle stages: TheFloorr receiving payment from network, approved payment record creation, batching into Revolut drafts, draft state transitions (approved→created→sent→completed/failed), and VAT handling for UK registrants.",
-        "contextRelevance": 0,
-        "contextNoise": 1,
-        "supersessionCorrect": true
-      },
-      {
-        "questionId": "q-manual-adjustments",
-        "score": 2,
-        "reasoning": "Partially correct on network delays and edge cases, but misses explicit reasons: data import errors, reconciliation adjustments when payments don't match, and fails to specify what admins can override (internal status, payment statuses, commission amounts, stylist balance).",
-        "contextRelevance": 0,
-        "contextNoise": 1,
-        "supersessionCorrect": true
-      },
-      {
-        "questionId": "q-product-partitioning",
-        "score": 1,
-        "reasoning": "Answer acknowledges missing information rather than providing the expected specific technical details (16 partitions, 2 genders × 4 regions × 2 price types formula, regional pricing variation), making it vaguely related but factually incomplete on core question requirements.",
-        "contextRelevance": 0,
-        "contextNoise": 1,
-        "supersessionCorrect": true
-      },
-      {
-        "questionId": "q-return-flow-network",
-        "score": 2,
-        "reasoning": "Partially correct on commission adjustments but fundamentally misses the key mechanism: networks deduct refunds from FUTURE payments, not recalculate current payments before issuance, and fails to mention the pending status for post-payment returns.",
-        "contextRelevance": 0,
-        "contextNoise": 1,
-        "supersessionCorrect": true
-      }
-    ],
-    "avgScore": 2.25,
-    "avgTime": 13.514960539062503,
-    "qualityPerSecond": 0.16648217310711264,
-    "contextRelevance": 0.020833333333333332,
-    "contextNoise": 0.9791666666666666,
-    "supersessionAccuracy": 1,
-    "classificationAccuracy": 0.3783783783783784
-  }
+    "phase": 5,
+    "config": "no-supersession-hybrid-noconsolidate-2000",
+    "timestamp": "2026-04-06T10:27:08.749Z",
+    "durationMs": 176432.00145899993,
+    "status": "success",
+    "data": {
+        "entries": [
+            {
+                "questionId": "q-what-is-thefloorr",
+                "score": 5,
+                "reasoning": "Answer is correct and comprehensive, covering all ground truth elements (luxury styling platform, no direct product sales, affiliate commission model, revenue sharing with stylists) while adding substantial accurate detail about commission splits, unmatched orders, and affiliate payment mechanics.",
+                "contextRelevance": 0,
+                "contextNoise": 1,
+                "supersessionCorrect": true
+            },
+            {
+                "questionId": "q-affiliate-networks",
+                "score": 1,
+                "reasoning": "The answer correctly identifies that the information is unavailable in the retrieved context, but provides zero of the four required network names (Rakuten, Commission Junction, Partnerize, ProductsUp) and instead discusses generic affiliate operations, completely failing to answer the specific question.",
+                "contextRelevance": 0,
+                "contextNoise": 1,
+                "supersessionCorrect": true
+            },
+            {
+                "questionId": "q-what-is-moodboard",
+                "score": 1,
+                "reasoning": "The answer admits lacking direct information and provides speculative inference rather than factual knowledge, missing all specific details about public/private status, sharing capabilities, template usage, and catalogue products with notes.",
+                "contextRelevance": 0,
+                "contextNoise": 1,
+                "supersessionCorrect": true
+            },
+            {
+                "questionId": "q-how-stylist-earns",
+                "score": 3,
+                "reasoning": "Correctly explains the 80/20 split and affiliate network verification process with good procedural detail, but omits how referrals are generated (Moodboards/trackable links), fails to mention that commission rates vary by retailer and item type, and doesn't specify the customer must purchase at the retailer's website via the tracked link.",
+                "contextRelevance": 0,
+                "contextNoise": 1,
+                "supersessionCorrect": true
+            },
+            {
+                "questionId": "q-payment-delayed",
+                "score": 2,
+                "reasoning": "Answer correctly identifies pending network confirmation and return recalculation but omits 4 of 6 major causes: network payment to TheFloorr, admin system approval, Revolut batching, and in-progress transfers.",
+                "contextRelevance": 0,
+                "contextNoise": 1,
+                "supersessionCorrect": true
+            },
+            {
+                "questionId": "q-partial-return",
+                "score": 3,
+                "reasoning": "Correctly explains item-level accounting and commission impact, but misses key expected details: the gross/net sale amount distinction (gross stays same, net decreases), and the 'mixed' order status outcome.",
+                "contextRelevance": 0,
+                "contextNoise": 1,
+                "supersessionCorrect": true
+            },
+            {
+                "questionId": "q-attribution",
+                "score": 4,
+                "reasoning": "Answer correctly explains attribution as purchase-to-link connection and commission distribution impact, covers all expected points, but adds specifics (80% split) not in ground truth while being otherwise comprehensive and well-structured.",
+                "contextRelevance": 0,
+                "contextNoise": 1,
+                "supersessionCorrect": true
+            },
+            {
+                "questionId": "q-order-statuses",
+                "score": 2,
+                "reasoning": "Correctly identifies affiliate order statuses but misses the core architectural answer: three independent status dimensions (Affiliate, Internal, and Manual), specifically omitting Internal Order Status and Manual Status override—the expected answer's key insight.",
+                "contextRelevance": 0,
+                "contextNoise": 1,
+                "supersessionCorrect": true
+            },
+            {
+                "questionId": "q-return-after-payment",
+                "score": 2,
+                "reasoning": "Correctly identifies the deduction mechanism for post-payment returns, but reverses the stylist/TheFloorr commission split (stylist should get 40 pounds at 80%, TheFloorr 10 pounds, not vice versa), making all subsequent financial figures incorrect.",
+                "contextRelevance": 0,
+                "contextNoise": 1,
+                "supersessionCorrect": true
+            },
+            {
+                "questionId": "q-rakuten-vs-cj",
+                "score": 1,
+                "reasoning": "Vaguely addresses order handling and network processes but completely misses all three key specific differences (Rakuten approval-via-payment vs CJ approval flow, historical snapshots vs correction records, separate payment tables) and explicitly admits lack of TheFloorr-specific knowledge rather than providing the factual answer.",
+                "contextRelevance": 0,
+                "contextNoise": 1,
+                "supersessionCorrect": true
+            },
+            {
+                "questionId": "q-three-status-dimensions",
+                "score": 3,
+                "reasoning": "Correctly identifies and explains the three status types with appropriate examples and layering, but lacks the specific technical details about internal status calculation rules (all items returned → internally returned, closed/locked → approved, etc.) and the complete list of affiliate statuses from the expected answer.",
+                "contextRelevance": 0,
+                "contextNoise": 1,
+                "supersessionCorrect": true
+            },
+            {
+                "questionId": "q-deprecated-features",
+                "score": 2,
+                "reasoning": "Correctly identifies three deprecated features (Looks, Consultations, PSE direct communication) but entirely misses the critical naming convention deprecations (FRI, GPS renamed to PSE) and order status terminology change (rejected → returned), which constitute half the expected answer.",
+                "contextRelevance": 0.3333333333333333,
+                "contextNoise": 0.6666666666666666,
+                "supersessionCorrect": true
+            },
+            {
+                "questionId": "q-pse-payment-stages",
+                "score": 2,
+                "reasoning": "Captures initial order approval and final payout stages but misses critical middle stages: TheFloorr receiving payment from network, approved payment record creation, batching into Revolut drafts, draft state transitions (approved→created→sent→completed/failed), and VAT handling for UK registrants.",
+                "contextRelevance": 0,
+                "contextNoise": 1,
+                "supersessionCorrect": true
+            },
+            {
+                "questionId": "q-manual-adjustments",
+                "score": 2,
+                "reasoning": "Partially correct on network delays and edge cases, but misses explicit reasons: data import errors, reconciliation adjustments when payments don't match, and fails to specify what admins can override (internal status, payment statuses, commission amounts, stylist balance).",
+                "contextRelevance": 0,
+                "contextNoise": 1,
+                "supersessionCorrect": true
+            },
+            {
+                "questionId": "q-product-partitioning",
+                "score": 1,
+                "reasoning": "Answer acknowledges missing information rather than providing the expected specific technical details (16 partitions, 2 genders × 4 regions × 2 price types formula, regional pricing variation), making it vaguely related but factually incomplete on core question requirements.",
+                "contextRelevance": 0,
+                "contextNoise": 1,
+                "supersessionCorrect": true
+            },
+            {
+                "questionId": "q-return-flow-network",
+                "score": 2,
+                "reasoning": "Partially correct on commission adjustments but fundamentally misses the key mechanism: networks deduct refunds from FUTURE payments, not recalculate current payments before issuance, and fails to mention the pending status for post-payment returns.",
+                "contextRelevance": 0,
+                "contextNoise": 1,
+                "supersessionCorrect": true
+            }
+        ],
+        "avgScore": 2.25,
+        "avgTime": 13.514960539062503,
+        "qualityPerSecond": 0.16648217310711264,
+        "contextRelevance": 0.020833333333333332,
+        "contextNoise": 0.9791666666666666,
+        "supersessionAccuracy": 1,
+        "classificationAccuracy": 0.3783783783783784
+    }
 }
