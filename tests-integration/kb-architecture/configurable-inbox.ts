@@ -1,4 +1,5 @@
 // tests-integration/kb-architecture/configurable-inbox.ts
+import { StringRecordId } from "surrealdb";
 import type { OwnedMemory, DomainContext, ScoredMemory } from "../../src/core/types.js";
 import type { KbClassification } from "../../src/domains/kb/types.js";
 import { KB_TAG, KB_DOMAIN_ID, DECOMPOSITION_TOKEN_THRESHOLD } from "../../src/domains/kb/types.js";
@@ -131,6 +132,19 @@ export function createConfigurableInboxProcessor(stages: PipelineStages) {
                                     /* already related */
                                 }
                                 await context.tagMemory(entry.memory.id, classTagId);
+
+                                // Denormalize classification onto memory record for DB-level filtering
+                                try {
+                                    await context.graph.query(
+                                        "UPDATE $memId SET classification = $cls",
+                                        {
+                                            memId: new StringRecordId(entry.memory.id),
+                                            cls: classification,
+                                        },
+                                    );
+                                } catch {
+                                    /* best-effort denormalization */
+                                }
                             }
                         },
                         { entries: processableEntries.length },
@@ -150,7 +164,8 @@ export function createConfigurableInboxProcessor(stages: PipelineStages) {
                 if (stages.supersede) {
                     await context.debug.time(
                         "kb.inbox.supersessionDetection",
-                        () => batchDetectSupersession(processableEntries, classificationMap, context),
+                        () =>
+                            batchDetectSupersession(processableEntries, classificationMap, context),
                         { entries: processableEntries.length },
                     );
                 }
