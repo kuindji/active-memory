@@ -271,6 +271,46 @@ export function createKbDomain(options?: KbDomainOptions): DomainConfig {
             { name: "adaptiveContext", default: 1, min: 0, max: 1, step: 1 },
         ],
 
+        async bootstrap(context: DomainContext) {
+            // Backfill classification/topics from owned_by attributes for existing entries
+            const domainRef = new StringRecordId(`domain:${KB_DOMAIN_ID}`);
+            const rows = await context.graph.query<
+                Array<{ in: string; attributes: Record<string, unknown> }>
+            >(
+                `SELECT in, attributes FROM owned_by WHERE out = $domainId AND in.classification IS NONE`,
+                { domainId: domainRef },
+            );
+
+            if (!rows || rows.length === 0) return;
+
+            for (const row of rows) {
+                const cls = row.attributes?.classification as string | undefined;
+                if (!cls) continue;
+
+                const updates: Record<string, unknown> = { classification: cls };
+
+                // Try to get topics from about_topic edges
+                const topicRows = await context.graph.query<Array<{ content: string }>>(
+                    `SELECT (SELECT content FROM ONLY $parent.out).content AS content FROM about_topic WHERE in = $memId`,
+                    { memId: new StringRecordId(row.in) },
+                );
+                if (topicRows && topicRows.length > 0) {
+                    updates.topics = topicRows
+                        .map((t) => t.content)
+                        .filter((c) => typeof c === "string" && c.length > 0);
+                }
+
+                await context.graph.query(
+                    "UPDATE $memId SET classification = $cls, topics = $topics",
+                    {
+                        memId: new StringRecordId(row.in),
+                        cls: updates.classification,
+                        topics: updates.topics ?? [],
+                    },
+                );
+            }
+        },
+
         describe() {
             return "General-purpose knowledge base domain for storing domain-agnostic knowledge: facts, definitions, how-tos, technical references, concepts, and insights. A personal wiki not tied to any specific project or conversation.";
         },
