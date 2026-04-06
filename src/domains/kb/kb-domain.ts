@@ -233,7 +233,19 @@ export function createKbDomain(options?: KbDomainOptions): DomainConfig {
         name: "Knowledge Base",
         baseDir: dirname(fileURLToPath(import.meta.url)),
         schema: {
-            nodes: [],
+            nodes: [
+                {
+                    name: "memory",
+                    fields: [
+                        { name: "classification", type: "option<string>" },
+                        { name: "topics", type: "option<array<string>>" },
+                    ],
+                    indexes: [
+                        { name: "idx_memory_classification", fields: ["classification"] },
+                        { name: "idx_memory_topics", fields: ["topics"] },
+                    ],
+                },
+            ],
             edges: [
                 { name: "supersedes", from: "memory", to: "memory" },
                 {

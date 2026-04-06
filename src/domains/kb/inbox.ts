@@ -1,3 +1,4 @@
+import { StringRecordId } from "surrealdb";
 import type { OwnedMemory, DomainContext, ScoredMemory } from "../../core/types.js";
 import { KB_TAG, KB_DOMAIN_ID, DECOMPOSITION_TOKEN_THRESHOLD } from "./types.js";
 import type { KbClassification } from "./types.js";
@@ -112,6 +113,16 @@ export async function processInboxBatch(
                             /* already related */
                         }
                         await context.tagMemory(entry.memory.id, classTagId);
+
+                        // Denormalize classification onto memory record for DB-level filtering
+                        try {
+                            await context.graph.query("UPDATE $memId SET classification = $cls", {
+                                memId: new StringRecordId(entry.memory.id),
+                                cls: classification,
+                            });
+                        } catch {
+                            /* best-effort denormalization */
+                        }
                     }
                 },
                 { entries: processableEntries.length },

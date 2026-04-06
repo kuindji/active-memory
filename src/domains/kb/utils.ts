@@ -1,3 +1,4 @@
+import { StringRecordId } from "surrealdb";
 import type { DomainContext, LLMAdapter, OwnedMemory } from "../../core/types.js";
 import { TOPIC_TAG, TOPIC_DOMAIN_ID } from "../topic/types.js";
 import type { KbClassification, QueryIntent } from "./types.js";
@@ -185,10 +186,24 @@ export async function linkToTopicsBatch(
 
     for (const entry of entries) {
         const topicNames = topicsMap.get(entry.memory.id) ?? [];
+        const validTopics: string[] = [];
         for (const topicName of topicNames) {
             const trimmed = topicName.trim();
             if (!trimmed) continue;
             await linkSingleTopic(context, entry.memory.id, trimmed);
+            validTopics.push(trimmed);
+        }
+
+        // Denormalize topics onto memory record for DB-level filtering
+        if (validTopics.length > 0) {
+            try {
+                await context.graph.query("UPDATE $memId SET topics = $topics", {
+                    memId: new StringRecordId(entry.memory.id),
+                    topics: validTopics,
+                });
+            } catch {
+                /* best-effort denormalization */
+            }
         }
     }
 }
