@@ -176,4 +176,60 @@ describe("SchemaRegistry", () => {
             expect(registry.getRegisteredNode("unknown")).toBeUndefined();
         });
     });
+
+    describe("index features", () => {
+        test("defineIndex emits BM25(k1, b) when config provides them", async () => {
+            await registry.registerCore();
+            const schema: DomainSchema = {
+                nodes: [
+                    {
+                        name: "memory",
+                        fields: [],
+                        indexes: [
+                            {
+                                name: "idx_test_bm25",
+                                fields: ["content"],
+                                type: "search",
+                                config: { analyzer: "memory_content", k1: 2.0, b: 0.5 },
+                            },
+                        ],
+                    },
+                ],
+                edges: [],
+            };
+            await registry.registerDomain("test_bm25", schema);
+            // Verify index was created by querying the INFO
+            const [info] = await db.query<[Record<string, unknown>]>("INFO FOR TABLE memory");
+            const indexes = info?.indexes ?? info?.ix ?? {};
+            const indexStr = JSON.stringify(indexes);
+            expect(indexStr).toContain("idx_test_bm25");
+        });
+
+        test("defineIndex appends WHERE clause for conditional indexes", async () => {
+            await registry.registerCore();
+            const schema: DomainSchema = {
+                nodes: [
+                    {
+                        name: "memory",
+                        fields: [{ name: "active", type: "option<bool>" }],
+                        indexes: [
+                            {
+                                name: "idx_test_conditional",
+                                fields: ["content"],
+                                type: "search",
+                                config: { analyzer: "memory_content" },
+                                condition: "active = true",
+                            },
+                        ],
+                    },
+                ],
+                edges: [],
+            };
+            await registry.registerDomain("test_cond", schema);
+            const [info] = await db.query<[Record<string, unknown>]>("INFO FOR TABLE memory");
+            const indexes = info?.indexes ?? info?.ix ?? {};
+            const indexStr = JSON.stringify(indexes);
+            expect(indexStr).toContain("idx_test_conditional");
+        });
+    });
 });

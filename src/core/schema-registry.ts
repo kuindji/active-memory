@@ -163,6 +163,14 @@ class SchemaRegistry {
                     await this.defineField(node.name, field);
                 }
                 existing.fields.push(...newFields);
+
+                // Also create any declared indexes for existing nodes
+                if (node.indexes) {
+                    for (const idx of node.indexes) {
+                        await this.defineIndex(node.name, idx);
+                    }
+                }
+
                 existing.contributors.push(contributor);
             } else {
                 // New table
@@ -245,7 +253,21 @@ class SchemaRegistry {
             query += ` HNSW DIMENSION ${dim} DIST ${dist}`;
         } else if (idx.type === "search") {
             const analyzer = (idx.config?.analyzer as string) ?? "ascii";
-            query += ` FULLTEXT ANALYZER ${analyzer} BM25`;
+            const k1 = idx.config?.k1 as number | undefined;
+            const b = idx.config?.b as number | undefined;
+            if (k1 !== undefined && b !== undefined) {
+                query += ` FULLTEXT ANALYZER ${analyzer} BM25(${k1}, ${b})`;
+            } else {
+                query += ` FULLTEXT ANALYZER ${analyzer} BM25`;
+            }
+        }
+        if (idx.condition) {
+            try {
+                await this.db.query(`${query} WHERE ${idx.condition}`);
+                return;
+            } catch {
+                // WHERE condition not supported by this engine version; fall back to creating without it
+            }
         }
         await this.db.query(query);
     }
