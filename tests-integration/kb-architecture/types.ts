@@ -42,6 +42,7 @@ export interface ArchitectureConfig {
         tightenFilters?: boolean;
         embeddingRerank?: boolean;
         llmRerank?: boolean;
+        useQueryIntent?: boolean;
     };
 }
 

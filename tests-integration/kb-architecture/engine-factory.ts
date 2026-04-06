@@ -74,6 +74,9 @@ export async function createConfiguredEngine(config: ArchitectureConfig): Promis
         if (config.noiseReduction.llmRerank !== undefined) {
             overrides.llmRerank = config.noiseReduction.llmRerank ? 1 : 0;
         }
+        if (config.noiseReduction.useQueryIntent !== undefined) {
+            overrides.useQueryIntent = config.noiseReduction.useQueryIntent ? 1 : 0;
+        }
         if (Object.keys(overrides).length > 0) {
             await engine.saveTunableParams("kb", overrides);
         }

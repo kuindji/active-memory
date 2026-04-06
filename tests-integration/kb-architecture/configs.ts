@@ -180,4 +180,27 @@ export const configs: ArchitectureConfig[] = [
         contextBudget: 2000,
         noiseReduction: { tightenFilters: true, embeddingRerank: true, llmRerank: true },
     },
+    {
+        name: "intent-filtered",
+        pipeline: NO_SUPERSESSION_PIPELINE,
+        search: HYBRID_DEFAULT,
+        consolidate: false,
+        contextBudget: 2000,
+        noiseReduction: {
+            tightenFilters: true,
+            embeddingRerank: true,
+            useQueryIntent: true,
+        },
+    },
+    {
+        name: "intent-only",
+        pipeline: NO_SUPERSESSION_PIPELINE,
+        search: HYBRID_DEFAULT,
+        consolidate: false,
+        contextBudget: 2000,
+        noiseReduction: {
+            tightenFilters: true,
+            useQueryIntent: true,
+        },
+    },
 ];
