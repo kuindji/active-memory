@@ -261,10 +261,40 @@ export const ALL_CLASSIFICATIONS: KbClassification[] = [
 ];
 
 const QUERY_INTENT_PROMPT =
-    "Classify what type of knowledge answers this query. " +
-    "Types: definition, concept, fact, reference, how-to, insight. " +
-    'Return JSON: {"classifications": [...], "keywords": [...], "topic": "..."}\n\n' +
+    "Classify what type of knowledge best answers this query.\n\n" +
+    "Categories:\n" +
+    "- fact: Asks for a specific data point or verifiable statement\n" +
+    "- definition: Asks 'what IS something?' — wants a term or entity explained\n" +
+    "- how-to: Asks 'how do I do X?' — wants a step-by-step process\n" +
+    "- reference: Asks 'how does X work?' — wants system behavior, specs, or configuration details\n" +
+    "- concept: Asks about an abstract principle or mental model\n" +
+    "- insight: Asks for practical recommendations or lessons learned\n\n" +
+    "Return 1-3 most relevant categories, key search keywords, and an optional topic.\n\n" +
     "Query: ";
+
+const QUERY_INTENT_SCHEMA = JSON.stringify({
+    type: "object",
+    properties: {
+        classifications: {
+            type: "array",
+            items: {
+                type: "string",
+                enum: ["fact", "definition", "how-to", "reference", "concept", "insight"],
+            },
+            description: "1-3 most relevant knowledge categories for this query",
+        },
+        keywords: {
+            type: "array",
+            items: { type: "string" },
+            description: "Key search terms extracted from the query",
+        },
+        topic: {
+            type: "string",
+            description: "Main topic of the query, if identifiable",
+        },
+    },
+    required: ["classifications", "keywords"],
+});
 
 export async function classifyQueryIntent(text: string, llm: LLMAdapter): Promise<QueryIntent> {
     const fallback: QueryIntent = {
@@ -275,10 +305,45 @@ export async function classifyQueryIntent(text: string, llm: LLMAdapter): Promis
             .filter((w) => w.length > 2),
     };
 
+    if (llm.extractStructured) {
+        try {
+            const parsed = (await llm.extractStructured(
+                QUERY_INTENT_PROMPT + text,
+                QUERY_INTENT_SCHEMA,
+                "Classify the query intent.",
+            )) as unknown as {
+                classifications?: string[];
+                keywords?: string[];
+                topic?: string;
+            };
+
+            const validClassifications = (parsed.classifications ?? []).filter(
+                (c): c is KbClassification => VALID_CLASSIFICATIONS.has(c),
+            );
+
+            if (validClassifications.length === 0) return fallback;
+
+            return {
+                classifications: validClassifications,
+                keywords:
+                    Array.isArray(parsed.keywords) && parsed.keywords.length > 0
+                        ? parsed.keywords
+                        : fallback.keywords,
+                topic: parsed.topic || undefined,
+            };
+        } catch {
+            return fallback;
+        }
+    }
+
     if (!llm.generate) return fallback;
 
     try {
-        const response = await llm.generate(QUERY_INTENT_PROMPT + text);
+        const response = await llm.generate(
+            QUERY_INTENT_PROMPT +
+                text +
+                '\n\nReturn JSON: {"classifications": [...], "keywords": [...], "topic": "..."}',
+        );
         const match = response.match(/\{[\s\S]*\}/);
         if (!match) return fallback;
 

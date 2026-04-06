@@ -10,6 +10,11 @@ import {
 } from "./utils.js";
 import { countTokens } from "../../core/scoring.js";
 
+interface DecomposeResult {
+    processable: OwnedMemory[];
+    decomposedParents: OwnedMemory[];
+}
+
 function logKbInboxWarning(scope: string, error: unknown): void {
     const errorMessage = error instanceof Error ? error.message : String(error);
     console.warn(`[memory-domain warning] ${scope}: ${errorMessage}`);
@@ -25,13 +30,40 @@ const VALID_CLASSIFICATIONS = new Set<string>([
 ]);
 
 const BATCH_CLASSIFICATION_PROMPT =
-    "Classify each numbered item below into exactly one knowledge category:\n" +
-    '- fact: a verified, discrete piece of knowledge ("HTTP 429 means Too Many Requests")\n' +
-    '- definition: a term or concept definition ("Eventual consistency means...")\n' +
-    '- how-to: a procedural explanation or recipe ("To reset a PostgreSQL sequence...")\n' +
-    '- reference: a technical reference, specification, or standard ("RFC 7519 defines JWT...")\n' +
-    '- concept: an abstract idea, principle, or mental model ("The CAP theorem states...")\n' +
-    '- insight: a personal conclusion or learned lesson ("In practice, optimistic locking works better...")\n\n';
+    "Classify each numbered item into exactly one knowledge category.\n\n" +
+    "Categories:\n" +
+    "- fact: A specific, verifiable data point or business rule. " +
+    'Example: "TheFloorr uses Rakuten, CJ, Partnerize, and ProductsUp as affiliate networks."\n' +
+    "- definition: Explains WHAT something IS — defines a term, role, or entity. Answers 'what is X?' " +
+    'Example: "A PSE (Personal Shopper Entrepreneur) is a stylist who curates fashion for clients."\n' +
+    "- how-to: Step-by-step process, procedure, or recipe. Answers 'how do I do X?' " +
+    'Example: "To place an order: 1) select products, 2) generate a trackable link, 3) share with client."\n' +
+    "- reference: Describes how a system, feature, or specification WORKS — its structure, rules, " +
+    "configuration, or operational details. Answers 'how does X work?' " +
+    'Example: "Products are partitioned into 16 search indices by gender, region, and price type."\n' +
+    "- concept: An abstract principle, mental model, or framework for understanding. " +
+    'Example: "Attribution connects a purchase back to the stylist who generated the trackable link."\n' +
+    "- insight: A personal conclusion, learned lesson, or practical recommendation. " +
+    'Example: "In practice, most payment delays are caused by pending network approvals."\n\n' +
+    "KEY DISTINCTION: 'definition' answers 'what IS this thing?' while 'reference' answers " +
+    "'how does this thing WORK?' If the text describes system behavior, feature specs, rules, " +
+    "or configuration details, choose 'reference' not 'definition'.\n\n";
+
+const BATCH_CLASSIFICATION_SCHEMA = JSON.stringify({
+    type: "array",
+    items: {
+        type: "object",
+        properties: {
+            index: { type: "number", description: "Zero-based index of the item" },
+            classification: {
+                type: "string",
+                enum: ["fact", "definition", "how-to", "reference", "concept", "insight"],
+                description: "The knowledge category for this item",
+            },
+        },
+        required: ["index", "classification"],
+    },
+});
 
 const BATCH_SUPERSESSION_SCHEMA = JSON.stringify({
     type: "array",
@@ -72,7 +104,7 @@ export async function processInboxBatch(
         "kb.inbox.total",
         async () => {
             // Stage 0: Atomic Fact Decomposition
-            const processableEntries = await context.debug.time(
+            const { processable: processableEntries, decomposedParents } = await context.debug.time(
                 "kb.inbox.decompose",
                 () => decomposeEntries(entries, context),
                 { entries: entries.length },
@@ -85,6 +117,23 @@ export async function processInboxBatch(
                 { entries: processableEntries.length },
             );
 
+            // Classify decomposed parents (not included in later stages)
+            if (decomposedParents.length > 0) {
+                const parentClassificationMap = await context.debug.time(
+                    "kb.inbox.classifyParents",
+                    () => batchClassify(decomposedParents, context),
+                    { entries: decomposedParents.length },
+                );
+                for (const parent of decomposedParents) {
+                    const classification = parentClassificationMap.get(parent.memory.id) ?? "fact";
+                    await context.updateAttributes(parent.memory.id, {
+                        ...parent.domainAttributes,
+                        decomposed: true,
+                        classification,
+                    });
+                }
+            }
+
             // Stage 2: Tag & Attribute assignment
             const kbTagId = await ensureTag(context, KB_TAG);
 
@@ -94,6 +143,9 @@ export async function processInboxBatch(
                     for (const entry of processableEntries) {
                         const classification = classificationMap.get(entry.memory.id) ?? "fact";
                         const existingSource = entry.domainAttributes.source as string | undefined;
+                        const existingParentId = entry.domainAttributes.parentMemoryId as
+                            | string
+                            | undefined;
 
                         await context.updateAttributes(entry.memory.id, {
                             classification,
@@ -101,6 +153,7 @@ export async function processInboxBatch(
                             validFrom: Date.now(),
                             confidence: 1.0,
                             ...(existingSource ? { source: existingSource } : {}),
+                            ...(existingParentId ? { parentMemoryId: existingParentId } : {}),
                         });
 
                         await context.tagMemory(entry.memory.id, kbTagId);
@@ -156,19 +209,20 @@ export async function processInboxBatch(
 async function decomposeEntries(
     entries: OwnedMemory[],
     context: DomainContext,
-): Promise<OwnedMemory[]> {
-    const result: OwnedMemory[] = [];
+): Promise<DecomposeResult> {
+    const processable: OwnedMemory[] = [];
+    const decomposedParents: OwnedMemory[] = [];
 
     for (const entry of entries) {
         const tokens = countTokens(entry.memory.content);
         if (tokens <= DECOMPOSITION_TOKEN_THRESHOLD) {
-            result.push(entry);
+            processable.push(entry);
             continue;
         }
 
         const atomicFacts = await decomposeToAtomicFacts(entry.memory.content, context);
         if (!atomicFacts || atomicFacts.length <= 1) {
-            result.push(entry);
+            processable.push(entry);
             continue;
         }
 
@@ -177,6 +231,9 @@ async function decomposeEntries(
             ...entry.domainAttributes,
             decomposed: true,
         });
+
+        // Track parent for separate classification
+        decomposedParents.push(entry);
 
         // Create child memories
         for (const fact of atomicFacts) {
@@ -199,7 +256,7 @@ async function decomposeEntries(
             // Fetch child memory for subsequent stages
             const childMemory = await context.getMemory(childId);
             if (childMemory) {
-                result.push({
+                processable.push({
                     memory: childMemory,
                     domainAttributes: {
                         source: "decomposed",
@@ -212,7 +269,7 @@ async function decomposeEntries(
         }
     }
 
-    return result;
+    return { processable, decomposedParents };
 }
 
 async function batchClassify(
@@ -234,37 +291,57 @@ async function batchClassify(
     if (needsClassification.length === 0) return result;
 
     const classifyLlm = context.llmAt("low");
-    if (!classifyLlm.generate) {
-        for (const { entry } of needsClassification) {
-            result.set(entry.memory.id, "fact");
-        }
-        return result;
-    }
 
     const numberedItems = needsClassification
-        .map((item, i) => `${i + 1}. ${item.entry.memory.content}`)
+        .map((item, i) => `${i}. ${item.entry.memory.content}`)
         .join("\n\n");
 
-    const prompt =
-        BATCH_CLASSIFICATION_PROMPT +
-        `Items:\n${numberedItems}\n\n` +
-        "Respond with ONLY one category per line, matching the item number:\n" +
-        needsClassification.map((_, i) => `${i + 1}. <category>`).join("\n");
+    if (classifyLlm.extractStructured) {
+        try {
+            const raw = (await classifyLlm.extractStructured(
+                `Items:\n${numberedItems}`,
+                BATCH_CLASSIFICATION_SCHEMA,
+                BATCH_CLASSIFICATION_PROMPT,
+            )) as Array<{ index: number; classification: string }>;
 
-    try {
-        const response = await classifyLlm.generate(prompt);
-        const lines = response.trim().split("\n");
-
-        for (let i = 0; i < needsClassification.length; i++) {
-            const line = lines[i]?.trim().toLowerCase() ?? "";
-            const match = line.match(/^\d+\.\s*(.+)$/);
-            const normalized = match ? match[1].trim() : line;
-            const classification = VALID_CLASSIFICATIONS.has(normalized) ? normalized : "fact";
-            result.set(needsClassification[i].entry.memory.id, classification);
+            for (const item of raw) {
+                if (item.index >= 0 && item.index < needsClassification.length) {
+                    const cls = VALID_CLASSIFICATIONS.has(item.classification)
+                        ? item.classification
+                        : "fact";
+                    result.set(needsClassification[item.index].entry.memory.id, cls);
+                }
+            }
+        } catch (error) {
+            logKbInboxWarning("kb.inbox.classify.extractStructured", error);
         }
-    } catch (error) {
-        logKbInboxWarning("kb.inbox.classify", error);
-        for (const { entry } of needsClassification) {
+    } else if (classifyLlm.generate) {
+        try {
+            const prompt =
+                BATCH_CLASSIFICATION_PROMPT +
+                `Items:\n${numberedItems}\n\n` +
+                "Respond with ONLY one category per line, matching the item number:\n" +
+                needsClassification.map((_, i) => `${i}. <category>`).join("\n");
+
+            const response = await classifyLlm.generate(prompt);
+            const lines = response.trim().split("\n");
+
+            for (let i = 0; i < needsClassification.length; i++) {
+                const line = lines[i]?.trim().toLowerCase() ?? "";
+                const match = line.match(/^\d+\.\s*(.+)$/);
+                const normalized = match ? match[1].trim() : line;
+                if (VALID_CLASSIFICATIONS.has(normalized)) {
+                    result.set(needsClassification[i].entry.memory.id, normalized);
+                }
+            }
+        } catch (error) {
+            logKbInboxWarning("kb.inbox.classify.generate", error);
+        }
+    }
+
+    // Fill any unclassified entries with default
+    for (const { entry } of needsClassification) {
+        if (!result.has(entry.memory.id)) {
             result.set(entry.memory.id, "fact");
         }
     }

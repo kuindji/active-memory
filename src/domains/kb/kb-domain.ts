@@ -112,103 +112,6 @@ Include only memories with score >= 3.`;
     }
 }
 
-async function tryFullContextReturn(
-    budgetTokens: number,
-    context: DomainContext,
-): Promise<ContextResult | null> {
-    const allEntries = await context.getMemories({
-        tags: [KB_TAG],
-        attributes: { superseded: false },
-    });
-
-    // Quick token count — bail early if over budget
-    let totalTokens = 0;
-    for (const entry of allEntries) {
-        totalTokens += entry.tokenCount;
-        if (totalTokens > budgetTokens) return null;
-    }
-
-    if (allEntries.length === 0) return null;
-
-    // Fetch domain attributes for all entries in a single batch query
-    const now = Date.now();
-    const domainRef = new StringRecordId(`domain:${KB_DOMAIN_ID}`);
-    const memRefs = allEntries.map((e) => new StringRecordId(e.id));
-    const attrRows = await context.graph.query<
-        Array<{ in: string; attributes: Record<string, unknown> }>
-    >("SELECT in, attributes FROM owned_by WHERE in IN $memIds AND out = $domainId", {
-        memIds: memRefs,
-        domainId: domainRef,
-    });
-
-    const attrMap = new Map<string, Record<string, unknown>>();
-    if (attrRows) {
-        for (const row of attrRows) {
-            attrMap.set(String(row.in), row.attributes);
-        }
-    }
-
-    const groups = new Map<string, Array<{ content: string; mem: ScoredMemory }>>();
-    const allMemories: ScoredMemory[] = [];
-
-    for (const entry of allEntries) {
-        const attrs = attrMap.get(entry.id);
-        if (!isEntryValid(attrs, now)) continue;
-
-        const cls = (attrs?.classification as string) ?? "fact";
-        const scored: ScoredMemory = {
-            id: entry.id,
-            content: entry.content,
-            score: 1.0,
-            scores: {},
-            tags: [],
-            domainAttributes: { [KB_DOMAIN_ID]: attrs ?? {} },
-            eventTime: entry.eventTime,
-            createdAt: entry.createdAt,
-            tokenCount: entry.tokenCount,
-        };
-
-        let group = groups.get(cls);
-        if (!group) {
-            group = [];
-            groups.set(cls, group);
-        }
-        group.push({ content: entry.content, mem: scored });
-        allMemories.push(scored);
-    }
-
-    const sections: string[] = [];
-    const defConcept = [...(groups.get("definition") ?? []), ...(groups.get("concept") ?? [])];
-    if (defConcept.length > 0) {
-        sections.push(`[Definitions & Concepts]\n${defConcept.map((e) => e.content).join("\n")}`);
-    }
-
-    const factRef = [...(groups.get("fact") ?? []), ...(groups.get("reference") ?? [])];
-    if (factRef.length > 0) {
-        sections.push(`[Facts & References]\n${factRef.map((e) => e.content).join("\n")}`);
-    }
-
-    const howtoInsight = [...(groups.get("how-to") ?? []), ...(groups.get("insight") ?? [])];
-    if (howtoInsight.length > 0) {
-        sections.push(`[How-Tos & Insights]\n${howtoInsight.map((e) => e.content).join("\n")}`);
-    }
-
-    const finalContext = sections.join("\n\n");
-
-    // Record access for importance tracking
-    Promise.all(
-        allMemories.map((m) =>
-            recordAccess(context, m.id, getKbAttrs(m.domainAttributes)).catch(() => {}),
-        ),
-    ).catch(() => {});
-
-    return {
-        context: finalContext,
-        memories: allMemories,
-        totalTokens: countTokens(finalContext),
-    };
-}
-
 export function createKbDomain(options?: KbDomainOptions): DomainConfig {
     return {
         id: KB_DOMAIN_ID,
@@ -243,13 +146,10 @@ export function createKbDomain(options?: KbDomainOptions): DomainConfig {
         schedules: buildSchedules(options),
         tunableParams: [
             { name: "minScore", default: 0.5, min: -1, max: 0.8, step: 0.05 },
-            { name: "definitionBudgetPct", default: 0.3, min: 0.1, max: 0.6, step: 0.05 },
-            { name: "factBudgetPct", default: 0.4, min: 0.1, max: 0.6, step: 0.05 },
             { name: "embeddingRerank", default: 1, min: 0, max: 1, step: 1 },
             { name: "llmRerank", default: 0, min: 0, max: 1, step: 1 },
             { name: "decayFactor", default: 0.95, min: 0.5, max: 1.0, step: 0.05 },
             { name: "importanceBoost", default: 1.5, min: 1.0, max: 3.0, step: 0.25 },
-            { name: "adaptiveContext", default: 1, min: 0, max: 1, step: 1 },
             { name: "useQueryIntent", default: 1, min: 0, max: 1, step: 1 },
         ],
 
@@ -344,19 +244,9 @@ export function createKbDomain(options?: KbDomainOptions): DomainConfig {
             if (!text) return empty;
 
             const minScore = context.getTunableParam("minScore") ?? 0.5;
-            const defPct = context.getTunableParam("definitionBudgetPct") ?? 0.3;
-            const factPct = context.getTunableParam("factBudgetPct") ?? 0.4;
-            const howtoPct = Math.max(0.1, 1.0 - defPct - factPct);
             const useEmbeddingRerank = (context.getTunableParam("embeddingRerank") ?? 1) > 0;
             const useLlmRerank = (context.getTunableParam("llmRerank") ?? 0) > 0;
             const useIntent = (context.getTunableParam("useQueryIntent") ?? 1) > 0;
-
-            // Adaptive context: if KB is small enough, return everything
-            const useAdaptiveContext = (context.getTunableParam("adaptiveContext") ?? 1) > 0;
-            if (useAdaptiveContext) {
-                const fullResult = await tryFullContextReturn(budgetTokens, context);
-                if (fullResult) return fullResult;
-            }
 
             // Step 1: Classify query intent
             let intent: QueryIntent | null = null;
@@ -384,7 +274,7 @@ export function createKbDomain(options?: KbDomainOptions): DomainConfig {
                 rerank: useEmbeddingRerank,
                 rerankThreshold: minScore,
                 filters: Object.keys(filters).length > 0 ? filters : undefined,
-                tokenBudget: budgetTokens,
+                tokenBudget: budgetTokens * 3, // Over-fetch to have candidates for parent resolution
             });
 
             let entries = results.entries.filter((e) =>
@@ -394,14 +284,13 @@ export function createKbDomain(options?: KbDomainOptions): DomainConfig {
             // Step 4: Progressive fallback if too few results
             const MIN_RESULTS = 3;
             if (entries.length < MIN_RESULTS && Object.keys(filters).length > 0) {
-                // Widen: drop classification filter
                 const widerResults = await context.search({
                     text,
                     tags: [KB_TAG],
                     minScore,
                     rerank: useEmbeddingRerank,
                     rerankThreshold: minScore,
-                    tokenBudget: budgetTokens,
+                    tokenBudget: budgetTokens * 3,
                 });
                 entries = widerResults.entries.filter((e) =>
                     isEntryValid(getKbAttrs(e.domainAttributes), now),
@@ -415,59 +304,66 @@ export function createKbDomain(options?: KbDomainOptions): DomainConfig {
                 entries = await llmRerankMemories(text, entries, context.llm);
             }
 
-            // Step 6: Group by classification for output
-            const groups = new Map<string, ScoredMemory[]>();
-            for (const entry of entries) {
+            // Step 6: Resolve children to parents
+            const resolved = await resolveToParents(entries, context, now);
+
+            // Step 7: Relevance-first budget — fill by score, then group for output
+            resolved.sort((a, b) => b.score - a.score);
+
+            const selected: Array<{ mem: ScoredMemory; classification: string }> = [];
+            let usedTokens = 0;
+            for (const entry of resolved) {
+                const tokens = countTokens(entry.content);
+                if (usedTokens + tokens > budgetTokens) continue;
+                usedTokens += tokens;
+
                 const attrs = getKbAttrs(entry.domainAttributes);
                 const cls = (attrs?.classification as string) ?? "fact";
-                let group = groups.get(cls);
+                selected.push({ mem: entry, classification: cls });
+            }
+
+            if (selected.length === 0) return empty;
+
+            // Step 8: Group selected entries by classification for formatted output
+            const groups = new Map<string, ScoredMemory[]>();
+            for (const { mem, classification } of selected) {
+                let group = groups.get(classification);
                 if (!group) {
                     group = [];
-                    groups.set(cls, group);
+                    groups.set(classification, group);
                 }
-                group.push(entry);
+                group.push(mem);
             }
 
             const sections: string[] = [];
             const allMemories: ScoredMemory[] = [];
 
-            // Definitions & Concepts
             const defConcept = [
                 ...(groups.get("definition") ?? []),
                 ...(groups.get("concept") ?? []),
             ];
             if (defConcept.length > 0) {
-                const definitionBudget = Math.floor(budgetTokens * defPct);
-                const lines = truncateToTokenBudget(defConcept, definitionBudget);
-                if (lines.length > 0) {
-                    sections.push(`[Definitions & Concepts]\n${lines.join("\n")}`);
-                    allMemories.push(...defConcept.slice(0, lines.length));
-                }
+                sections.push(
+                    `[Definitions & Concepts]\n${defConcept.map((e) => e.content).join("\n")}`,
+                );
+                allMemories.push(...defConcept);
             }
 
-            // Facts & References
             const factRef = [...(groups.get("fact") ?? []), ...(groups.get("reference") ?? [])];
             if (factRef.length > 0) {
-                const factBudget = Math.floor(budgetTokens * factPct);
-                const lines = truncateToTokenBudget(factRef, factBudget);
-                if (lines.length > 0) {
-                    sections.push(`[Facts & References]\n${lines.join("\n")}`);
-                    allMemories.push(...factRef.slice(0, lines.length));
-                }
+                sections.push(`[Facts & References]\n${factRef.map((e) => e.content).join("\n")}`);
+                allMemories.push(...factRef);
             }
 
-            // How-Tos & Insights
             const howtoInsight = [
                 ...(groups.get("how-to") ?? []),
                 ...(groups.get("insight") ?? []),
             ];
             if (howtoInsight.length > 0) {
-                const howtoBudget = Math.floor(budgetTokens * howtoPct);
-                const lines = truncateToTokenBudget(howtoInsight, howtoBudget);
-                if (lines.length > 0) {
-                    sections.push(`[How-Tos & Insights]\n${lines.join("\n")}`);
-                    allMemories.push(...howtoInsight.slice(0, lines.length));
-                }
+                sections.push(
+                    `[How-Tos & Insights]\n${howtoInsight.map((e) => e.content).join("\n")}`,
+                );
+                allMemories.push(...howtoInsight);
             }
 
             const finalContext = sections.join("\n\n");
@@ -488,16 +384,84 @@ export function createKbDomain(options?: KbDomainOptions): DomainConfig {
     };
 }
 
-function truncateToTokenBudget(memories: ScoredMemory[], budget: number): string[] {
-    const lines: string[] = [];
-    let tokens = 0;
-    for (const mem of memories) {
-        const t = countTokens(mem.content);
-        if (tokens + t > budget) break;
-        tokens += t;
-        lines.push(mem.content);
+/**
+ * Resolves child entries (from decomposition) back to their parent documents.
+ * When multiple children from the same parent match, the parent gets the highest child score.
+ * Standalone entries (no parent) pass through unchanged.
+ */
+async function resolveToParents(
+    entries: ScoredMemory[],
+    context: DomainContext,
+    now: number,
+): Promise<ScoredMemory[]> {
+    // Map: parentId → { parentMemory, bestScore }
+    const parentMap = new Map<string, { mem: ScoredMemory; bestScore: number }>();
+    const standalone: ScoredMemory[] = [];
+
+    for (const entry of entries) {
+        const attrs = getKbAttrs(entry.domainAttributes);
+        const parentId = attrs?.parentMemoryId as string | undefined;
+
+        if (!parentId) {
+            standalone.push(entry);
+            continue;
+        }
+
+        const existing = parentMap.get(parentId);
+        if (existing) {
+            // Multiple children from same parent — keep best score
+            if (entry.score > existing.bestScore) {
+                existing.bestScore = entry.score;
+                existing.mem = { ...existing.mem, score: entry.score };
+            }
+            continue;
+        }
+
+        // Fetch parent memory
+        const parentMemory = await context.getMemory(parentId);
+        if (!parentMemory) {
+            // Parent not found — keep the child as fallback
+            standalone.push(entry);
+            continue;
+        }
+
+        // Fetch parent's domain attributes
+        const parentDomainRef = new StringRecordId(`domain:${KB_DOMAIN_ID}`);
+        const parentMemRef = new StringRecordId(parentId);
+        const attrRows = await context.graph.query<Array<{ attributes: Record<string, unknown> }>>(
+            "SELECT attributes FROM owned_by WHERE in = $memId AND out = $domainId LIMIT 1",
+            {
+                memId: parentMemRef,
+                domainId: parentDomainRef,
+            },
+        );
+
+        const parentAttrs = attrRows?.[0]?.attributes ?? {};
+
+        // Check parent validity (superseded/expired but NOT decomposed — that's expected)
+        if (parentAttrs.superseded) continue;
+        if (typeof parentAttrs.validUntil === "number" && parentAttrs.validUntil < now) continue;
+
+        const parentScored: ScoredMemory = {
+            id: parentMemory.id,
+            content: parentMemory.content,
+            score: entry.score,
+            scores: {},
+            tags: [],
+            domainAttributes: { [KB_DOMAIN_ID]: parentAttrs },
+            eventTime: parentMemory.eventTime,
+            createdAt: parentMemory.createdAt,
+            tokenCount: parentMemory.tokenCount,
+        };
+
+        parentMap.set(parentId, { mem: parentScored, bestScore: entry.score });
     }
-    return lines;
+
+    // Deduplicate: standalone entries that are also resolved as parents
+    const parentIds = new Set(parentMap.keys());
+    const deduped = standalone.filter((e) => !parentIds.has(e.id));
+
+    return [...deduped, ...[...parentMap.values()].map((p) => p.mem)];
 }
 
 export const kbDomain = createKbDomain();
