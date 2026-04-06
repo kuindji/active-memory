@@ -1,6 +1,6 @@
-import type { DomainContext, OwnedMemory } from "../../core/types.js";
+import type { DomainContext, LLMAdapter, OwnedMemory } from "../../core/types.js";
 import { TOPIC_TAG, TOPIC_DOMAIN_ID } from "../topic/types.js";
-import type { KbClassification } from "./types.js";
+import type { KbClassification, QueryIntent } from "./types.js";
 import {
     CLASSIFICATION_TAGS,
     KB_DOMAIN_ID,
@@ -234,6 +234,62 @@ async function batchExtractTopics(
     }
 
     return result;
+}
+
+export const ALL_CLASSIFICATIONS: KbClassification[] = [
+    "fact",
+    "definition",
+    "how-to",
+    "reference",
+    "concept",
+    "insight",
+];
+
+const QUERY_INTENT_PROMPT =
+    "Classify what type of knowledge answers this query. " +
+    "Types: definition, concept, fact, reference, how-to, insight. " +
+    'Return JSON: {"classifications": [...], "keywords": [...], "topic": "..."}\n\n' +
+    "Query: ";
+
+export async function classifyQueryIntent(text: string, llm: LLMAdapter): Promise<QueryIntent> {
+    const fallback: QueryIntent = {
+        classifications: [...ALL_CLASSIFICATIONS],
+        keywords: text
+            .toLowerCase()
+            .split(/\s+/)
+            .filter((w) => w.length > 2),
+    };
+
+    if (!llm.generate) return fallback;
+
+    try {
+        const response = await llm.generate(QUERY_INTENT_PROMPT + text);
+        const match = response.match(/\{[\s\S]*\}/);
+        if (!match) return fallback;
+
+        const parsed = JSON.parse(match[0]) as {
+            classifications?: string[];
+            keywords?: string[];
+            topic?: string;
+        };
+
+        const validClassifications = (parsed.classifications ?? []).filter(
+            (c): c is KbClassification => VALID_CLASSIFICATIONS.has(c),
+        );
+
+        if (validClassifications.length === 0) return fallback;
+
+        return {
+            classifications: validClassifications,
+            keywords:
+                Array.isArray(parsed.keywords) && parsed.keywords.length > 0
+                    ? parsed.keywords
+                    : fallback.keywords,
+            topic: parsed.topic || undefined,
+        };
+    } catch {
+        return fallback;
+    }
 }
 
 async function linkSingleTopic(

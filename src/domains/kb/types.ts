@@ -1,3 +1,9 @@
+export interface QueryIntent {
+    classifications: KbClassification[];
+    keywords: string[];
+    topic?: string;
+}
+
 export type KbClassification =
     | "fact"
     | "definition"
