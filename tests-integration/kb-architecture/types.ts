@@ -47,6 +47,7 @@ export interface ArchitectureConfig {
         mmrLambda?: number;
     };
     useOrama?: boolean;
+    answerModel?: string;
 }
 
 export interface Checkpoint<T = unknown> {

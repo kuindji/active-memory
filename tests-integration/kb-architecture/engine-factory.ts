@@ -10,11 +10,11 @@ import type { DomainConfig } from "../../src/core/types.js";
 import { createOramaKbDomain } from "./orama-kb-domain.js";
 import type { OramaDb } from "./orama-index.js";
 
-const llm = new ClaudeCliAdapter({ model: "haiku", timeout: 180_000 });
+const defaultLlm = new ClaudeCliAdapter({ model: "haiku", timeout: 180_000 });
 const embedding = new OnnxEmbeddingAdapter();
 
 export function getLlm(): ClaudeCliAdapter {
-    return llm;
+    return defaultLlm;
 }
 
 export function getEmbedding(): OnnxEmbeddingAdapter {
@@ -29,6 +29,14 @@ export async function createConfiguredEngine(
     config: ArchitectureConfig,
     oramaIndex?: OramaDb,
 ): Promise<MemoryEngine> {
+    const llm = config.answerModel
+        ? new ClaudeCliAdapter({
+              model: config.answerModel,
+              modelLevels: { low: "haiku" },
+              timeout: 180_000,
+          })
+        : defaultLlm;
+
     const engine = new MemoryEngine();
     await engine.initialize({
         connection: "mem://",

@@ -220,6 +220,15 @@ export const configs: ArchitectureConfig[] = [
         noiseReduction: { tightenFilters: true, embeddingRerank: true },
     },
     {
+        name: "question-indexing-sonnet",
+        pipeline: { ...NO_SUPERSESSION_PIPELINE, generateQuestions: true },
+        search: HYBRID_DEFAULT,
+        consolidate: false,
+        contextBudget: 2000,
+        noiseReduction: { tightenFilters: true, embeddingRerank: true },
+        answerModel: "sonnet",
+    },
+    {
         name: "question-indexing-mmr",
         pipeline: { ...NO_SUPERSESSION_PIPELINE, generateQuestions: true },
         search: HYBRID_DEFAULT,
