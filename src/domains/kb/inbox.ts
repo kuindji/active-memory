@@ -7,6 +7,7 @@ import {
     linkToTopicsBatch,
     classificationToTag,
     decomposeToAtomicFacts,
+    batchGenerateQuestions,
 } from "./utils.js";
 import { countTokens } from "../../core/scoring.js";
 
@@ -134,6 +135,13 @@ export async function processInboxBatch(
                 }
             }
 
+            // Stage 1.5: Question generation (what question does this entry answer?)
+            const questionMap = await context.debug.time(
+                "kb.inbox.questionGeneration",
+                () => batchGenerateQuestions(context, processableEntries),
+                { entries: processableEntries.length },
+            );
+
             // Stage 2: Tag & Attribute assignment
             const kbTagId = await ensureTag(context, KB_TAG);
 
@@ -146,6 +154,7 @@ export async function processInboxBatch(
                         const existingParentId = entry.domainAttributes.parentMemoryId as
                             | string
                             | undefined;
+                        const answersQuestion = questionMap.get(entry.memory.id);
 
                         await context.updateAttributes(entry.memory.id, {
                             classification,
@@ -154,6 +163,7 @@ export async function processInboxBatch(
                             confidence: 1.0,
                             ...(existingSource ? { source: existingSource } : {}),
                             ...(existingParentId ? { parentMemoryId: existingParentId } : {}),
+                            ...(answersQuestion ? { answersQuestion } : {}),
                         });
 
                         await context.tagMemory(entry.memory.id, kbTagId);
@@ -167,12 +177,20 @@ export async function processInboxBatch(
                         }
                         await context.tagMemory(entry.memory.id, classTagId);
 
-                        // Denormalize classification onto memory record for DB-level filtering
+                        // Denormalize classification and answers_question onto memory record
                         try {
-                            await context.graph.query("UPDATE $memId SET classification = $cls", {
-                                memId: new StringRecordId(entry.memory.id),
-                                cls: classification,
-                            });
+                            const updates: Record<string, unknown> = { classification };
+                            if (answersQuestion) {
+                                updates.answers_question = answersQuestion;
+                            }
+                            await context.graph.query(
+                                "UPDATE $memId SET classification = $cls, answers_question = $aq",
+                                {
+                                    memId: new StringRecordId(entry.memory.id),
+                                    cls: classification,
+                                    aq: answersQuestion ?? null,
+                                },
+                            );
                         } catch {
                             /* best-effort denormalization */
                         }

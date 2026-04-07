@@ -372,6 +372,88 @@ export async function classifyQueryIntent(text: string, llm: LLMAdapter): Promis
     }
 }
 
+const BATCH_QUESTION_GENERATION_SCHEMA = JSON.stringify({
+    type: "array",
+    items: {
+        type: "object",
+        properties: {
+            index: { type: "number", description: "Zero-based index of the item" },
+            questions: {
+                type: "string",
+                description: "1-2 specific questions this entry answers, joined with ' '",
+            },
+        },
+        required: ["index", "questions"],
+    },
+});
+
+const BATCH_QUESTION_GENERATION_PROMPT =
+    "For each numbered knowledge entry below, generate 1-2 specific questions that this entry directly answers. " +
+    "Be precise and discriminating — the questions should distinguish this entry from other entries about the same broad topic. " +
+    "For example, if the entry is about 'commission split ratios', write 'What is the default commission split ratio?' " +
+    "NOT 'What is the commission system?' which is too vague. " +
+    "Return the questions as a single string (space-separated if multiple).";
+
+/**
+ * Batch generates answersQuestion text for multiple entries in a single LLM call.
+ * Returns a map from memory ID to generated question text.
+ */
+export async function batchGenerateQuestions(
+    context: DomainContext,
+    entries: OwnedMemory[],
+): Promise<Map<string, string>> {
+    const result = new Map<string, string>();
+    if (entries.length === 0) return result;
+
+    const llm = context.llmAt("low");
+    const numberedItems = entries.map((e, i) => `${i}. ${e.memory.content}`).join("\n\n");
+
+    if (llm.extractStructured) {
+        try {
+            const raw = (await llm.extractStructured(
+                numberedItems,
+                BATCH_QUESTION_GENERATION_SCHEMA,
+                BATCH_QUESTION_GENERATION_PROMPT,
+            )) as Array<{ index: number; questions: string }>;
+
+            for (const item of raw) {
+                if (
+                    item.index >= 0 &&
+                    item.index < entries.length &&
+                    typeof item.questions === "string" &&
+                    item.questions.trim()
+                ) {
+                    result.set(entries[item.index].memory.id, item.questions.trim());
+                }
+            }
+            return result;
+        } catch (error) {
+            logKbWarning("kb.inbox.questionGeneration.extractStructured", error);
+        }
+    }
+
+    // Fallback: generate individually
+    if (llm.generate) {
+        for (const entry of entries) {
+            try {
+                const response = await llm.generate(
+                    "Generate 1-2 specific questions that this knowledge entry directly answers. " +
+                        "Be precise — distinguish from other entries on the same broad topic.\n\n" +
+                        `Entry: ${entry.memory.content}\n\nReturn only the question(s), nothing else.`,
+                );
+                const trimmed = response.trim();
+                if (trimmed) {
+                    result.set(entry.memory.id, trimmed);
+                }
+            } catch (error) {
+                logKbWarning("kb.inbox.questionGeneration.generate", error);
+            }
+        }
+    }
+
+    return result;
+}
+
 async function linkSingleTopic(
     context: DomainContext,
     memoryId: string,

@@ -8,6 +8,7 @@ import {
     classificationToTag,
     linkToTopicsBatch,
     decomposeToAtomicFacts,
+    batchGenerateQuestions,
 } from "../../src/domains/kb/utils.js";
 import { countTokens } from "../../src/core/scoring.js";
 import type { PipelineStages } from "./types.js";
@@ -150,6 +151,16 @@ export function createConfigurableInboxProcessor(stages: PipelineStages) {
                     }
                 }
 
+                // Stage 1.5: Question generation
+                let questionMap = new Map<string, string>();
+                if (stages.generateQuestions) {
+                    questionMap = await context.debug.time(
+                        "kb.inbox.questionGeneration",
+                        () => batchGenerateQuestions(context, processableEntries),
+                        { entries: processableEntries.length },
+                    );
+                }
+
                 // Stage 2: Tag & Attribute assignment
                 if (stages.tagAssign) {
                     const kbTagId = await ensureTag(context, KB_TAG);
@@ -165,6 +176,7 @@ export function createConfigurableInboxProcessor(stages: PipelineStages) {
                                 const existingParentId = entry.domainAttributes.parentMemoryId as
                                     | string
                                     | undefined;
+                                const answersQuestion = questionMap.get(entry.memory.id);
 
                                 await context.updateAttributes(entry.memory.id, {
                                     classification,
@@ -175,6 +187,7 @@ export function createConfigurableInboxProcessor(stages: PipelineStages) {
                                     ...(existingParentId
                                         ? { parentMemoryId: existingParentId }
                                         : {}),
+                                    ...(answersQuestion ? { answersQuestion } : {}),
                                 });
 
                                 await context.tagMemory(entry.memory.id, kbTagId);
@@ -190,13 +203,14 @@ export function createConfigurableInboxProcessor(stages: PipelineStages) {
                                 }
                                 await context.tagMemory(entry.memory.id, classTagId);
 
-                                // Denormalize classification onto memory record for DB-level filtering
+                                // Denormalize classification and answers_question
                                 try {
                                     await context.graph.query(
-                                        "UPDATE $memId SET classification = $cls",
+                                        "UPDATE $memId SET classification = $cls, answers_question = $aq",
                                         {
                                             memId: new StringRecordId(entry.memory.id),
                                             cls: classification,
+                                            aq: answersQuestion ?? null,
                                         },
                                     );
                                 } catch {

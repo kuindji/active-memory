@@ -11,7 +11,7 @@ import type {
     ContextResult,
     LLMAdapter,
 } from "../../core/types.js";
-import { countTokens } from "../../core/scoring.js";
+import { countTokens, cosineSimilarity } from "../../core/scoring.js";
 import { TOPIC_TAG } from "../topic/types.js";
 import { KB_DOMAIN_ID, KB_TAG, DEFAULT_CONSOLIDATE_INTERVAL_MS } from "./types.js";
 import type { KbDomainOptions } from "./types.js";
@@ -117,10 +117,17 @@ export function createKbDomain(options?: KbDomainOptions): DomainConfig {
                     fields: [
                         { name: "classification", type: "option<string>" },
                         { name: "topics", type: "option<array<string>>" },
+                        { name: "answers_question", type: "option<string>" },
                     ],
                     indexes: [
                         { name: "idx_memory_classification", fields: ["classification"] },
                         { name: "idx_memory_topics", fields: ["topics"] },
+                        {
+                            name: "idx_memory_answers_question",
+                            fields: ["answers_question"],
+                            type: "search",
+                            config: { analyzer: "memory_content" },
+                        },
                     ],
                 },
             ],
@@ -143,6 +150,7 @@ export function createKbDomain(options?: KbDomainOptions): DomainConfig {
             { name: "llmRerank", default: 0, min: 0, max: 1, step: 1 },
             { name: "decayFactor", default: 0.95, min: 0.5, max: 1.0, step: 0.05 },
             { name: "importanceBoost", default: 1.5, min: 1.0, max: 3.0, step: 0.25 },
+            { name: "mmrLambda", default: 1.0, min: 0.3, max: 1.0, step: 0.05 },
         ],
 
         async bootstrap(context: DomainContext) {
@@ -238,6 +246,7 @@ export function createKbDomain(options?: KbDomainOptions): DomainConfig {
             const minScore = context.getTunableParam("minScore") ?? 0.5;
             const useEmbeddingRerank = (context.getTunableParam("embeddingRerank") ?? 1) > 0;
             const useLlmRerank = (context.getTunableParam("llmRerank") ?? 0) > 0;
+            const mmrLambda = context.getTunableParam("mmrLambda") ?? 1.0;
 
             const now = Date.now();
 
@@ -259,6 +268,9 @@ export function createKbDomain(options?: KbDomainOptions): DomainConfig {
 
             if (entries.length === 0) return empty;
 
+            // Step 4.5: Boost entries whose answers_question matches the query
+            entries = await boostByQuestionMatch(entries, text, context.graph);
+
             // Step 5: Optional LLM rerank
             if (useLlmRerank && context.llm) {
                 entries = await llmRerankMemories(text, entries, context.llm);
@@ -270,20 +282,8 @@ export function createKbDomain(options?: KbDomainOptions): DomainConfig {
             // Step 7: Deduplicate near-duplicate content
             const { entries: deduped, aliases: dedupAliases } = deduplicateByContent(resolved, 0.5);
 
-            // Step 8: Relevance-first budget — fill by score, then group for output
-            deduped.sort((a, b) => b.score - a.score);
-
-            const selected: Array<{ mem: ScoredMemory; classification: string }> = [];
-            let usedTokens = 0;
-            for (const entry of deduped) {
-                const tokens = countTokens(entry.content);
-                if (usedTokens + tokens > budgetTokens) continue;
-                usedTokens += tokens;
-
-                const attrs = getKbAttrs(entry.domainAttributes);
-                const cls = (attrs?.classification as string) ?? "fact";
-                selected.push({ mem: entry, classification: cls });
-            }
+            // Step 8: MMR-based budget fill — balances relevance with diversity
+            const selected = await mmrBudgetFill(deduped, budgetTokens, mmrLambda, context.graph);
 
             if (selected.length === 0) return empty;
 
@@ -484,6 +484,190 @@ async function resolveToParents(
     const deduped = standalone.filter((e) => !parentIds.has(e.id));
 
     return [...deduped, ...[...parentMap.values()].map((p) => p.mem)];
+}
+
+/**
+ * Boosts scores of entries whose `answers_question` field matches the query text.
+ * Uses SurrealDB fulltext search on the answers_question index.
+ * Entries that match get a score boost; non-matches pass through unchanged.
+ */
+async function boostByQuestionMatch(
+    entries: ScoredMemory[],
+    queryText: string,
+    graph: GraphApi,
+): Promise<ScoredMemory[]> {
+    if (entries.length === 0) return entries;
+
+    const ids = entries.map((e) =>
+        e.id.startsWith("memory:")
+            ? new StringRecordId(e.id)
+            : new StringRecordId(`memory:${e.id}`),
+    );
+
+    try {
+        const rows = await graph.query<Array<{ id: unknown; answers_question: string | null }>>(
+            `SELECT id, answers_question FROM memory WHERE id IN $ids AND answers_question IS NOT NONE`,
+            { ids },
+        );
+
+        if (!rows || rows.length === 0) return entries;
+
+        // Build a set of keywords from the query for matching
+        const queryWords = new Set(
+            queryText
+                .toLowerCase()
+                .split(/\s+/)
+                .filter((w) => w.length > 2),
+        );
+
+        // Compute question-match scores based on keyword overlap
+        const questionScores = new Map<string, number>();
+        for (const row of rows) {
+            if (!row.answers_question) continue;
+            const qWords = row.answers_question
+                .toLowerCase()
+                .split(/\s+/)
+                .filter((w) => w.length > 2);
+            if (qWords.length === 0) continue;
+
+            let matches = 0;
+            for (const w of qWords) {
+                if (queryWords.has(w)) matches++;
+            }
+            const overlap = matches / Math.max(queryWords.size, 1);
+            if (overlap > 0) {
+                questionScores.set(String(row.id), overlap);
+            }
+        }
+
+        if (questionScores.size === 0) return entries;
+
+        // Boost: entries with question match get up to 30% score boost
+        const QUESTION_BOOST = 0.3;
+        return entries.map((e) => {
+            const qScore = questionScores.get(e.id);
+            if (qScore === undefined) return e;
+            return { ...e, score: e.score * (1 + QUESTION_BOOST * qScore) };
+        });
+    } catch {
+        return entries;
+    }
+}
+
+/**
+ * MMR (Maximal Marginal Relevance) budget filling.
+ * Selects entries that maximize: lambda * relevance - (1-lambda) * max_similarity_to_selected.
+ * When lambda=1.0, behaves like pure greedy (relevance only).
+ */
+async function mmrBudgetFill(
+    candidates: ScoredMemory[],
+    budgetTokens: number,
+    lambda: number,
+    graph: GraphApi,
+): Promise<Array<{ mem: ScoredMemory; classification: string }>> {
+    if (candidates.length === 0) return [];
+
+    // When lambda=1.0, skip embedding fetch — pure relevance, same as old greedy
+    if (lambda >= 1.0) {
+        const sorted = [...candidates].sort((a, b) => b.score - a.score);
+        const result: Array<{ mem: ScoredMemory; classification: string }> = [];
+        let usedTokens = 0;
+        for (const entry of sorted) {
+            const tokens = countTokens(entry.content);
+            if (usedTokens + tokens > budgetTokens) continue;
+            usedTokens += tokens;
+            const attrs = getKbAttrs(entry.domainAttributes);
+            const cls = (attrs?.classification as string) ?? "fact";
+            result.push({ mem: entry, classification: cls });
+        }
+        return result;
+    }
+
+    // Fetch embeddings for diversity computation
+    const embeddingMap = await fetchEmbeddings(
+        candidates.map((c) => c.id),
+        graph,
+    );
+
+    const remaining = candidates.map((c, i) => ({ entry: c, idx: i }));
+    const selected: Array<{ mem: ScoredMemory; classification: string }> = [];
+    const selectedEmbeddings: number[][] = [];
+    let usedTokens = 0;
+
+    while (remaining.length > 0) {
+        let bestIdx = -1;
+        let bestMmr = -Infinity;
+
+        for (let i = 0; i < remaining.length; i++) {
+            const { entry } = remaining[i];
+            const tokens = countTokens(entry.content);
+            if (usedTokens + tokens > budgetTokens) continue;
+
+            const relevance = entry.score;
+            let maxSim = 0;
+
+            if (selectedEmbeddings.length > 0) {
+                const emb = embeddingMap.get(entry.id);
+                if (emb) {
+                    for (const sel of selectedEmbeddings) {
+                        const sim = cosineSimilarity(emb, sel);
+                        if (sim > maxSim) maxSim = sim;
+                    }
+                }
+            }
+
+            const mmr = lambda * relevance - (1 - lambda) * maxSim;
+            if (mmr > bestMmr) {
+                bestMmr = mmr;
+                bestIdx = i;
+            }
+        }
+
+        if (bestIdx === -1) break;
+
+        const { entry } = remaining[bestIdx];
+        const tokens = countTokens(entry.content);
+        usedTokens += tokens;
+
+        const attrs = getKbAttrs(entry.domainAttributes);
+        const cls = (attrs?.classification as string) ?? "fact";
+        selected.push({ mem: entry, classification: cls });
+
+        const emb = embeddingMap.get(entry.id);
+        if (emb) selectedEmbeddings.push(emb);
+
+        remaining.splice(bestIdx, 1);
+    }
+
+    return selected;
+}
+
+async function fetchEmbeddings(ids: string[], graph: GraphApi): Promise<Map<string, number[]>> {
+    const map = new Map<string, number[]>();
+    if (ids.length === 0) return map;
+
+    const surrealIds = ids.map((id) =>
+        id.startsWith("memory:") ? new StringRecordId(id) : new StringRecordId(`memory:${id}`),
+    );
+
+    try {
+        const rows = await graph.query<Array<{ id: unknown; embedding: number[] }>>(
+            `SELECT id, embedding FROM memory WHERE id IN $ids`,
+            { ids: surrealIds },
+        );
+
+        if (rows) {
+            for (const row of rows) {
+                if (row.embedding) {
+                    map.set(String(row.id), row.embedding);
+                }
+            }
+        }
+    } catch {
+        // If embedding fetch fails, MMR degrades to greedy (no diversity penalty)
+    }
+
+    return map;
 }
 
 export const kbDomain = createKbDomain();

@@ -27,6 +27,7 @@ export interface PipelineStages {
     topicLink: boolean;
     supersede: boolean;
     relateKnowledge: boolean;
+    generateQuestions?: boolean;
 }
 
 export interface ArchitectureConfig {
@@ -43,6 +44,7 @@ export interface ArchitectureConfig {
         embeddingRerank?: boolean;
         llmRerank?: boolean;
         useQueryIntent?: boolean;
+        mmrLambda?: number;
     };
     useOrama?: boolean;
 }

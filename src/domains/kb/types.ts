@@ -27,6 +27,8 @@ export interface KbAttributes {
     // Atomic decomposition
     decomposed?: boolean;
     parentMemoryId?: string;
+    // Question-aware indexing
+    answersQuestion?: string;
 }
 
 export const DEFAULT_IMPORTANCE: Record<KbClassification, number> = {

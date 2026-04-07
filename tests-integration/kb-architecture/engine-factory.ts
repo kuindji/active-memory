@@ -83,6 +83,9 @@ export async function createConfiguredEngine(
         if (config.noiseReduction.useQueryIntent !== undefined) {
             overrides.useQueryIntent = config.noiseReduction.useQueryIntent ? 1 : 0;
         }
+        if (config.noiseReduction.mmrLambda !== undefined) {
+            overrides.mmrLambda = config.noiseReduction.mmrLambda;
+        }
         if (Object.keys(overrides).length > 0) {
             await engine.saveTunableParams("kb", overrides);
         }
