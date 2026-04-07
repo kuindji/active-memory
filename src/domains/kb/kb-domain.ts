@@ -268,8 +268,8 @@ export function createKbDomain(options?: KbDomainOptions): DomainConfig {
 
             if (entries.length === 0) return empty;
 
-            // Step 4.5: Supplemental BM25 search — catches entries the embedding rerank missed
-            entries = await mergeSupplementalSearch(entries, text, context);
+            // Step 4.5: Keyword search — catches entries the embedding rerank missed
+            entries = await mergeKeywordSearch(entries, text, context);
 
             // Step 5: Optional LLM rerank
             if (useLlmRerank && context.llm) {
@@ -486,145 +486,236 @@ async function resolveToParents(
     return [...deduped, ...[...parentMap.values()].map((p) => p.mem)];
 }
 
+type MemoryQueryRow = {
+    id: unknown;
+    content: string;
+    event_time: number | null;
+    created_at: number;
+    token_count?: number;
+};
+
 /**
- * Runs supplemental BM25 searches on both content and answers_question fields,
- * merging results with the existing candidate set. This catches entries that the
- * embedding-reranked search missed (e.g. BM25-matchable terms like "deprecated"
- * that are semantically distant in embedding space).
- * Entries found in both get a score boost.
+ * Keyword-based supplemental search. Extracts discriminating keywords from the
+ * query (words that appear infrequently in typical text) and searches for entries
+ * containing those keywords via CONTAINS. This catches entries that the embedding
+ * reranker dropped despite having exact keyword matches.
  */
-async function mergeSupplementalSearch(
+async function mergeKeywordSearch(
     entries: ScoredMemory[],
     queryText: string,
     context: DomainContext,
 ): Promise<ScoredMemory[]> {
     const now = Date.now();
+    const STOP_WORDS = new Set([
+        "the",
+        "a",
+        "an",
+        "is",
+        "are",
+        "was",
+        "were",
+        "be",
+        "been",
+        "being",
+        "have",
+        "has",
+        "had",
+        "do",
+        "does",
+        "did",
+        "will",
+        "would",
+        "could",
+        "should",
+        "may",
+        "might",
+        "shall",
+        "can",
+        "need",
+        "dare",
+        "ought",
+        "used",
+        "to",
+        "of",
+        "in",
+        "for",
+        "on",
+        "with",
+        "at",
+        "by",
+        "from",
+        "as",
+        "into",
+        "through",
+        "during",
+        "before",
+        "after",
+        "above",
+        "below",
+        "between",
+        "out",
+        "off",
+        "over",
+        "under",
+        "again",
+        "further",
+        "then",
+        "once",
+        "here",
+        "there",
+        "when",
+        "where",
+        "why",
+        "how",
+        "all",
+        "each",
+        "every",
+        "both",
+        "few",
+        "more",
+        "most",
+        "other",
+        "some",
+        "such",
+        "no",
+        "nor",
+        "not",
+        "only",
+        "own",
+        "same",
+        "so",
+        "than",
+        "too",
+        "very",
+        "just",
+        "because",
+        "but",
+        "and",
+        "or",
+        "if",
+        "while",
+        "what",
+        "which",
+        "who",
+        "whom",
+        "this",
+        "that",
+        "these",
+        "those",
+        "it",
+        "its",
+        "i",
+        "me",
+        "my",
+        "we",
+        "our",
+        "you",
+        "your",
+        "he",
+        "him",
+        "his",
+        "she",
+        "her",
+        "they",
+        "them",
+        "their",
+        "about",
+        "up",
+        "down",
+        "also",
+        "still",
+        "already",
+        "longer",
+        "no longer",
+    ]);
+
+    const keywords = queryText
+        .toLowerCase()
+        .replace(/[^\w\s-]/g, "")
+        .split(/\s+/)
+        .filter((w) => w.length > 2 && !STOP_WORDS.has(w));
+
+    if (keywords.length === 0) return entries;
 
     try {
-        // Run two BM25 searches: one on content, one on answers_question
-        const [contentRows, questionRows] = await Promise.all([
-            context.graph
-                .query<
-                    Array<{
-                        id: unknown;
-                        content: string;
-                        score: number;
-                        event_time: number | null;
-                        created_at: number;
-                        token_count?: number;
-                    }>
-                >(
-                    `SELECT *, search::score(1) AS score FROM memory
-                 WHERE content @1@ $text
-                 ORDER BY score DESC
-                 LIMIT 20`,
-                    { text: queryText },
-                )
-                .catch(
-                    () =>
-                        [] as Array<{
-                            id: unknown;
-                            content: string;
-                            score: number;
-                            event_time: number | null;
-                            created_at: number;
-                            token_count?: number;
-                        }>,
-                ),
-            context.graph
-                .query<
-                    Array<{
-                        id: unknown;
-                        content: string;
-                        score: number;
-                        event_time: number | null;
-                        created_at: number;
-                        token_count?: number;
-                    }>
-                >(
-                    `SELECT *, search::score(1) AS score FROM memory
-                 WHERE answers_question @1@ $text
-                 ORDER BY score DESC
-                 LIMIT 20`,
-                    { text: queryText },
-                )
-                .catch(
-                    () =>
-                        [] as Array<{
-                            id: unknown;
-                            content: string;
-                            score: number;
-                            event_time: number | null;
-                            created_at: number;
-                            token_count?: number;
-                        }>,
-                ),
-        ]);
+        // Search for entries containing any discriminating keyword
+        const conditions = keywords.map((_, i) => `string::lowercase(content) CONTAINS $kw${i}`);
+        const vars: Record<string, unknown> = { limit: 20 };
+        keywords.forEach((kw, i) => {
+            vars[`kw${i}`] = kw;
+        });
 
-        const allRows = [...(contentRows ?? []), ...(questionRows ?? [])];
-        if (allRows.length === 0) return entries;
+        const rows = await context.graph.query<MemoryQueryRow[]>(
+            `SELECT * FROM memory WHERE (${conditions.join(" OR ")}) LIMIT $limit`,
+            vars,
+        );
+
+        if (!rows || rows.length === 0) return entries;
 
         const existingMap = new Map(entries.map((e) => [e.id, e]));
-        const BOOST = 0.3;
+        const newIds = rows.map((r) => String(r.id)).filter((id) => !existingMap.has(id));
 
-        // Collect unique new IDs for attribute enrichment
-        const newIdSet = new Set<string>();
-        for (const row of allRows) {
-            const id = String(row.id);
-            if (!existingMap.has(id)) newIdSet.add(id);
+        if (newIds.length === 0) {
+            // All found entries already in candidate set — boost them
+            for (const row of rows) {
+                const existing = existingMap.get(String(row.id));
+                if (existing) existing.score *= 1.3;
+            }
+            return entries;
         }
-        const newIds = [...newIdSet];
 
         // Fetch domain attributes for new entries
         const attrMap = new Map<string, Record<string, Record<string, unknown>>>();
-        if (newIds.length > 0) {
-            const surrealIds = newIds.map((id) =>
-                id.startsWith("memory:")
-                    ? new StringRecordId(id)
-                    : new StringRecordId(`memory:${id}`),
-            );
-            const ownershipEdges = await context.graph.query<
-                Array<{ in: unknown; out: unknown; attributes: Record<string, unknown> }>
-            >("SELECT in, out, attributes FROM owned_by WHERE in IN $ids", {
-                ids: surrealIds,
-            });
-            if (ownershipEdges) {
-                for (const edge of ownershipEdges) {
-                    const memId = String(edge.in);
-                    const domainId = String(edge.out).replace("domain:", "");
-                    if (!attrMap.has(memId)) attrMap.set(memId, {});
-                    attrMap.get(memId)![domainId] = edge.attributes ?? {};
-                }
+        const surrealIds = newIds.map((id) =>
+            id.startsWith("memory:") ? new StringRecordId(id) : new StringRecordId(`memory:${id}`),
+        );
+        const ownershipEdges = await context.graph.query<
+            Array<{ in: unknown; out: unknown; attributes: Record<string, unknown> }>
+        >("SELECT in, out, attributes FROM owned_by WHERE in IN $ids", {
+            ids: surrealIds,
+        });
+        if (ownershipEdges) {
+            for (const edge of ownershipEdges) {
+                const memId = String(edge.in);
+                const domainId = String(edge.out).replace("domain:", "");
+                if (!attrMap.has(memId)) attrMap.set(memId, {});
+                attrMap.get(memId)![domainId] = edge.attributes ?? {};
             }
         }
 
         const newEntries: ScoredMemory[] = [];
         const seen = new Set<string>();
 
-        for (const row of allRows) {
+        for (const row of rows) {
             const id = String(row.id);
             if (seen.has(id)) continue;
             seen.add(id);
 
             const existing = existingMap.get(id);
             if (existing) {
-                existing.score *= 1 + BOOST;
-            } else {
-                const domainAttributes = attrMap.get(id) ?? {};
-                if (!isEntryValid(getKbAttrs(domainAttributes), now)) continue;
-
-                newEntries.push({
-                    id,
-                    content: row.content,
-                    score: row.score * 0.8,
-                    scores: { fulltext: row.score },
-                    tags: [],
-                    domainAttributes,
-                    eventTime: row.event_time ?? null,
-                    createdAt: row.created_at,
-                    tokenCount: row.token_count,
-                });
+                existing.score *= 1.3;
+                continue;
             }
+
+            const domainAttributes = attrMap.get(id) ?? {};
+            if (!isEntryValid(getKbAttrs(domainAttributes), now)) continue;
+
+            // Score based on keyword match count
+            const content = row.content.toLowerCase();
+            const matchCount = keywords.filter((kw) => content.includes(kw)).length;
+            const score = matchCount / keywords.length;
+
+            newEntries.push({
+                id,
+                content: row.content,
+                score,
+                scores: { fulltext: score },
+                tags: [],
+                domainAttributes,
+                eventTime: row.event_time ?? null,
+                createdAt: row.created_at,
+                tokenCount: row.token_count,
+            });
         }
 
         return [...entries, ...newEntries];
