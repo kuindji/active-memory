@@ -14,18 +14,11 @@ import type {
 import { countTokens } from "../../core/scoring.js";
 import { TOPIC_TAG } from "../topic/types.js";
 import { KB_DOMAIN_ID, KB_TAG, DEFAULT_CONSOLIDATE_INTERVAL_MS } from "./types.js";
-import type { KbDomainOptions, QueryIntent } from "./types.js";
+import type { KbDomainOptions } from "./types.js";
 import { kbSkills } from "./skills.js";
 import { processInboxBatch } from "./inbox.js";
 import { consolidateKnowledge } from "./schedules.js";
-import {
-    isEntryValid,
-    getKbAttrs,
-    recordAccess,
-    computeImportance,
-    classifyQueryIntent,
-    ALL_CLASSIFICATIONS,
-} from "./utils.js";
+import { isEntryValid, getKbAttrs, recordAccess, computeImportance } from "./utils.js";
 
 async function findMatchingTopicMemoryIds(text: string, graph: GraphApi): Promise<string[]> {
     try {
@@ -150,7 +143,6 @@ export function createKbDomain(options?: KbDomainOptions): DomainConfig {
             { name: "llmRerank", default: 0, min: 0, max: 1, step: 1 },
             { name: "decayFactor", default: 0.95, min: 0.5, max: 1.0, step: 0.05 },
             { name: "importanceBoost", default: 1.5, min: 1.0, max: 3.0, step: 0.25 },
-            { name: "useQueryIntent", default: 1, min: 0, max: 1, step: 1 },
         ],
 
         async bootstrap(context: DomainContext) {
@@ -246,56 +238,24 @@ export function createKbDomain(options?: KbDomainOptions): DomainConfig {
             const minScore = context.getTunableParam("minScore") ?? 0.5;
             const useEmbeddingRerank = (context.getTunableParam("embeddingRerank") ?? 1) > 0;
             const useLlmRerank = (context.getTunableParam("llmRerank") ?? 0) > 0;
-            const useIntent = (context.getTunableParam("useQueryIntent") ?? 1) > 0;
-
-            // Step 1: Classify query intent
-            let intent: QueryIntent | null = null;
-            if (useIntent) {
-                intent = await classifyQueryIntent(text, context.llmAt("low"));
-            }
 
             const now = Date.now();
 
-            // Step 2: Build filters from intent
-            const filters: Record<string, unknown> = {};
-            if (intent && intent.classifications.length < ALL_CLASSIFICATIONS.length) {
-                filters.classification = intent.classifications;
-            }
-            if (intent?.topic) {
-                filters.topics = { containsAny: [intent.topic] };
-            }
-
-            // Step 3: Search with filters
-            const searchText = intent?.keywords?.length ? intent.keywords.join(" ") : text;
+            // Search with original text, no intent filters.
+            // Classification at 54% accuracy hurts more than it helps as a search filter.
+            // Classification is used for output grouping via stored attributes instead.
             const results = await context.search({
-                text: searchText,
+                text,
                 tags: [KB_TAG],
                 minScore,
                 rerank: useEmbeddingRerank,
                 rerankThreshold: minScore,
-                filters: Object.keys(filters).length > 0 ? filters : undefined,
-                tokenBudget: budgetTokens * 3, // Over-fetch to have candidates for parent resolution
+                tokenBudget: budgetTokens * 3,
             });
 
             let entries = results.entries.filter((e) =>
                 isEntryValid(getKbAttrs(e.domainAttributes), now),
             );
-
-            // Step 4: Progressive fallback if too few results
-            const MIN_RESULTS = 3;
-            if (entries.length < MIN_RESULTS && Object.keys(filters).length > 0) {
-                const widerResults = await context.search({
-                    text,
-                    tags: [KB_TAG],
-                    minScore,
-                    rerank: useEmbeddingRerank,
-                    rerankThreshold: minScore,
-                    tokenBudget: budgetTokens * 3,
-                });
-                entries = widerResults.entries.filter((e) =>
-                    isEntryValid(getKbAttrs(e.domainAttributes), now),
-                );
-            }
 
             if (entries.length === 0) return empty;
 
@@ -308,7 +268,7 @@ export function createKbDomain(options?: KbDomainOptions): DomainConfig {
             const resolved = await resolveToParents(entries, context, now);
 
             // Step 7: Deduplicate near-duplicate content
-            const deduped = deduplicateByContent(resolved, 0.5);
+            const { entries: deduped, aliases: dedupAliases } = deduplicateByContent(resolved, 0.5);
 
             // Step 8: Relevance-first budget — fill by score, then group for output
             deduped.sort((a, b) => b.score - a.score);
@@ -371,6 +331,17 @@ export function createKbDomain(options?: KbDomainOptions): DomainConfig {
 
             const finalContext = sections.join("\n\n");
 
+            // Include dedup aliases — entries whose content is represented by a surviving entry
+            const selectedIds = new Set(allMemories.map((m) => m.id));
+            for (const [aliasId, survivorId] of dedupAliases) {
+                if (selectedIds.has(survivorId)) {
+                    const survivor = allMemories.find((m) => m.id === survivorId);
+                    if (survivor) {
+                        allMemories.push({ ...survivor, id: aliasId });
+                    }
+                }
+            }
+
             // Record access for importance tracking (fire-and-forget)
             Promise.all(
                 allMemories.map((m) =>
@@ -406,23 +377,33 @@ function jaccardSimilarity(a: Set<string>, b: Set<string>): number {
     return union > 0 ? intersection / union : 0;
 }
 
+interface DedupResult {
+    entries: ScoredMemory[];
+    /** Maps removed entry ID → surviving entry ID that absorbed it */
+    aliases: Map<string, string>;
+}
+
 /**
  * Removes near-duplicate entries by word-overlap similarity.
  * Entries are processed in score order — higher-scored entries are kept.
+ * Returns alias map so callers can track which entries were collapsed.
  */
-function deduplicateByContent(entries: ScoredMemory[], threshold: number): ScoredMemory[] {
+function deduplicateByContent(entries: ScoredMemory[], threshold: number): DedupResult {
     const sorted = [...entries].sort((a, b) => b.score - a.score);
     const accepted: Array<{ mem: ScoredMemory; words: Set<string> }> = [];
+    const aliases = new Map<string, string>();
 
     for (const entry of sorted) {
         const words = extractWordSet(entry.content);
-        const isDuplicate = accepted.some((a) => jaccardSimilarity(a.words, words) >= threshold);
-        if (!isDuplicate) {
+        const match = accepted.find((a) => jaccardSimilarity(a.words, words) >= threshold);
+        if (match) {
+            aliases.set(entry.id, match.mem.id);
+        } else {
             accepted.push({ mem: entry, words });
         }
     }
 
-    return accepted.map((a) => a.mem);
+    return { entries: accepted.map((a) => a.mem), aliases };
 }
 
 /**
