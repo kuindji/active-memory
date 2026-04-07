@@ -12,6 +12,8 @@ import { runReport } from "./phases/6-report.js";
 import { runTune } from "./phases/7-tune.js";
 import { runBaseline } from "./phases/baseline.js";
 import type { ArchitectureConfig } from "./types.js";
+import { buildOramaIndex, serializeOramaIndex, loadOramaIndex } from "./orama-index.js";
+import type { OramaDb } from "./orama-index.js";
 
 const { values } = parseArgs({
     options: {
@@ -30,6 +32,8 @@ async function runConfig(config: ArchitectureConfig, fromPhase: number): Promise
     console.log(`\n${"=".repeat(60)}`);
     console.log(`Running config: "${config.name}"`);
     console.log(`${"=".repeat(60)}`);
+
+    let oramaIndex: OramaDb | undefined;
 
     // Phase 1: Ingest (always needed — creates the engine)
     let engine;
@@ -58,6 +62,13 @@ async function runConfig(config: ArchitectureConfig, fromPhase: number): Promise
             await engine.close();
             return;
         }
+
+        // Build Orama index after processing (before consolidation)
+        if (config.useOrama) {
+            console.log(`\n[Phase 2.5: Build Orama Index] Config: "${config.name}"`);
+            oramaIndex = await buildOramaIndex(engine);
+            await serializeOramaIndex(oramaIndex, config.name);
+        }
     }
 
     // Phase 3: Consolidate
@@ -65,9 +76,24 @@ async function runConfig(config: ArchitectureConfig, fromPhase: number): Promise
         await runConsolidate(config, engine);
     }
 
+    // For Orama configs resuming from a later phase, load the serialized index
+    if (config.useOrama && !oramaIndex && fromPhase > 2) {
+        oramaIndex = await loadOramaIndex(config.name);
+    }
+
     // Phase 4: Evaluate
-    if (fromPhase <= 4 && engine) {
-        await runEvaluate(config, engine);
+    if (fromPhase <= 4) {
+        if (config.useOrama && oramaIndex) {
+            // Orama buildContext queries its own in-memory index, not SurrealDB search.
+            // But it still needs the engine for parent resolution and access recording.
+            // Re-ingest to populate the DB, then evaluate with Orama domain.
+            if (engine) await engine.close();
+            const result = await runIngest(config, oramaIndex);
+            engine = result.engine;
+        }
+        if (engine) {
+            await runEvaluate(config, engine);
+        }
     }
 
     // Close engine before scoring
