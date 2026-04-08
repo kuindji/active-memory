@@ -1,11 +1,7 @@
 import { readdir, stat, readFile } from "node:fs/promises";
 import { execFile } from "node:child_process";
-import { dirname, join, relative } from "node:path";
-import { fileURLToPath } from "node:url";
+import { join, relative } from "node:path";
 import type { DomainContext } from "../../core/types.js";
-import { loadPrompt } from "../../core/prompt-loader.js";
-
-const BASE_DIR = dirname(fileURLToPath(import.meta.url));
 import {
     CODE_REPO_DOMAIN_ID,
     CODE_REPO_TAG,
@@ -157,7 +153,7 @@ export async function bootstrapCodeRepo(
     if (!llm.generate) return;
 
     // Step 2: Triage — let LLM assess repo size and pick files to read
-    const triagePrompt = await loadPrompt(BASE_DIR, "bootstrap-triage");
+    const triagePrompt = await context.loadPrompt("bootstrap-triage");
     let filesToRead: string[] = [];
     try {
         const triageResponse = await llm.generate(
@@ -199,7 +195,7 @@ export async function bootstrapCodeRepo(
     }
 
     // Step 4: Deep analysis with structure + code
-    const analysisPrompt = await loadPrompt(BASE_DIR, "bootstrap-analysis");
+    const analysisPrompt = await context.loadPrompt("bootstrap-analysis");
     let analysis: AnalysisResult;
     try {
         const prompt =

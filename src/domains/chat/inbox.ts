@@ -1,12 +1,7 @@
-import { dirname } from "node:path";
-import { fileURLToPath } from "node:url";
 import type { OwnedMemory, DomainContext } from "../../core/types.js";
-import { loadPrompt } from "../../core/prompt-loader.js";
 import { CHAT_TAG, CHAT_MESSAGE_TAG } from "./types.js";
 import { TOPIC_TAG, TOPIC_DOMAIN_ID } from "../topic/types.js";
 import { ensureTag } from "./utils.js";
-
-const BASE_DIR = dirname(fileURLToPath(import.meta.url));
 
 function logInboxWarning(scope: string, error: unknown): void {
     const errorMessage = error instanceof Error ? error.message : String(error);
@@ -108,7 +103,7 @@ async function batchExtractTopics(
 ): Promise<Map<string, string[]>> {
     const result = new Map<string, string[]>();
     const llm = context.llmAt("low");
-    const topicPrompt = await loadPrompt(BASE_DIR, "topic-extraction");
+    const topicPrompt = await context.loadPrompt("topic-extraction");
 
     // Build numbered content list
     const numberedItems = entries.map((e, i) => `${i}. ${e.memory.content}`).join("\n\n");

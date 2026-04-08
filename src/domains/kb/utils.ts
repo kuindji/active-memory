@@ -1,8 +1,5 @@
 import { StringRecordId } from "surrealdb";
-import { dirname } from "node:path";
-import { fileURLToPath } from "node:url";
-import type { DomainContext, LLMAdapter, OwnedMemory } from "../../core/types.js";
-import { loadPrompt } from "../../core/prompt-loader.js";
+import type { DomainContext, OwnedMemory } from "../../core/types.js";
 import { TOPIC_TAG, TOPIC_DOMAIN_ID } from "../topic/types.js";
 import type { KbClassification, QueryIntent } from "./types.js";
 import {
@@ -11,8 +8,6 @@ import {
     DEFAULT_IMPORTANCE,
     MAX_ATOMIC_FACTS,
 } from "./types.js";
-
-const BASE_DIR = dirname(fileURLToPath(import.meta.url));
 
 const VALID_CLASSIFICATIONS = new Set<string>([
     "fact",
@@ -107,7 +102,7 @@ export async function decomposeToAtomicFacts(
     if (!llm.extractStructured) return null;
 
     try {
-        const decompositionPrompt = await loadPrompt(BASE_DIR, "decomposition");
+        const decompositionPrompt = await context.loadPrompt("decomposition");
         const results = (await llm.extractStructured(
             content,
             ATOMIC_DECOMPOSITION_SCHEMA,
@@ -208,7 +203,7 @@ async function batchExtractTopics(
 ): Promise<Map<string, string[]>> {
     const result = new Map<string, string[]>();
     const llm = context.llmAt("low");
-    const topicPrompt = await loadPrompt(BASE_DIR, "topic-extraction");
+    const topicPrompt = await context.loadPrompt("topic-extraction");
 
     const numberedItems = entries.map((e, i) => `${i}. ${e.memory.content}`).join("\n\n");
 
@@ -279,7 +274,11 @@ const QUERY_INTENT_SCHEMA = JSON.stringify({
     required: ["classifications", "keywords"],
 });
 
-export async function classifyQueryIntent(text: string, llm: LLMAdapter): Promise<QueryIntent> {
+export async function classifyQueryIntent(
+    text: string,
+    context: DomainContext,
+): Promise<QueryIntent> {
+    const llm = context.llmAt("low");
     const fallback: QueryIntent = {
         classifications: [...ALL_CLASSIFICATIONS],
         keywords: text
@@ -288,7 +287,7 @@ export async function classifyQueryIntent(text: string, llm: LLMAdapter): Promis
             .filter((w) => w.length > 2),
     };
 
-    const queryIntentPrompt = await loadPrompt(BASE_DIR, "query-intent");
+    const queryIntentPrompt = await context.loadPrompt("query-intent");
 
     if (llm.extractStructured) {
         try {
@@ -384,7 +383,7 @@ export async function batchGenerateQuestions(
     if (entries.length === 0) return result;
 
     const llm = context.llmAt("low");
-    const questionPrompt = await loadPrompt(BASE_DIR, "question-generation");
+    const questionPrompt = await context.loadPrompt("question-generation");
     const numberedItems = entries.map((e, i) => `${i}. ${e.memory.content}`).join("\n\n");
 
     if (llm.extractStructured) {

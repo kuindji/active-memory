@@ -219,6 +219,7 @@ export interface DomainContext {
     requestContext: RequestContext;
     getMemoryTags(memoryId: string): Promise<string[]>;
     getNodeEdges(nodeId: string, direction?: "in" | "out" | "both"): Promise<Edge[]>;
+    loadPrompt(name: string): Promise<string>;
 }
 
 export interface DomainSchedule {
@@ -391,6 +392,8 @@ export interface EngineConfig {
     };
     context?: RequestContext;
     debug?: DebugConfig;
+    /** Additional text appended to domain prompts. Keys are "domainId/promptName". */
+    prompts?: Record<string, string>;
 }
 
 // --- Event types ---

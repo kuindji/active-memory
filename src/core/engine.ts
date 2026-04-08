@@ -12,6 +12,7 @@ import { Scheduler, MetaScheduleStateStore } from "./scheduler.js";
 import { EventEmitter } from "./events.js";
 import { createDebugTools, wrapLLMAdapter } from "./debug.js";
 import { countTokens, applyTokenBudget } from "./scoring.js";
+import { loadPrompt as loadPromptFromFile } from "./prompt-loader.js";
 import type {
     EngineConfig,
     DomainConfig,
@@ -63,6 +64,7 @@ class MemoryEngine {
     private debugConfig: DebugConfig = {};
     private debug!: DebugTools;
     private tunableParams: TunableParamRegistry = new TunableParamRegistry();
+    private promptExtras: Record<string, string> = {};
 
     async initialize(config: EngineConfig): Promise<void> {
         const connection = config.adapter ? await config.adapter.resolve() : config.connection;
@@ -88,6 +90,7 @@ class MemoryEngine {
             timing: config.debug?.timing ?? process.env.MEMORY_DOMAIN_DEBUG_TIMING === "1",
         };
         this.debug = createDebugTools("engine", this.debugConfig);
+        this.promptExtras = config.prompts ?? {};
 
         // Set up schema
         this.schema = new SchemaRegistry(db);
@@ -759,6 +762,7 @@ class MemoryEngine {
         const schema = this.schema;
         const domainRegistry = this.domainRegistry;
         const tunableParams = this.tunableParams;
+        const promptExtras = this.promptExtras;
         const debug = createDebugTools(`domain:${domainId}`, this.debugConfig);
         const llm = wrapLLMAdapter(baseLlm, debug, "llm");
 
@@ -1091,6 +1095,18 @@ class MemoryEngine {
                 }
 
                 return filtered;
+            },
+
+            async loadPrompt(name: string): Promise<string> {
+                const domain = domainRegistry.get(domainId);
+                if (!domain?.baseDir) {
+                    throw new Error(
+                        `Domain "${domainId}" has no baseDir — cannot load prompt "${name}"`,
+                    );
+                }
+                const base = await loadPromptFromFile(domain.baseDir, name);
+                const extra = promptExtras[`${domainId}/${name}`];
+                return extra ? `${base}\n\n${extra}` : base;
             },
         };
     }

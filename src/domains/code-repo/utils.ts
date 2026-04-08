@@ -1,12 +1,7 @@
-import { dirname } from "node:path";
-import { fileURLToPath } from "node:url";
 import type { DomainContext } from "../../core/types.js";
-import { loadPrompt } from "../../core/prompt-loader.js";
 import { TOPIC_TAG, TOPIC_DOMAIN_ID } from "../topic/types.js";
 import type { MemoryClassification } from "./types.js";
 import { CLASSIFICATION_TAGS } from "./types.js";
-
-const BASE_DIR = dirname(fileURLToPath(import.meta.url));
 
 function logCodeRepoWarning(scope: string, error: unknown): void {
     const errorMessage = error instanceof Error ? error.message : String(error);
@@ -112,7 +107,7 @@ async function batchExtractTopics(
 ): Promise<Map<string, string[]>> {
     const result = new Map<string, string[]>();
     const llm = context.llmAt("low");
-    const topicPrompt = await loadPrompt(BASE_DIR, "topic-extraction");
+    const topicPrompt = await context.loadPrompt("topic-extraction");
 
     const numberedItems = entries.map((e, i) => `${i}. ${e.memory.content}`).join("\n\n");
 

@@ -1,7 +1,4 @@
-import { dirname } from "node:path";
-import { fileURLToPath } from "node:url";
 import type { OwnedMemory, DomainContext, ScoredMemory } from "../../core/types.js";
-import { loadPrompt } from "../../core/prompt-loader.js";
 import {
     CODE_REPO_TAG,
     CODE_REPO_DOMAIN_ID,
@@ -10,8 +7,6 @@ import {
 } from "./types.js";
 import type { MemoryClassification, Audience } from "./types.js";
 import { ensureTag, findOrCreateEntity, linkToTopicsBatch, classificationToTag } from "./utils.js";
-
-const BASE_DIR = dirname(fileURLToPath(import.meta.url));
 
 function logCodeRepoInboxWarning(scope: string, error: unknown): void {
     const errorMessage = error instanceof Error ? error.message : String(error);
@@ -241,7 +236,7 @@ async function batchClassify(
         return result;
     }
 
-    const classificationPrompt = await loadPrompt(BASE_DIR, "classification");
+    const classificationPrompt = await context.loadPrompt("classification");
     const numberedItems = needsClassification
         .map((item, i) => `${i + 1}. ${item.entry.memory.content}`)
         .join("\n\n");
@@ -286,7 +281,7 @@ async function batchExtractEntities(
 
     if (!entityLlm.extractStructured) return result;
 
-    const entityPrompt = await loadPrompt(BASE_DIR, "entity-extraction");
+    const entityPrompt = await context.loadPrompt("entity-extraction");
     const numberedItems = entries.map((e, i) => `${i}. ${e.memory.content}`).join("\n\n");
 
     try {
@@ -397,7 +392,7 @@ async function processContradictionBatch(
     const llm = context.llmAt("low");
     if (!llm.extractStructured) return;
 
-    const contradictionPrompt = await loadPrompt(BASE_DIR, "contradiction");
+    const contradictionPrompt = await context.loadPrompt("contradiction");
 
     const newItems = newDecisions.map((d, i) => `${i}. ${d.memory.content}`).join("\n");
 

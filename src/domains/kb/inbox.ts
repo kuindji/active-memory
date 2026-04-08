@@ -1,8 +1,5 @@
 import { StringRecordId } from "surrealdb";
-import { dirname } from "node:path";
-import { fileURLToPath } from "node:url";
 import type { OwnedMemory, DomainContext, ScoredMemory } from "../../core/types.js";
-import { loadPrompt } from "../../core/prompt-loader.js";
 import { KB_TAG, KB_DOMAIN_ID, DECOMPOSITION_TOKEN_THRESHOLD } from "./types.js";
 import type { KbClassification } from "./types.js";
 import {
@@ -13,8 +10,6 @@ import {
     batchGenerateQuestions,
 } from "./utils.js";
 import { countTokens } from "../../core/scoring.js";
-
-const BASE_DIR = dirname(fileURLToPath(import.meta.url));
 
 interface DecomposeResult {
     processable: OwnedMemory[];
@@ -294,7 +289,7 @@ async function batchClassify(
     if (needsClassification.length === 0) return result;
 
     const classifyLlm = context.llmAt("low");
-    const classificationPrompt = await loadPrompt(BASE_DIR, "classification");
+    const classificationPrompt = await context.loadPrompt("classification");
 
     const numberedItems = needsClassification
         .map((item, i) => `${i}. ${item.entry.memory.content}`)
@@ -442,7 +437,7 @@ async function processSupersessionBatch(
     const llm = context.llmAt("low");
     if (!llm.extractStructured) return;
 
-    const supersessionPrompt = await loadPrompt(BASE_DIR, "supersession");
+    const supersessionPrompt = await context.loadPrompt("supersession");
 
     const newItems = newEntries.map((e, i) => `${i}. ${e.memory.content}`).join("\n");
 
@@ -510,7 +505,7 @@ async function batchLinkRelated(
     const relatedEntries = [...relatedMap.values()];
     if (relatedEntries.length === 0) return;
 
-    const relatedPrompt = await loadPrompt(BASE_DIR, "related-knowledge");
+    const relatedPrompt = await context.loadPrompt("related-knowledge");
 
     const newItems = entries
         .map(

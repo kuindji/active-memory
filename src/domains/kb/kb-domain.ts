@@ -9,9 +9,7 @@ import type {
     SearchQuery,
     ScoredMemory,
     ContextResult,
-    LLMAdapter,
 } from "../../core/types.js";
-import { loadPrompt } from "../../core/prompt-loader.js";
 import { countTokens, cosineSimilarity } from "../../core/scoring.js";
 import { TOPIC_TAG } from "../topic/types.js";
 import { KB_DOMAIN_ID, KB_TAG, DEFAULT_CONSOLIDATE_INTERVAL_MS } from "./types.js";
@@ -68,12 +66,13 @@ const KB_BASE_DIR = dirname(fileURLToPath(import.meta.url));
 async function llmRerankMemories(
     query: string,
     memories: ScoredMemory[],
-    llm: LLMAdapter,
+    context: DomainContext,
 ): Promise<ScoredMemory[]> {
     if (memories.length === 0) return memories;
+    const llm = context.llm;
     if (!llm.generate) return memories;
 
-    const rerankPrompt = await loadPrompt(KB_BASE_DIR, "rerank");
+    const rerankPrompt = await context.loadPrompt("rerank");
     const numbered = memories.map((m, i) => `[${i}] ${m.content.substring(0, 200)}`).join("\n");
 
     const prompt = `Given the query: "${query}"\n\n${rerankPrompt}\n\nMemories:\n${numbered}`;
@@ -276,7 +275,7 @@ export function createKbDomain(options?: KbDomainOptions): DomainConfig {
 
             // Step 5: Optional LLM rerank
             if (useLlmRerank && context.llm) {
-                entries = await llmRerankMemories(text, entries, context.llm);
+                entries = await llmRerankMemories(text, entries, context);
             }
 
             // Step 6: Resolve children to parents
