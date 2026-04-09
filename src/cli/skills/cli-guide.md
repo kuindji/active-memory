@@ -49,3 +49,12 @@ Use `ingest` when the domain should process the input. Use `write` when you know
 `node memory-domain memory <id> tag <tag>`                   # add tag
 `node memory-domain memory <id> untag <tag>`                 # remove tag
 `node memory-domain memory <id> delete`                      # delete
+
+## Core Memories (Instructions)
+
+Core memories are persistent instructions included in every context and prompt for a domain.
+They are stored as normal memory nodes (searchable) tagged with `core:<domain>`.
+
+`node memory-domain core-memory add --domain <domain> --text "<instruction>"`
+`node memory-domain core-memory list --domain <domain>`
+`node memory-domain core-memory remove --domain <domain> --id <memory-id>`

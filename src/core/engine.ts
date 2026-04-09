@@ -401,45 +401,53 @@ class MemoryEngine {
 
     // --- Core memory API ---
 
-    private async loadCoreMemories(domainId: string): Promise<CoreMemory[]> {
-        const metaId = `meta:${domainId}_core_memories`;
-        const node = await this.graph.getNode(metaId);
-        if (!node?.value) return [];
-        try {
-            return JSON.parse(node.value as string) as CoreMemory[];
-        } catch {
-            return [];
-        }
+    private coreTagFor(domainId: string): string {
+        return `core:${domainId}`;
     }
 
-    private async saveCoreMemories(domainId: string, memories: CoreMemory[]): Promise<void> {
-        const metaId = `meta:${domainId}_core_memories`;
-        const value = JSON.stringify(memories);
-        try {
-            await this.graph.createNodeWithId(metaId, { value });
-        } catch {
-            await this.graph.updateNode(metaId, { value });
-        }
+    private async queryCoreMemories(domainId: string): Promise<CoreMemory[]> {
+        const coreTag = this.coreTagFor(domainId);
+        const tagRef = new StringRecordId(`tag:${coreTag}`);
+        const rows = await this.graph.query<
+            Array<{ id: unknown; content: string; created_at: number }>
+        >(
+            `SELECT in AS id,
+                (SELECT content FROM ONLY $parent.in).content AS content,
+                (SELECT created_at FROM ONLY $parent.in).created_at AS created_at
+             FROM tagged WHERE out = $tagId`,
+            { tagId: tagRef },
+        );
+        if (!rows || rows.length === 0) return [];
+        return rows.map((r) => ({
+            id: String(r.id),
+            content: r.content,
+            createdAt: r.created_at,
+        }));
     }
 
     async addCoreMemory(domainId: string, content: string): Promise<string> {
         const domain = this.domainRegistry.get(domainId);
         if (!domain) throw new Error(`Domain "${domainId}" not found`);
-        const id = crypto.randomUUID();
-        const memories = await this.loadCoreMemories(domainId);
-        memories.push({ id, content, createdAt: Date.now() });
-        await this.saveCoreMemories(domainId, memories);
-        return id;
+        const coreTag = this.coreTagFor(domainId);
+        const result = await this.writeMemory(content, {
+            domain: domainId,
+            tags: [coreTag],
+        });
+        return result.id;
     }
 
     async listCoreMemories(domainId: string): Promise<CoreMemory[]> {
-        return this.loadCoreMemories(domainId);
+        return this.queryCoreMemories(domainId);
     }
 
     async removeCoreMemory(domainId: string, id: string): Promise<void> {
-        const memories = await this.loadCoreMemories(domainId);
-        const filtered = memories.filter((m) => m.id !== id);
-        await this.saveCoreMemories(domainId, filtered);
+        // Validate the memory has the core tag for this domain
+        const coreTag = this.coreTagFor(domainId);
+        const tags = await this.getMemoryTags(id);
+        if (!tags.includes(coreTag)) {
+            throw new Error(`Memory "${id}" is not a core memory for domain "${domainId}"`);
+        }
+        await this.deleteMemory(id);
     }
 
     listSchedules(domainId?: string): ScheduleInfo[] {
@@ -807,7 +815,7 @@ class MemoryEngine {
         const domainRegistry = this.domainRegistry;
         const tunableParams = this.tunableParams;
         const promptExtras = this.promptExtras;
-        const loadCoreMems = this.loadCoreMemories.bind(this);
+        const queryCoreMemsFn = this.queryCoreMemories.bind(this);
         let cachedCoreMemories: CoreMemory[] | null = null;
         const debug = createDebugTools(`domain:${domainId}`, this.debugConfig);
         const llm = wrapLLMAdapter(baseLlm, debug, "llm");
@@ -1162,7 +1170,7 @@ class MemoryEngine {
 
             async getCoreMemories(): Promise<CoreMemory[]> {
                 if (cachedCoreMemories === null) {
-                    cachedCoreMemories = await loadCoreMems(domainId);
+                    cachedCoreMemories = await queryCoreMemsFn(domainId);
                 }
                 return cachedCoreMemories;
             },

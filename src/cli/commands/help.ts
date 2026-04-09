@@ -11,6 +11,7 @@ Commands:
   memory          Read, update, tag, or delete a memory
   graph           Manage graph edges and traversals
   schedule        List or trigger domain schedules
+  core-memory     Manage core memories (persistent instructions) for a domain
   skill           Output combined skill guide for all domains
   domains         List all available domains
   domain          Inspect a specific domain
@@ -210,6 +211,28 @@ Examples:
   memory-domain schedule list --domain topic
   memory-domain schedule trigger topic merge-similar-topics
   memory-domain schedule run-due
+`.trim(),
+
+    "core-memory": `
+Usage: memory-domain core-memory <subcommand> --domain <id> [options]
+
+Manage core memories (persistent instructions) for a domain. Core memories are
+included in every context and prompt for the domain.
+
+Subcommands:
+  add              Add a new core memory
+  list             List all core memories
+  remove           Remove a core memory
+
+Options:
+  --domain <id>    Domain to manage core memories for (required)
+  --text <string>  Core memory content (required for add)
+  --id <id>        Memory ID to remove (required for remove)
+
+Examples:
+  memory-domain core-memory add --domain kb --text "Always use metric units"
+  memory-domain core-memory list --domain kb
+  memory-domain core-memory remove --domain kb --id memory:abc123
 `.trim(),
 
     skill: `

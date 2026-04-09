@@ -685,9 +685,11 @@ async function mergeKeywordSearch(
 
         if (allRows.size === 0) return entries;
 
-        // Filter to entries matching enough keywords
-        // For short queries (≤3 keywords), 1 match suffices; otherwise require 2+
-        const minMatches = keywords.length <= 3 ? 1 : 2;
+        // Allow single-keyword matches — scoring (mc/keywords.length) naturally
+        // ranks multi-keyword matches higher, and MMR budget fill handles noise.
+        // Requiring 2+ matches filters out decomposed children that individually
+        // match only one concept keyword (e.g., "deprecated") from cross-cutting queries.
+        const minMatches = 1;
         const rows = [...allRows.entries()]
             .filter(([id]) => (matchCounts.get(id) ?? 0) >= minMatches)
             .map(([, row]) => row);

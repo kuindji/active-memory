@@ -13,6 +13,7 @@ import { graphCommand } from "./commands/graph.js";
 import { scheduleCommand } from "./commands/schedule.js";
 import { initCommand } from "./commands/init.js";
 import { skillCommand } from "./commands/skill.js";
+import { coreMemoryCommand } from "./commands/core-memory.js";
 import { loadConfig } from "../config-loader.js";
 import type { CommandHandler, CommandResult } from "./types.js";
 
@@ -29,6 +30,7 @@ const COMMANDS: Record<string, CommandHandler> = {
     graph: graphCommand,
     schedule: scheduleCommand,
     skill: skillCommand,
+    "core-memory": coreMemoryCommand,
 };
 
 async function main(): Promise<void> {

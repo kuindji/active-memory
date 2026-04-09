@@ -83,7 +83,7 @@ export async function consolidateKnowledge(context: DomainContext): Promise<void
 
                 const summary = await context.debug.time(
                     "kb.schedule.consolidate.summary",
-                    () => context.llmAt("medium").consolidate(contents),
+                    () => context.llmAt("low").consolidate(contents),
                     { memories: contents.length, classification },
                 );
                 if (!summary) continue;
