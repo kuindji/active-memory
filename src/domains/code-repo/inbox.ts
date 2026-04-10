@@ -1,12 +1,23 @@
+import { StringRecordId } from "surrealdb";
 import type { OwnedMemory, DomainContext, ScoredMemory } from "../../core/types.js";
 import {
     CODE_REPO_TAG,
     CODE_REPO_DOMAIN_ID,
     CODE_REPO_DECISION_TAG,
     AUDIENCE_TAGS,
+    DEFAULT_IMPORTANCE,
+    DECOMPOSITION_TOKEN_THRESHOLD,
 } from "./types.js";
 import type { MemoryClassification, Audience } from "./types.js";
-import { ensureTag, findOrCreateEntity, linkToTopicsBatch, classificationToTag } from "./utils.js";
+import {
+    ensureTag,
+    findOrCreateEntity,
+    linkToTopicsBatch,
+    classificationToTag,
+    decomposeToAtomicFacts,
+    batchGenerateQuestions,
+} from "./utils.js";
+import { countTokens } from "../../core/scoring.js";
 
 function logCodeRepoInboxWarning(scope: string, error: unknown): void {
     const errorMessage = error instanceof Error ? error.message : String(error);
@@ -56,25 +67,47 @@ const BATCH_ENTITY_EXTRACTION_SCHEMA = JSON.stringify({
     },
 });
 
-const BATCH_CONTRADICTION_SCHEMA = JSON.stringify({
+const BATCH_SUPERSESSION_SCHEMA = JSON.stringify({
     type: "array",
     items: {
         type: "object",
         properties: {
-            newIndex: { type: "number", description: "Zero-based index of the new decision" },
-            existingId: { type: "string", description: "ID of the contradicted existing decision" },
+            newIndex: { type: "number", description: "Zero-based index of the new entry" },
+            existingId: { type: "string", description: "ID of the superseded existing entry" },
         },
         required: ["newIndex", "existingId"],
     },
 });
 
-const CONTRADICTION_PROMPT_BUDGET = 4000;
+const BATCH_RELATIONSHIP_SCHEMA = JSON.stringify({
+    type: "array",
+    items: {
+        type: "object",
+        properties: {
+            newIndex: { type: "number", description: "Zero-based index of the new entry" },
+            existingId: { type: "string", description: "ID of the related existing entry" },
+            relationship: {
+                type: "string",
+                enum: ["prerequisite", "example-of", "contrast", "elaboration"],
+                description: "How the new entry relates to the existing one",
+            },
+        },
+        required: ["newIndex", "existingId", "relationship"],
+    },
+});
+
+const SUPERSESSION_PROMPT_BUDGET = 4000;
 
 interface EntityResult {
     name: string;
     type: string;
     path?: string;
     kind?: string;
+}
+
+interface DecomposeResult {
+    processable: OwnedMemory[];
+    decomposedParents: OwnedMemory[];
 }
 
 export async function processInboxBatch(
@@ -84,8 +117,16 @@ export async function processInboxBatch(
     await context.debug.time(
         "code-repo.inbox.total",
         async () => {
+            // Stage 0: Atomic fact decomposition (long entries only)
+            const { processable: processableEntries, decomposedParents } = await context.debug.time(
+                "code-repo.inbox.decompose",
+                () => decomposeEntries(entries, context),
+                { entries: entries.length },
+            );
+
+            // Audience map (carry through from initial attributes)
             const audienceMap = new Map<string, string[]>();
-            for (const entry of entries) {
+            for (const entry of processableEntries) {
                 let audience = entry.domainAttributes.audience as string[] | undefined;
                 if (!audience || !Array.isArray(audience)) {
                     audience = ["technical"];
@@ -96,33 +137,73 @@ export async function processInboxBatch(
                 audienceMap.set(entry.memory.id, audience);
             }
 
+            // Stage 1: Classification
             const classificationMap = await context.debug.time(
                 "code-repo.inbox.classify",
-                () => batchClassify(entries, context),
-                { entries: entries.length },
+                () => batchClassify(processableEntries, context),
+                { entries: processableEntries.length },
+            );
+
+            // Classify decomposed parents separately so they get a classification for search/display
+            if (decomposedParents.length > 0) {
+                const parentClassificationMap = await context.debug.time(
+                    "code-repo.inbox.classifyParents",
+                    () => batchClassify(decomposedParents, context),
+                    { entries: decomposedParents.length },
+                );
+                for (const parent of decomposedParents) {
+                    const classification =
+                        parentClassificationMap.get(parent.memory.id) ?? "observation";
+                    const parentAudience = (parent.domainAttributes.audience as
+                        | string[]
+                        | undefined) ?? ["technical"];
+                    await context.updateAttributes(parent.memory.id, {
+                        ...parent.domainAttributes,
+                        classification,
+                        audience: parentAudience,
+                        decomposed: true,
+                    });
+                }
+            }
+
+            // Stage 1.5: Question generation (what questions does this entry answer?)
+            const questionMap = await context.debug.time(
+                "code-repo.inbox.questionGeneration",
+                () => batchGenerateQuestions(context, processableEntries),
+                { entries: processableEntries.length },
             );
 
             const codeRepoTagId = await ensureTag(context, CODE_REPO_TAG);
 
+            // Stage 2: Tag + attribute assignment (with importance/validFrom/answersQuestion)
             await context.debug.time(
                 "code-repo.inbox.tagAndAttribute",
                 async () => {
-                    for (const entry of entries) {
-                        const classification =
-                            classificationMap.get(entry.memory.id) ?? "observation";
+                    for (const entry of processableEntries) {
+                        const classification = (classificationMap.get(entry.memory.id) ??
+                            "observation") as MemoryClassification;
                         const audience = audienceMap.get(entry.memory.id) ?? ["technical"];
+                        const existingSource = entry.domainAttributes.source as string | undefined;
+                        const existingParentId = entry.domainAttributes.parentMemoryId as
+                            | string
+                            | undefined;
+                        const answersQuestion = questionMap.get(entry.memory.id);
 
                         await context.updateAttributes(entry.memory.id, {
                             classification,
                             audience,
                             superseded: false,
+                            validFrom: Date.now(),
+                            confidence: 1.0,
+                            importance: DEFAULT_IMPORTANCE[classification],
+                            ...(existingSource ? { source: existingSource } : {}),
+                            ...(existingParentId ? { parentMemoryId: existingParentId } : {}),
+                            ...(answersQuestion ? { answersQuestion } : {}),
                         });
 
                         await context.tagMemory(entry.memory.id, codeRepoTagId);
 
-                        const classTag = classificationToTag(
-                            classification as MemoryClassification,
-                        );
+                        const classTag = classificationToTag(classification);
                         const classTagId = await ensureTag(context, classTag);
                         try {
                             await context.graph.relate(classTagId, "child_of", codeRepoTagId);
@@ -143,21 +224,36 @@ export async function processInboxBatch(
                                 await context.tagMemory(entry.memory.id, audTagId);
                             }
                         }
+
+                        // Denormalize classification and answers_question onto memory record
+                        try {
+                            await context.graph.query(
+                                "UPDATE $memId SET classification = $cls, answers_question = $aq",
+                                {
+                                    memId: new StringRecordId(entry.memory.id),
+                                    cls: classification,
+                                    aq: answersQuestion ?? null,
+                                },
+                            );
+                        } catch {
+                            /* best-effort denormalization */
+                        }
                     }
                 },
-                { entries: entries.length },
+                { entries: processableEntries.length },
             );
 
+            // Stage 3: Entity extraction and linking
             const entitiesMap = await context.debug.time(
                 "code-repo.inbox.entityExtraction",
-                () => batchExtractEntities(entries, context),
-                { entries: entries.length },
+                () => batchExtractEntities(processableEntries, context),
+                { entries: processableEntries.length },
             );
 
             await context.debug.time(
                 "code-repo.inbox.entityLinking",
                 async () => {
-                    for (const entry of entries) {
+                    for (const entry of processableEntries) {
                         const entities = entitiesMap.get(entry.memory.id) ?? [];
                         for (const entity of entities) {
                             if (!entity.name || !entity.type) continue;
@@ -184,28 +280,103 @@ export async function processInboxBatch(
                         }
                     }
                 },
-                { entries: entries.length },
+                { entries: processableEntries.length },
             );
 
+            // Stage 4: Topic linking (with denormalization)
             await context.debug.time(
                 "code-repo.inbox.topicLinking",
-                () => linkToTopicsBatch(context, entries),
-                { entries: entries.length },
+                () => linkToTopicsBatch(context, processableEntries),
+                { entries: processableEntries.length },
             );
 
-            const decisions = entries.filter(
+            // Stage 5: Supersession detection (decisions only — preserves existing scope)
+            const decisions = processableEntries.filter(
                 (e) => classificationMap.get(e.memory.id) === "decision",
             );
             if (decisions.length > 0) {
                 await context.debug.time(
-                    "code-repo.inbox.contradictionDetection",
-                    () => batchDetectContradictions(decisions, context),
+                    "code-repo.inbox.supersessionDetection",
+                    () => batchDetectSupersession(decisions, context),
                     { decisions: decisions.length },
                 );
             }
+
+            // Stage 6: Related-knowledge linking
+            await context.debug.time(
+                "code-repo.inbox.relatedLinking",
+                () => batchLinkRelated(processableEntries, classificationMap, context),
+                { entries: processableEntries.length },
+            );
         },
         { entries: entries.length },
     );
+}
+
+async function decomposeEntries(
+    entries: OwnedMemory[],
+    context: DomainContext,
+): Promise<DecomposeResult> {
+    const processable: OwnedMemory[] = [];
+    const decomposedParents: OwnedMemory[] = [];
+
+    for (const entry of entries) {
+        const tokens = countTokens(entry.memory.content);
+        if (tokens <= DECOMPOSITION_TOKEN_THRESHOLD) {
+            processable.push(entry);
+            continue;
+        }
+
+        const atomicFacts = await decomposeToAtomicFacts(entry.memory.content, context);
+        if (!atomicFacts || atomicFacts.length <= 1) {
+            processable.push(entry);
+            continue;
+        }
+
+        // Mark parent as decomposed
+        await context.updateAttributes(entry.memory.id, {
+            ...entry.domainAttributes,
+            decomposed: true,
+        });
+
+        decomposedParents.push(entry);
+
+        // Create child memories
+        for (const fact of atomicFacts) {
+            const childId = await context.writeMemory({
+                content: fact.claim,
+                tags: [CODE_REPO_TAG],
+                ownership: {
+                    domain: CODE_REPO_DOMAIN_ID,
+                    attributes: {
+                        source: "decomposed",
+                        parentMemoryId: entry.memory.id,
+                        audience: entry.domainAttributes.audience ?? ["technical"],
+                        ...(fact.classification ? { classification: fact.classification } : {}),
+                    },
+                },
+            });
+
+            // Link child to parent via core refines edge
+            await context.graph.relate(childId, "refines", entry.memory.id);
+
+            const childMemory = await context.getMemory(childId);
+            if (childMemory) {
+                processable.push({
+                    memory: childMemory,
+                    domainAttributes: {
+                        source: "decomposed",
+                        parentMemoryId: entry.memory.id,
+                        audience: entry.domainAttributes.audience ?? ["technical"],
+                        ...(fact.classification ? { classification: fact.classification } : {}),
+                    },
+                    tags: [CODE_REPO_TAG],
+                });
+            }
+        }
+    }
+
+    return { processable, decomposedParents };
 }
 
 async function batchClassify(
@@ -214,7 +385,6 @@ async function batchClassify(
 ): Promise<Map<string, string>> {
     const result = new Map<string, string>();
 
-    // Separate entries that already have valid classifications
     const needsClassification: { entry: OwnedMemory; index: number }[] = [];
     for (let i = 0; i < entries.length; i++) {
         const existing = entries[i].domainAttributes.classification as string | undefined;
@@ -229,7 +399,6 @@ async function batchClassify(
 
     const classifyLlm = context.llmAt("low");
     if (!classifyLlm.generate) {
-        // No generate capability — default all to observation
         for (const { entry } of needsClassification) {
             result.set(entry.memory.id, "observation");
         }
@@ -253,7 +422,6 @@ async function batchClassify(
 
         for (let i = 0; i < needsClassification.length; i++) {
             const line = lines[i]?.trim().toLowerCase() ?? "";
-            // Parse "1. decision" or just "decision"
             const match = line.match(/^\d+\.\s*(.+)$/);
             const normalized = match ? match[1].trim() : line;
             const classification = VALID_CLASSIFICATIONS.has(normalized)
@@ -263,7 +431,6 @@ async function batchClassify(
         }
     } catch (error) {
         logCodeRepoInboxWarning("code-repo.inbox.classify", error);
-        // Fallback: default to observation
         for (const { entry } of needsClassification) {
             result.set(entry.memory.id, "observation");
         }
@@ -304,15 +471,15 @@ async function batchExtractEntities(
     return result;
 }
 
-async function batchDetectContradictions(
+async function batchDetectSupersession(
     decisions: OwnedMemory[],
     context: DomainContext,
 ): Promise<void> {
-    const contradictionLlm = context.llmAt("low");
-    if (!contradictionLlm.generate || !context.llmAt("low").extractStructured) return;
+    const llm = context.llmAt("low");
+    if (!llm.extractStructured) return;
 
-    // Collect all existing non-superseded decisions via a combined search
-    const existingDecisionsMap = new Map<string, ScoredMemory>();
+    // Collect existing non-superseded decisions similar to new ones
+    const existingMap = new Map<string, ScoredMemory>();
     const newDecisionIds = new Set(decisions.map((d) => d.memory.id));
 
     for (const decision of decisions) {
@@ -328,103 +495,171 @@ async function batchDetectContradictions(
                 | Record<string, unknown>
                 | undefined;
             if (attrs && !attrs.superseded) {
-                existingDecisionsMap.set(existing.id, existing);
+                existingMap.set(existing.id, existing);
             }
         }
     }
 
-    const existingDecisions = [...existingDecisionsMap.values()];
+    const existingDecisions = [...existingMap.values()];
     if (existingDecisions.length === 0) return;
 
-    // Build comparison batches based on prompt length
-    const batches = buildContradictionBatches(decisions, existingDecisions);
+    const batches = buildSupersessionBatches(decisions, existingDecisions);
 
     for (const batch of batches) {
-        await processContradictionBatch(batch.newDecisions, batch.existingDecisions, context);
+        await processSupersessionBatch(batch.newEntries, batch.existingEntries, context);
     }
 }
 
-interface ContradictionBatch {
-    newDecisions: OwnedMemory[];
-    existingDecisions: ScoredMemory[];
+interface SupersessionBatch {
+    newEntries: OwnedMemory[];
+    existingEntries: ScoredMemory[];
 }
 
-function buildContradictionBatches(
-    newDecisions: OwnedMemory[],
-    existingDecisions: ScoredMemory[],
-): ContradictionBatch[] {
-    const batches: ContradictionBatch[] = [];
-
-    // Estimate prompt length per item
-    const existingLengths = existingDecisions.map((d) => d.content.length);
+function buildSupersessionBatches(
+    newEntries: OwnedMemory[],
+    existingEntries: ScoredMemory[],
+): SupersessionBatch[] {
+    const batches: SupersessionBatch[] = [];
+    const existingLengths = existingEntries.map((e) => e.content.length);
     const totalExistingLength = existingLengths.reduce((sum, l) => sum + l, 0);
 
     let currentNew: OwnedMemory[] = [];
-    let currentPromptLength = totalExistingLength; // existing decisions are always included
+    let currentPromptLength = totalExistingLength;
 
-    for (const decision of newDecisions) {
-        const decisionLength = decision.memory.content.length;
-        const projectedLength = currentPromptLength + decisionLength;
+    for (const entry of newEntries) {
+        const entryLength = entry.memory.content.length;
+        const projectedLength = currentPromptLength + entryLength;
 
-        if (currentNew.length > 0 && projectedLength > CONTRADICTION_PROMPT_BUDGET) {
-            // Current batch is full, start a new one
-            batches.push({ newDecisions: currentNew, existingDecisions });
+        if (currentNew.length > 0 && projectedLength > SUPERSESSION_PROMPT_BUDGET) {
+            batches.push({ newEntries: currentNew, existingEntries });
             currentNew = [];
             currentPromptLength = totalExistingLength;
         }
 
-        currentNew.push(decision);
-        currentPromptLength += decisionLength;
+        currentNew.push(entry);
+        currentPromptLength += entryLength;
     }
 
     if (currentNew.length > 0) {
-        batches.push({ newDecisions: currentNew, existingDecisions });
+        batches.push({ newEntries: currentNew, existingEntries });
     }
 
     return batches;
 }
 
-async function processContradictionBatch(
-    newDecisions: OwnedMemory[],
-    existingDecisions: ScoredMemory[],
+async function processSupersessionBatch(
+    newEntries: OwnedMemory[],
+    existingEntries: ScoredMemory[],
     context: DomainContext,
 ): Promise<void> {
     const llm = context.llmAt("low");
     if (!llm.extractStructured) return;
 
-    const contradictionPrompt = await context.loadPrompt("contradiction");
+    const supersessionPrompt = await context.loadPrompt("supersession");
 
-    const newItems = newDecisions.map((d, i) => `${i}. ${d.memory.content}`).join("\n");
-
-    const existingItems = existingDecisions.map((d) => `[${d.id}] ${d.content}`).join("\n");
+    const newItems = newEntries.map((e, i) => `${i}. ${e.memory.content}`).join("\n");
+    const existingItems = existingEntries.map((e) => `[${e.id}] ${e.content}`).join("\n");
 
     const prompt =
-        contradictionPrompt +
-        `\n\nNew decisions:\n${newItems}\n\n` +
-        `Existing decisions:\n${existingItems}\n\n` +
-        "Return only actual contradictions. If none exist, return an empty array.";
+        supersessionPrompt +
+        `\n\nNew entries:\n${newItems}\n\n` +
+        `Existing entries:\n${existingItems}\n\n` +
+        "Return only actual supersessions. If none exist, return an empty array.";
 
     try {
         const pairs = (await llm.extractStructured(
             prompt,
-            BATCH_CONTRADICTION_SCHEMA,
-            "Identify contradicting decision pairs.",
+            BATCH_SUPERSESSION_SCHEMA,
+            "Identify superseded decision pairs.",
         )) as Array<{ newIndex: number; existingId: string }>;
 
         for (const pair of pairs) {
-            if (pair.newIndex < 0 || pair.newIndex >= newDecisions.length) continue;
-            const newMemoryId = newDecisions[pair.newIndex].memory.id;
-            const existing = existingDecisions.find((d) => d.id === pair.existingId);
+            if (pair.newIndex < 0 || pair.newIndex >= newEntries.length) continue;
+            const newMemoryId = newEntries[pair.newIndex].memory.id;
+            const existing = existingEntries.find((e) => e.id === pair.existingId);
             if (!existing) continue;
 
             await context.graph.relate(newMemoryId, "supersedes", existing.id);
             await context.updateAttributes(existing.id, {
                 ...existing.domainAttributes[CODE_REPO_DOMAIN_ID],
                 superseded: true,
+                validUntil: Date.now(),
             });
         }
     } catch (error) {
-        logCodeRepoInboxWarning("code-repo.inbox.contradictionDetection", error);
-        // Contradiction detection is best-effort
+        logCodeRepoInboxWarning("code-repo.inbox.supersessionDetection", error);
+    }
+}
+
+async function batchLinkRelated(
+    entries: OwnedMemory[],
+    classificationMap: Map<string, string>,
+    context: DomainContext,
+): Promise<void> {
+    const llm = context.llmAt("low");
+    if (!llm.extractStructured) return;
+
+    const newEntryIds = new Set(entries.map((e) => e.memory.id));
+    const relatedMap = new Map<string, ScoredMemory>();
+
+    for (const entry of entries) {
+        const searchResult = await context.search({
+            text: entry.memory.content,
+            tags: [CODE_REPO_TAG],
+            minScore: 0.75,
+        });
+
+        for (const candidate of searchResult.entries) {
+            if (newEntryIds.has(candidate.id)) continue;
+            const attrs = candidate.domainAttributes[CODE_REPO_DOMAIN_ID] as
+                | Record<string, unknown>
+                | undefined;
+            if (attrs?.superseded) continue;
+            relatedMap.set(candidate.id, candidate);
+        }
+    }
+
+    const relatedEntries = [...relatedMap.values()];
+    if (relatedEntries.length === 0) return;
+
+    const relatedPrompt = await context.loadPrompt("related-knowledge");
+
+    const newItems = entries
+        .map(
+            (e, i) =>
+                `${i}. [${classificationMap.get(e.memory.id) ?? "observation"}] ${e.memory.content}`,
+        )
+        .join("\n");
+    const existingItems = relatedEntries.map((e) => `[${e.id}] ${e.content}`).join("\n");
+
+    const prompt =
+        relatedPrompt +
+        `\n\nNew entries:\n${newItems}\n\n` +
+        `Existing entries:\n${existingItems}\n\n` +
+        "Return only meaningful relationships. If none exist, return an empty array.";
+
+    try {
+        const relationships = (await llm.extractStructured(
+            prompt,
+            BATCH_RELATIONSHIP_SCHEMA,
+            "Identify related code-repo entries.",
+        )) as Array<{ newIndex: number; existingId: string; relationship: string }>;
+
+        for (const rel of relationships) {
+            if (rel.newIndex < 0 || rel.newIndex >= entries.length) continue;
+            const newMemoryId = entries[rel.newIndex].memory.id;
+            const existing = relatedEntries.find((e) => e.id === rel.existingId);
+            if (!existing) continue;
+
+            try {
+                await context.graph.relate(newMemoryId, "related_knowledge", existing.id, {
+                    relationship: rel.relationship,
+                });
+            } catch {
+                // Best-effort
+            }
+        }
+    } catch (error) {
+        logCodeRepoInboxWarning("code-repo.inbox.relatedLinking", error);
     }
 }
