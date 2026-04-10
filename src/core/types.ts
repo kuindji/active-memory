@@ -109,6 +109,8 @@ export interface MemoryFilter {
 export interface SearchQuery extends MemoryFilter {
     text?: string;
     mode?: "vector" | "fulltext" | "hybrid" | "graph";
+    /** Filter to memories whose event_time is <= this timestamp (ms). Lets callers freeze the clock for historical queries. */
+    beforeTime?: number;
     traversal?: {
         from: string | string[];
         pattern: string;
