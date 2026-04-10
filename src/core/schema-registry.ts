@@ -27,6 +27,7 @@ class SchemaRegistry {
       DEFINE FIELD IF NOT EXISTS created_at ON memory TYPE int;
       DEFINE FIELD IF NOT EXISTS token_count ON memory TYPE int DEFAULT 0;
       DEFINE FIELD IF NOT EXISTS request_context ON memory TYPE option<object> FLEXIBLE;
+      DEFINE FIELD IF NOT EXISTS answers_question ON memory TYPE option<string>;
     `);
 
         await this.db.query(`
@@ -86,7 +87,12 @@ class SchemaRegistry {
             type: "search",
             config: { analyzer: "memory_content" },
         });
-
+        await this.defineIndex("memory", {
+            name: "idx_memory_answers_question",
+            fields: ["answers_question"],
+            type: "search",
+            config: { analyzer: "memory_content" },
+        });
         await this.defineIndex("memory", {
             name: "idx_memory_event_time",
             fields: ["event_time"],
@@ -102,6 +108,7 @@ class SchemaRegistry {
                 { name: "created_at", type: "int" },
                 { name: "token_count", type: "int" },
                 { name: "request_context", type: "option<object>" },
+                { name: "answers_question", type: "option<string>" },
             ],
             contributors: ["core"],
         });

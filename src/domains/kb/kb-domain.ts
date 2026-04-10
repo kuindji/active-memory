@@ -112,17 +112,10 @@ export function createKbDomain(options?: KbDomainOptions): DomainConfig {
                     fields: [
                         { name: "classification", type: "option<string>" },
                         { name: "topics", type: "option<array<string>>" },
-                        { name: "answers_question", type: "option<string>" },
                     ],
                     indexes: [
                         { name: "idx_memory_classification", fields: ["classification"] },
                         { name: "idx_memory_topics", fields: ["topics"] },
-                        {
-                            name: "idx_memory_answers_question",
-                            fields: ["answers_question"],
-                            type: "search",
-                            config: { analyzer: "memory_content" },
-                        },
                     ],
                 },
             ],
