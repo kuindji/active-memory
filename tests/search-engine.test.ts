@@ -594,9 +594,16 @@ describe("SearchEngine", () => {
             expect(result.entries.length).toBe(2);
         });
 
-        test("beforeTime = 0 emits clause and returns no results when all event_times > 0", async () => {
+        test("beforeTime = 0 emits clause: returns only the entry with event_time = 0, not entries with event_time > 0", async () => {
             await db.query("DEFINE FIELD IF NOT EXISTS event_time ON memory TYPE option<int>");
             await seedTimedMemories();
+            // Seed an extra memory with event_time = 0 — the only one that satisfies beforeTime = 0
+            await store.createNode("memory", {
+                content: "zeroth fact about Rome",
+                created_at: Date.now(),
+                token_count: 5,
+                event_time: 0,
+            });
 
             const result = await search.search({
                 text: "fact",
@@ -605,7 +612,8 @@ describe("SearchEngine", () => {
                 limit: 10,
             });
 
-            expect(result.entries.length).toBe(0);
+            expect(result.entries.length).toBe(1);
+            expect(result.entries[0].eventTime).toBe(0);
         });
 
         test("omitting beforeTime returns all matching entries", async () => {

@@ -182,13 +182,11 @@ class SearchEngine {
 
         const queryVec = await this.embeddingAdapter.embed(query.text);
 
-        let filterSql = "";
-        let filterVars: Record<string, unknown> = {};
-        if ((query.filters && Object.keys(query.filters).length > 0) || query.beforeTime !== undefined) {
-            const { clauses, vars } = this.buildFilterClauses(query.filters, query.beforeTime);
-            filterSql = clauses.length > 0 ? ` AND ${clauses.join(" AND ")}` : "";
-            filterVars = vars;
-        }
+        const { clauses: filterClauses, vars: filterVars } = this.buildFilterClauses(
+            query.filters,
+            query.beforeTime,
+        );
+        const filterSql = filterClauses.length > 0 ? ` AND ${filterClauses.join(" AND ")}` : "";
 
         const rows = await this.store.query<(MemoryRow & { score: number })[]>(
             `SELECT *, vector::similarity::cosine(embedding, $queryVec) AS score
@@ -224,13 +222,11 @@ class SearchEngine {
         const candidates = new Map<string, ScoredMemory>();
         if (!query.text) return candidates;
 
-        let filterSql = "";
-        let filterVars: Record<string, unknown> = {};
-        if ((query.filters && Object.keys(query.filters).length > 0) || query.beforeTime !== undefined) {
-            const { clauses, vars } = this.buildFilterClauses(query.filters, query.beforeTime);
-            filterSql = clauses.length > 0 ? ` AND ${clauses.join(" AND ")}` : "";
-            filterVars = vars;
-        }
+        const { clauses: filterClauses, vars: filterVars } = this.buildFilterClauses(
+            query.filters,
+            query.beforeTime,
+        );
+        const filterSql = filterClauses.length > 0 ? ` AND ${filterClauses.join(" AND ")}` : "";
 
         // Try BM25 full-text search first
         let rows: MemoryRow[] = [];
