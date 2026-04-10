@@ -511,6 +511,117 @@ describe("SearchEngine", () => {
         });
     });
 
+    describe("beforeTime filter", () => {
+        async function seedTimedMemories() {
+            await store.createNode("memory", {
+                content: "ancient fact about Rome",
+                created_at: Date.now(),
+                token_count: 5,
+                event_time: 1000,
+            });
+            await store.createNode("memory", {
+                content: "medieval fact about Rome",
+                created_at: Date.now(),
+                token_count: 5,
+                event_time: 5000,
+            });
+            await store.createNode("memory", {
+                content: "modern fact about Rome",
+                created_at: Date.now(),
+                token_count: 5,
+                event_time: 9000,
+            });
+        }
+
+        test("vector mode excludes entries after beforeTime", async () => {
+            const embeddingAdapter = new MockEmbeddingAdapter();
+            const vectorSearch = new SearchEngine(store, undefined, embeddingAdapter);
+            await db.query("DEFINE FIELD IF NOT EXISTS event_time ON memory TYPE option<int>");
+            await seedTimedMemories();
+
+            // Populate embeddings so vector search returns rows
+            const rows = await db.query<{ id: unknown; content: string }[][]>(
+                "SELECT id, content FROM memory WHERE event_time IS NOT NONE",
+            );
+            const memRows = rows[0] ?? [];
+            for (const row of memRows) {
+                const emb = await embeddingAdapter.embed(row.content);
+                await db.query(`UPDATE ${String(row.id)} SET embedding = $emb`, { emb });
+            }
+
+            const result = await vectorSearch.search({
+                text: "fact about Rome",
+                mode: "vector",
+                beforeTime: 6000,
+                limit: 10,
+            });
+
+            const times = result.entries.map((e) => e.eventTime);
+            expect(times.every((t) => t !== null && t <= 6000)).toBe(true);
+            expect(result.entries.length).toBe(2);
+        });
+
+        test("fulltext mode excludes entries after beforeTime", async () => {
+            await db.query("DEFINE FIELD IF NOT EXISTS event_time ON memory TYPE option<int>");
+            await seedTimedMemories();
+
+            const result = await search.search({
+                text: "fact",
+                mode: "fulltext",
+                beforeTime: 6000,
+                limit: 10,
+            });
+
+            const times = result.entries.map((e) => e.eventTime);
+            expect(times.every((t) => t !== null && t <= 6000)).toBe(true);
+            expect(result.entries.length).toBe(2);
+        });
+
+        test("hybrid mode excludes entries after beforeTime", async () => {
+            await db.query("DEFINE FIELD IF NOT EXISTS event_time ON memory TYPE option<int>");
+            await seedTimedMemories();
+
+            const result = await search.search({
+                text: "fact",
+                mode: "hybrid",
+                beforeTime: 6000,
+                limit: 10,
+                weights: { vector: 0.0, fulltext: 0.7, graph: 0.3 },
+            });
+
+            const times = result.entries.map((e) => e.eventTime);
+            expect(times.every((t) => t !== null && t <= 6000)).toBe(true);
+            expect(result.entries.length).toBe(2);
+        });
+
+        test("beforeTime = 0 emits clause and returns no results when all event_times > 0", async () => {
+            await db.query("DEFINE FIELD IF NOT EXISTS event_time ON memory TYPE option<int>");
+            await seedTimedMemories();
+
+            const result = await search.search({
+                text: "fact",
+                mode: "fulltext",
+                beforeTime: 0,
+                limit: 10,
+            });
+
+            expect(result.entries.length).toBe(0);
+        });
+
+        test("omitting beforeTime returns all matching entries", async () => {
+            await db.query("DEFINE FIELD IF NOT EXISTS event_time ON memory TYPE option<int>");
+            await seedTimedMemories();
+
+            const result = await search.search({
+                text: "fact",
+                mode: "fulltext",
+                limit: 10,
+            });
+
+            expect(result.entries.length).toBe(3);
+        });
+    });
+
     describe("domain ownership filter", () => {
         test("filters by domain ownership", async () => {
             await store.createNodeWithId("domain:alpha", { name: "Alpha" });

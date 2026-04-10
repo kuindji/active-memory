@@ -139,12 +139,23 @@ class SearchEngine {
         return countTokens(mem.content);
     }
 
-    private buildFilterClauses(filters: Record<string, unknown>): {
+    private buildFilterClauses(
+        filters: Record<string, unknown> | undefined,
+        beforeTime: number | undefined,
+    ): {
         clauses: string[];
         vars: Record<string, unknown>;
     } {
         const clauses: string[] = [];
         const vars: Record<string, unknown> = {};
+
+        if (beforeTime !== undefined) {
+            clauses.push("event_time <= $beforeTime");
+            vars.beforeTime = beforeTime;
+        }
+
+        if (!filters) return { clauses, vars };
+
         let i = 0;
         for (const [field, value] of Object.entries(filters)) {
             if (value !== null && typeof value === "object" && !Array.isArray(value)) {
@@ -173,8 +184,8 @@ class SearchEngine {
 
         let filterSql = "";
         let filterVars: Record<string, unknown> = {};
-        if (query.filters && Object.keys(query.filters).length > 0) {
-            const { clauses, vars } = this.buildFilterClauses(query.filters);
+        if ((query.filters && Object.keys(query.filters).length > 0) || query.beforeTime !== undefined) {
+            const { clauses, vars } = this.buildFilterClauses(query.filters, query.beforeTime);
             filterSql = clauses.length > 0 ? ` AND ${clauses.join(" AND ")}` : "";
             filterVars = vars;
         }
@@ -215,8 +226,8 @@ class SearchEngine {
 
         let filterSql = "";
         let filterVars: Record<string, unknown> = {};
-        if (query.filters && Object.keys(query.filters).length > 0) {
-            const { clauses, vars } = this.buildFilterClauses(query.filters);
+        if ((query.filters && Object.keys(query.filters).length > 0) || query.beforeTime !== undefined) {
+            const { clauses, vars } = this.buildFilterClauses(query.filters, query.beforeTime);
             filterSql = clauses.length > 0 ? ` AND ${clauses.join(" AND ")}` : "";
             filterVars = vars;
         }
