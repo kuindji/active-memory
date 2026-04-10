@@ -87,6 +87,11 @@ class SchemaRegistry {
             config: { analyzer: "memory_content" },
         });
 
+        await this.defineIndex("memory", {
+            name: "idx_memory_event_time",
+            fields: ["event_time"],
+        });
+
         // Track core nodes in memory
         this.registeredNodes.set("memory", {
             name: "memory",
