@@ -10,6 +10,7 @@ export interface TopicAttributes {
 }
 
 export interface TopicDomainOptions {
+    id?: string;
     mergeSchedule?: {
         enabled?: boolean;
         intervalMs?: number;

@@ -2,6 +2,7 @@ import { fileURLToPath } from "node:url";
 import { dirname } from "node:path";
 import type {
     DomainConfig,
+    DomainRegistration,
     OwnedMemory,
     DomainContext,
     SearchQuery,
@@ -27,9 +28,10 @@ function buildSchedules(options?: TopicDomainOptions): DomainSchedule[] {
     ];
 }
 
-export function createTopicDomain(options?: TopicDomainOptions): DomainConfig {
-    return {
-        id: TOPIC_DOMAIN_ID,
+export function createTopicDomain(options?: TopicDomainOptions): DomainRegistration {
+    const domainId = options?.id ?? TOPIC_DOMAIN_ID;
+    const domain: DomainConfig = {
+        id: domainId,
         name: "Topic",
         schema: {
             nodes: [],
@@ -40,12 +42,6 @@ export function createTopicDomain(options?: TopicDomainOptions): DomainConfig {
                     from: "memory",
                     to: "memory",
                     fields: [{ name: "strength", type: "float" }],
-                },
-                {
-                    name: "about_topic",
-                    from: "memory",
-                    to: "memory",
-                    fields: [{ name: "domain", type: "string" }],
                 },
             ],
         },
@@ -65,6 +61,8 @@ export function createTopicDomain(options?: TopicDomainOptions): DomainConfig {
             },
         },
     };
+    return { domain };
 }
 
-export const topicDomain = createTopicDomain();
+const topicRegistration = createTopicDomain();
+export const topicDomain = topicRegistration.domain;

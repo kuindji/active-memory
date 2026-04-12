@@ -13,13 +13,13 @@ import type { DomainConfig, OwnedMemory, DomainContext } from "../src/core/types
 
 describe("User domain - config", () => {
     test("has correct id and name", () => {
-        const domain = createUserDomain();
+        const { domain } = createUserDomain();
         expect(domain.id).toBe("user");
         expect(domain.name).toBe("User");
     });
 
     test("has baseDir and 3 skills", () => {
-        const domain = createUserDomain();
+        const { domain } = createUserDomain();
         expect(domain.baseDir).toBeTypeOf("string");
         expect(domain.baseDir!.length).toBeGreaterThan(0);
         expect(domain.skills).toHaveLength(3);
@@ -30,7 +30,7 @@ describe("User domain - config", () => {
     });
 
     test("schema declares user node (with userId unique index), memory classification field, about_user and supersedes edges", () => {
-        const domain = createUserDomain();
+        const { domain } = createUserDomain();
         const nodes = domain.schema!.nodes;
         const userNode = nodes.find((n) => n.name === "user");
         expect(userNode).toBeDefined();
@@ -55,30 +55,30 @@ describe("User domain - config", () => {
     });
 
     test("default options include consolidation schedule", () => {
-        const domain = createUserDomain();
+        const { domain } = createUserDomain();
         expect(domain.schedules).toHaveLength(1);
         expect(domain.schedules![0].id).toBe("consolidate-user-profile");
         expect(domain.schedules![0].intervalMs).toBe(DEFAULT_CONSOLIDATE_INTERVAL_MS);
     });
 
     test("consolidation schedule can be disabled", () => {
-        const domain = createUserDomain({ consolidateSchedule: { enabled: false } });
+        const { domain } = createUserDomain({ consolidateSchedule: { enabled: false } });
         expect(domain.schedules).toHaveLength(0);
     });
 
     test("consolidation schedule accepts custom interval", () => {
-        const domain = createUserDomain({ consolidateSchedule: { intervalMs: 5000 } });
+        const { domain } = createUserDomain({ consolidateSchedule: { intervalMs: 5000 } });
         expect(domain.schedules).toHaveLength(1);
         expect(domain.schedules![0].intervalMs).toBe(5000);
     });
 
     test("processInboxBatch is defined (user domain now processes facts)", () => {
-        const domain = createUserDomain();
+        const { domain } = createUserDomain();
         expect(typeof domain.processInboxBatch).toBe("function");
     });
 
     test("describe() returns a non-empty string", () => {
-        const domain = createUserDomain();
+        const { domain } = createUserDomain();
         const describeFn = domain.describe?.bind(domain);
         expect(describeFn).toBeTypeOf("function");
         const description = describeFn!();

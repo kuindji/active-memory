@@ -1,7 +1,7 @@
 import { StringRecordId } from "surrealdb";
 import type { DomainContext } from "../../core/types.js";
 import type { TopicAttributes } from "./types.js";
-import { TOPIC_TAG, TOPIC_DOMAIN_ID, MERGE_SIMILARITY_THRESHOLD } from "./types.js";
+import { TOPIC_TAG, MERGE_SIMILARITY_THRESHOLD } from "./types.js";
 
 export async function mergeSimilarTopics(context: DomainContext): Promise<void> {
     const activeTopics = await context.getMemories({
@@ -23,14 +23,14 @@ export async function mergeSimilarTopics(context: DomainContext): Promise<void> 
         const similarEntries = searchResult.entries.filter((entry) => {
             if (entry.id === topic.id) return false;
             if (mergedInThisRun.has(entry.id)) return false;
-            const attrs = entry.domainAttributes[TOPIC_DOMAIN_ID];
+            const attrs = entry.domainAttributes[context.domain];
             return attrs?.status === "active";
         });
 
         for (const similar of similarEntries) {
             // Get fresh attributes for the current topic via graph query
             const topicAttrs = await getTopicAttributesFromGraph(context, topic.id);
-            const similarAttrs = parseTopicAttributes(similar.domainAttributes[TOPIC_DOMAIN_ID]);
+            const similarAttrs = parseTopicAttributes(similar.domainAttributes[context.domain]);
 
             if (!topicAttrs || !similarAttrs) continue;
 
@@ -118,7 +118,7 @@ async function getTopicAttributesFromGraph(
     const memRef = new StringRecordId(
         memoryId.startsWith("memory:") ? memoryId : `memory:${memoryId}`,
     );
-    const domainRef = new StringRecordId(`domain:${TOPIC_DOMAIN_ID}`);
+    const domainRef = new StringRecordId(`domain:${context.domain}`);
     const rows = await context.graph.query<{ attributes: Record<string, unknown> }[]>(
         "SELECT attributes FROM owned_by WHERE in = $memId AND out = $domainId",
         { memId: memRef, domainId: domainRef },

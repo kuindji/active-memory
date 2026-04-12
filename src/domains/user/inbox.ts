@@ -1,6 +1,6 @@
 import { StringRecordId } from "surrealdb";
 import type { OwnedMemory, DomainContext } from "../../core/types.js";
-import { USER_DOMAIN_ID, USER_TAG, DEFAULT_USER_IMPORTANCE } from "./types.js";
+import { USER_TAG, DEFAULT_USER_IMPORTANCE } from "./types.js";
 import type { UserFactClassification } from "./types.js";
 import { batchGenerateQuestions } from "./utils.js";
 
@@ -179,7 +179,7 @@ async function ensureAboutUserEdge(
         if (existing && existing.length > 0) return;
 
         await context.graph.relate(memoryId, "about_user", userNodeId, {
-            domain: USER_DOMAIN_ID,
+            domain: context.domain,
         });
     } catch (error) {
         logUserInboxWarning("user.inbox.ensureAboutUserEdge", error);
@@ -348,7 +348,7 @@ async function fetchExistingUserFacts(
 
     try {
         const userRef = new StringRecordId(userNodeId);
-        const domainRef = new StringRecordId(`domain:${USER_DOMAIN_ID}`);
+        const domainRef = new StringRecordId(`domain:${context.domain}`);
 
         // Fetch memories linked via about_user to this user
         const rows = await context.graph.query<

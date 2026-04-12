@@ -2,6 +2,7 @@ import { fileURLToPath } from "node:url";
 import { dirname } from "node:path";
 import type {
     DomainConfig,
+    DomainRegistration,
     DomainContext,
     ScoredMemory,
     SearchQuery,
@@ -29,9 +30,10 @@ function buildSchedules(options?: UserDomainOptions): DomainSchedule[] {
     ];
 }
 
-export function createUserDomain(options?: UserDomainOptions): DomainConfig {
-    return {
-        id: USER_DOMAIN_ID,
+export function createUserDomain(options?: UserDomainOptions): DomainRegistration {
+    const domainId = options?.id ?? USER_DOMAIN_ID;
+    const domain: DomainConfig = {
+        id: domainId,
         name: "User",
         baseDir: dirname(fileURLToPath(import.meta.url)),
         schema: {
@@ -92,6 +94,8 @@ export function createUserDomain(options?: UserDomainOptions): DomainConfig {
             },
         },
     };
+    return { domain };
 }
 
-export const userDomain = createUserDomain();
+const userRegistration = createUserDomain();
+export const userDomain = userRegistration.domain;
