@@ -46,7 +46,10 @@ import type {
     TuneOptions,
     TuneResult,
     CoreMemory,
+    DomainPlugin,
+    DomainRegistration,
 } from "./types.js";
+import { isDomainRegistration } from "./types.js";
 
 class MemoryEngine {
     private db: Surreal | null = null;
@@ -66,6 +69,8 @@ class MemoryEngine {
     private debug!: DebugTools;
     private tunableParams: TunableParamRegistry = new TunableParamRegistry();
     private promptExtras: Record<string, string> = {};
+    private pluginsByDomain = new Map<string, DomainPlugin[]>();
+    private pluginRequirements = new Map<string, string[]>();
 
     async initialize(config: EngineConfig): Promise<void> {
         const connection = config.adapter ? await config.adapter.resolve() : config.connection;
@@ -128,7 +133,30 @@ class MemoryEngine {
         this.defaultContext = config.context ?? {};
     }
 
-    async registerDomain(domain: DomainConfig, options?: DomainRegistrationOptions): Promise<void> {
+    private validatePlugins(): void {
+        for (const [domainId, required] of this.pluginRequirements) {
+            const plugins = this.pluginsByDomain.get(domainId) ?? [];
+            const availableTypes = new Set(plugins.map((p) => p.type));
+            for (const req of required) {
+                if (!availableTypes.has(req)) {
+                    throw new Error(
+                        `Domain "${domainId}" requires plugin type "${req}" but none is registered`,
+                    );
+                }
+            }
+        }
+    }
+
+    async registerDomain(
+        input: DomainConfig | DomainRegistration,
+        options?: DomainRegistrationOptions,
+    ): Promise<void> {
+        const registration: DomainRegistration = isDomainRegistration(input)
+            ? input
+            : { domain: input };
+        const { domain, plugins, requires } = registration;
+        let domainToRegister = domain;
+
         // Register schema if provided
         if (domain.schema) {
             await this.schema.registerDomain(domain.id, domain.schema);
@@ -147,9 +175,6 @@ class MemoryEngine {
                 await this.graph.updateNode(`domain:${domain.id}`, { settings: domain.settings });
             }
         }
-
-        // Register in DomainRegistry
-        this.domainRegistry.register(domain, options);
 
         // Register schedules
         if (domain.schedules) {
@@ -172,6 +197,44 @@ class MemoryEngine {
                 }
             }
         }
+
+        // Register plugins
+        if (plugins && plugins.length > 0) {
+            // Wrap processInboxBatch if any plugin has afterInboxProcess
+            if (plugins.some((p) => p.hooks.afterInboxProcess)) {
+                const original = domain.processInboxBatch.bind(domain);
+                domainToRegister = Object.create(domain) as DomainConfig;
+                domainToRegister.processInboxBatch = async (entries, context) => {
+                    await original(entries, context);
+                    for (const plugin of plugins) {
+                        if (plugin.hooks.afterInboxProcess) {
+                            await plugin.hooks.afterInboxProcess(entries, context);
+                        }
+                    }
+                };
+            }
+
+            for (const plugin of plugins) {
+                if (plugin.schema) {
+                    await this.schema.registerDomain(
+                        `${domain.id}:plugin:${plugin.type}`,
+                        plugin.schema,
+                    );
+                }
+                if (plugin.schedules) {
+                    for (const schedule of plugin.schedules) {
+                        this.scheduler.registerSchedule(domain.id, schedule);
+                    }
+                }
+            }
+            this.pluginsByDomain.set(domain.id, plugins);
+        }
+        if (requires && requires.length > 0) {
+            this.pluginRequirements.set(domain.id, requires);
+        }
+
+        // Register in DomainRegistry (use wrapped domain if plugins modified it)
+        this.domainRegistry.register(domainToRegister, options);
     }
 
     private assertWriteAccess(domainId: string): void {
@@ -696,6 +759,19 @@ class MemoryEngine {
             }
         }
 
+        // Plugin search expansion
+        for (const domainId of targetDomains) {
+            const domainPlugins = this.pluginsByDomain.get(domainId);
+            if (domainPlugins) {
+                for (const plugin of domainPlugins) {
+                    if (plugin.hooks.expandSearch) {
+                        const ctx = this.createDomainContext(domainId, query.context);
+                        expandedQuery = await plugin.hooks.expandSearch(expandedQuery, ctx);
+                    }
+                }
+            }
+        }
+
         let result = await this.searchEngine.search(expandedQuery);
 
         // Let domains rank results
@@ -1183,10 +1259,20 @@ class MemoryEngine {
 
         // Check if a target domain has custom buildContext
         if (options?.domains?.length === 1) {
-            const domain = this.domainRegistry.get(options.domains[0]);
+            const domainId = options.domains[0];
+            const domain = this.domainRegistry.get(domainId);
             if (domain?.buildContext) {
-                const ctx = this.createDomainContext(options.domains[0], options?.context);
-                return domain.buildContext(text, budgetTokens, ctx);
+                const ctx = this.createDomainContext(domainId, options?.context);
+                let result = await domain.buildContext(text, budgetTokens, ctx);
+                const domainPlugins = this.pluginsByDomain.get(domainId);
+                if (domainPlugins) {
+                    for (const plugin of domainPlugins) {
+                        if (plugin.hooks.enrichContext) {
+                            result = await plugin.hooks.enrichContext(result, text, ctx);
+                        }
+                    }
+                }
+                return result;
             }
         }
 
@@ -1272,6 +1358,7 @@ class MemoryEngine {
     }
 
     startProcessing(options?: InboxProcessorOptions): void {
+        this.validatePlugins();
         this.inboxProcessor.start(options);
         this.scheduler.start();
     }
@@ -1299,9 +1386,25 @@ class MemoryEngine {
 
         const bootstrapped: string[] = [];
         for (const domain of domains) {
+            const ctx = this.createDomainContext(domain.id);
+            let ran = false;
+
             if (domain.bootstrap) {
-                const ctx = this.createDomainContext(domain.id);
                 await domain.bootstrap(ctx);
+                ran = true;
+            }
+
+            const domainPlugins = this.pluginsByDomain.get(domain.id);
+            if (domainPlugins) {
+                for (const plugin of domainPlugins) {
+                    if (plugin.hooks.bootstrap) {
+                        await plugin.hooks.bootstrap(ctx);
+                        ran = true;
+                    }
+                }
+            }
+
+            if (ran) {
                 bootstrapped.push(domain.id);
             }
         }
@@ -1374,6 +1477,10 @@ class MemoryEngine {
         await this.saveTunableParams(domainId, bestParams);
 
         return { bestParams, bestScore, iterations: history.length - 1, history };
+    }
+
+    getPlugins(domainId: string): DomainPlugin[] {
+        return this.pluginsByDomain.get(domainId) ?? [];
     }
 
     async close(): Promise<void> {
