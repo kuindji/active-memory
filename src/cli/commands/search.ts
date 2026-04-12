@@ -3,7 +3,11 @@ import type { SearchQuery } from "../../core/types.js";
 import { parseMeta } from "../utils.js";
 
 const searchCommand: CommandHandler = async (engine, parsed) => {
-    const text = parsed.args[0];
+    // Query text is positional (first arg), but fall back to --text or --query
+    // flags for agents that pass it as a named flag instead.
+    const text = parsed.args[0]
+        ?? (parsed.flags["text"] as string | undefined)
+        ?? (parsed.flags["query"] as string | undefined);
 
     if (!text) {
         return { output: { error: "Search query is required." }, exitCode: 1 };

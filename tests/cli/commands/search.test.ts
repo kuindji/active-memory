@@ -79,6 +79,25 @@ describe("searchCommand", () => {
         expect(output.entries.length).toBeLessThanOrEqual(1);
     });
 
+    it("falls back to --text flag when no positional arg", async () => {
+        const result = await searchCommand(engine, makeParsed([], { text: "fox" }));
+        expect(result.exitCode).toBe(0);
+        const output = result.output as { entries: unknown[]; totalTokens: number; mode: string };
+        expect(Array.isArray(output.entries)).toBe(true);
+    });
+
+    it("falls back to --query flag when no positional arg", async () => {
+        const result = await searchCommand(engine, makeParsed([], { query: "fox" }));
+        expect(result.exitCode).toBe(0);
+        const output = result.output as { entries: unknown[]; totalTokens: number; mode: string };
+        expect(Array.isArray(output.entries)).toBe(true);
+    });
+
+    it("positional arg takes precedence over --text flag", async () => {
+        const result = await searchCommand(engine, makeParsed(["meeting"], { text: "fox" }));
+        expect(result.exitCode).toBe(0);
+    });
+
     it("passes domains flag to engine", async () => {
         const result = await searchCommand(engine, makeParsed(["fox"], { domains: "test" }));
         expect(result.exitCode).toBe(0);

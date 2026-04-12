@@ -62,6 +62,21 @@ describe("buildContextCommand", () => {
         expect(typeof output.totalTokens).toBe("number");
     });
 
+    it("falls back to --text flag when no positional arg", async () => {
+        const result = await buildContextCommand(engine, makeParsed([], { text: "fox" }));
+        expect(result.exitCode).toBe(0);
+    });
+
+    it("falls back to --query flag when no positional arg", async () => {
+        const result = await buildContextCommand(engine, makeParsed([], { query: "fox" }));
+        expect(result.exitCode).toBe(0);
+    });
+
+    it("positional arg takes precedence over --text flag", async () => {
+        const result = await buildContextCommand(engine, makeParsed(["meeting"], { text: "fox" }));
+        expect(result.exitCode).toBe(0);
+    });
+
     it("respects budget flag", async () => {
         // Ingest more memories to ensure there's something to limit
         for (let i = 0; i < 5; i++) {
