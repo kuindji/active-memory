@@ -1,0 +1,1 @@
+From the text below extract key topics. Return topics as short noun phrases (1-4 words). Only extract meaningful, specific topics — not generic words.
