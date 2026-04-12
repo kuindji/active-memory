@@ -1,6 +1,6 @@
 import { StringRecordId } from "surrealdb";
 import type { DomainContext } from "../../core/types.js";
-import { USER_DOMAIN_ID, USER_TAG } from "./types.js";
+import { USER_TAG } from "./types.js";
 
 export async function consolidateUserProfile(context: DomainContext): Promise<void> {
     // Find all user nodes
@@ -32,7 +32,7 @@ export async function consolidateUserProfile(context: DomainContext): Promise<vo
                 Array<{ attributes: Record<string, unknown> }>
             >("SELECT attributes FROM owned_by WHERE in = $memId AND out = $domainId LIMIT 1", {
                 memId: new StringRecordId(memId),
-                domainId: new StringRecordId(`domain:${USER_DOMAIN_ID}`),
+                domainId: new StringRecordId(`domain:${context.domain}`),
             });
             const attrs = attrRows?.[0]?.attributes ?? {};
             if (attrs.superseded) continue;
@@ -49,7 +49,7 @@ export async function consolidateUserProfile(context: DomainContext): Promise<vo
         // Find existing profile summary for this user
         const existingSummaries = await context.getMemories({
             tags: [`${USER_TAG}/profile-summary`],
-            domains: [USER_DOMAIN_ID],
+            domains: [context.domain],
         });
 
         let existingSummaryId: string | undefined;
@@ -68,10 +68,10 @@ export async function consolidateUserProfile(context: DomainContext): Promise<vo
             const summaryId = await context.writeMemory({
                 content: summary,
                 tags: [`${USER_TAG}/profile-summary`],
-                ownership: { domain: USER_DOMAIN_ID, attributes: {} },
+                ownership: { domain: context.domain, attributes: {} },
             });
             await context.graph.relate(summaryId, "about_user", userNodeId, {
-                domain: USER_DOMAIN_ID,
+                domain: context.domain,
             });
         }
     }

@@ -219,7 +219,7 @@ describe("Visibility with built-in domains (real)", () => {
         });
 
         const restrictedUser: DomainConfig = {
-            ...createUserDomain(),
+            ...createUserDomain().domain,
             settings: { includeDomains: [TOPIC_DOMAIN_ID] },
         };
 

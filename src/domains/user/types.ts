@@ -1,4 +1,5 @@
 export interface UserDomainOptions {
+    id?: string;
     consolidateSchedule?: {
         enabled?: boolean;
         intervalMs?: number;

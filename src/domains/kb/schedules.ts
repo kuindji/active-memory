@@ -1,6 +1,6 @@
 import { StringRecordId } from "surrealdb";
 import type { DomainContext } from "../../core/types.js";
-import { KB_DOMAIN_ID, KB_TAG } from "./types.js";
+import { KB_TAG } from "./types.js";
 import { ensureTag } from "./utils.js";
 
 interface OwnershipRow {
@@ -16,7 +16,7 @@ export async function consolidateKnowledge(context: DomainContext): Promise<void
         // Get all non-superseded KB memories
         const rows = await context.graph.query<OwnershipRow[]>(
             "SELECT in, attributes FROM owned_by WHERE out = $domainId AND attributes.superseded = false AND attributes.decomposed != true",
-            { domainId: new StringRecordId(`domain:${KB_DOMAIN_ID}`) },
+            { domainId: new StringRecordId(`domain:${context.domain}`) },
         );
         if (!rows || rows.length === 0) return;
 
@@ -101,7 +101,7 @@ export async function consolidateKnowledge(context: DomainContext): Promise<void
                     content: summary,
                     tags: [KB_TAG, classTag],
                     ownership: {
-                        domain: KB_DOMAIN_ID,
+                        domain: context.domain,
                         attributes: {
                             classification,
                             superseded: false,

@@ -229,7 +229,7 @@ describe("Visibility with built-in domains", () => {
 
         // User domain with restricted visibility: can only see itself + topic
         const restrictedUser: DomainConfig = {
-            ...createUserDomain(),
+            ...createUserDomain().domain,
             settings: { includeDomains: [TOPIC_DOMAIN_ID] },
         };
 

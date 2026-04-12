@@ -223,7 +223,7 @@ describe("Topic domain - merge schedule", () => {
 
 describe("Topic domain - config", () => {
     test("topic domain registers with correct baseDir and skills", () => {
-        const domain = createTopicDomain();
+        const { domain } = createTopicDomain();
         expect(domain.id).toBe(TOPIC_DOMAIN_ID);
         expect(domain.name).toBe("Topic");
         expect(domain.baseDir).toBeTypeOf("string");
@@ -234,28 +234,24 @@ describe("Topic domain - config", () => {
         expect(skillIds).toContain("topic-query");
     });
 
-    test("topic domain schema has 3 edges (subtopic_of, related_to, about_topic)", () => {
-        const domain = createTopicDomain();
+    test("topic domain schema has 2 edges (subtopic_of, related_to)", () => {
+        const { domain } = createTopicDomain();
         const edges = domain.schema!.edges;
-        expect(edges).toHaveLength(3);
+        expect(edges).toHaveLength(2);
 
         const edgeNames = edges.map((e) => e.name);
         expect(edgeNames).toContain("subtopic_of");
         expect(edgeNames).toContain("related_to");
-        expect(edgeNames).toContain("about_topic");
 
         const relatedTo = edges.find((e) => e.name === "related_to")!;
         expect(relatedTo.fields).toEqual([{ name: "strength", type: "float" }]);
-
-        const aboutTopic = edges.find((e) => e.name === "about_topic")!;
-        expect(aboutTopic.fields).toEqual([{ name: "domain", type: "string" }]);
 
         const subtopicOf = edges.find((e) => e.name === "subtopic_of")!;
         expect(subtopicOf.fields).toBeUndefined();
     });
 
     test("topic domain describe() returns a non-empty string", () => {
-        const domain = createTopicDomain();
+        const { domain } = createTopicDomain();
         const describeFn = domain.describe?.bind(domain);
         expect(describeFn).toBeTypeOf("function");
         const description = describeFn!();
@@ -264,25 +260,25 @@ describe("Topic domain - config", () => {
     });
 
     test("createTopicDomain() with default options includes merge schedule", () => {
-        const domain = createTopicDomain();
+        const { domain } = createTopicDomain();
         expect(domain.schedules).toHaveLength(1);
         expect(domain.schedules![0].id).toBe("merge-similar-topics");
         expect(domain.schedules![0].intervalMs).toBe(DEFAULT_MERGE_INTERVAL_MS);
     });
 
     test("createTopicDomain({ mergeSchedule: { enabled: false } }) has no schedules", () => {
-        const domain = createTopicDomain({ mergeSchedule: { enabled: false } });
+        const { domain } = createTopicDomain({ mergeSchedule: { enabled: false } });
         expect(domain.schedules).toHaveLength(0);
     });
 
     test("createTopicDomain({ mergeSchedule: { intervalMs: 5000 } }) uses custom interval", () => {
-        const domain = createTopicDomain({ mergeSchedule: { intervalMs: 5000 } });
+        const { domain } = createTopicDomain({ mergeSchedule: { intervalMs: 5000 } });
         expect(domain.schedules).toHaveLength(1);
         expect(domain.schedules![0].intervalMs).toBe(5000);
     });
 
     test("processInboxBatch is a no-op (does not throw, returns void)", async () => {
-        const domain = createTopicDomain();
+        const { domain } = createTopicDomain();
         const result = await domain.processInboxBatch(
             [
                 {
