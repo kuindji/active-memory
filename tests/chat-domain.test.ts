@@ -1,4 +1,5 @@
 import { describe, test, expect, beforeEach, afterEach } from "bun:test";
+import { StringRecordId } from "surrealdb";
 import { MemoryEngine } from "../src/core/engine.js";
 import type { DomainContext } from "../src/core/types.js";
 import { MockLLMAdapter, MockEmbeddingAdapter } from "./helpers.js";
@@ -716,6 +717,51 @@ describe("Chat domain - promote working memory", () => {
             attributes: { layer: "episodic" },
         });
         expect(episodic).toHaveLength(0);
+    });
+
+    test("promoted episodic memories have validFrom set", async () => {
+        await engine.ingest("Message about weather", {
+            domains: ["chat"],
+            metadata: { role: "user" },
+        });
+        await engine.processInbox();
+        await engine.ingest("Message about coding", {
+            domains: ["chat"],
+            metadata: { role: "user" },
+            skipDedup: true,
+        });
+        await engine.processInbox();
+        await engine.ingest("Message about lunch", {
+            domains: ["chat"],
+            metadata: { role: "user" },
+            skipDedup: true,
+        });
+        await engine.processInbox();
+
+        const ctx = engine.createDomainContext(CHAT_DOMAIN_ID);
+        llm.extractResult = ["Fact about weather and coding"];
+
+        const beforePromote = Date.now();
+        await promoteWorkingMemory(ctx, { workingMemoryCapacity: 2 });
+
+        const episodic = await ctx.getMemories({
+            tags: [CHAT_EPISODIC_TAG],
+            attributes: { layer: "episodic" },
+        });
+        expect(episodic).toHaveLength(1);
+
+        // Check validFrom via graph query on owned_by attributes
+        const rows = await ctx.graph.query<{ attributes: Record<string, unknown> }[]>(
+            "SELECT attributes FROM owned_by WHERE in = $memId AND out = $domainId",
+            {
+                memId: new StringRecordId(`${episodic[0].id}`),
+                domainId: new StringRecordId(`domain:${CHAT_DOMAIN_ID}`),
+            },
+        );
+        expect(rows).toHaveLength(1);
+        const validFrom = rows[0].attributes.validFrom as number;
+        expect(validFrom).toBeTypeOf("number");
+        expect(validFrom).toBeGreaterThanOrEqual(beforePromote);
     });
 
     test("released working memories no longer returned by getMemories", async () => {

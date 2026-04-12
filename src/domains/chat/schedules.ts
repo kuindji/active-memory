@@ -128,6 +128,7 @@ export async function promoteWorkingMemory(
                             userId,
                             chatSessionId,
                             weight: 1.0,
+                            validFrom: Date.now(),
                         },
                     },
                 });
