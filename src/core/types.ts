@@ -491,3 +491,6 @@ export interface TuneResult {
     iterations: number;
     history: Array<{ params: Record<string, number>; score: number }>;
 }
+
+export type { DomainPlugin, DomainPluginHooks, DomainRegistration } from "./plugin-types.js";
+export { isDomainRegistration } from "./plugin-types.js";
