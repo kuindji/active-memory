@@ -13,12 +13,19 @@ export async function createTestDb(): Promise<Surreal> {
 
 export class MockLLMAdapter implements LLMAdapter {
     extractResult: string[] = [];
+    extractStructuredResult: unknown[] | null = null;
     consolidateResult = "";
     generateResult = "";
     synthesizeResult = "";
 
     extract(): Promise<string[]> {
         return Promise.resolve(this.extractResult);
+    }
+    extractStructured(): Promise<unknown[]> {
+        if (this.extractStructuredResult === null) {
+            return Promise.reject(new Error("MockLLMAdapter: extractStructuredResult not set"));
+        }
+        return Promise.resolve(this.extractStructuredResult);
     }
     consolidate(): Promise<string> {
         return Promise.resolve(this.consolidateResult);
