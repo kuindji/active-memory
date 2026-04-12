@@ -20,6 +20,7 @@ import {
     CHAT_EPISODIC_TAG,
     CHAT_SEMANTIC_TAG,
 } from "../src/domains/chat/types.js";
+import { StringRecordId } from "surrealdb";
 import { TOPIC_DOMAIN_ID, TOPIC_TAG } from "../src/domains/topic/types.js";
 import { USER_DOMAIN_ID, USER_TAG } from "../src/domains/user/types.js";
 import {
@@ -217,6 +218,21 @@ describe("Working memory promotion (real)", () => {
         }
         expect(episodicEntries.length).toBeGreaterThan(0);
 
+        // Verify validFrom is set on episodic memories
+        const graph = engine.getGraph();
+        for (const mem of episodicMemories) {
+            const attrRows = await graph.query<{ attributes: Record<string, unknown> }[]>(
+                "SELECT attributes FROM owned_by WHERE in = $memId AND out = $domainId",
+                {
+                    memId: new StringRecordId(mem.id),
+                    domainId: new StringRecordId(`domain:${CHAT_DOMAIN_ID}`),
+                },
+            );
+            expect(attrRows.length).toBe(1);
+            expect(attrRows[0].attributes.validFrom).toBeTypeOf("number");
+        }
+        console.log("[PASS] Episodic memories have validFrom timestamps");
+
         // Note: summarizes edges (episodic → working) are not checked here because
         // releaseOwnership deletes orphaned working memories and their edges within
         // promoteWorkingMemory itself. The semantic→episodic summarizes edges tested
@@ -284,8 +300,8 @@ describe("Full chat lifecycle (real)", () => {
             "Our CI/CD pipeline runs on GitHub Actions with automated testing",
             "I set up monitoring using Prometheus and Grafana dashboards",
             "We also use Terraform modules for reusable infrastructure components",
-            "Our AWS setup includes EKS clusters managed by Terraform",
-            "Infrastructure as code is essential for our deployment workflow",
+            "We recently switched from AWS to Google Cloud for our infrastructure",
+            "Our GCP setup uses Cloud Build instead of GitHub Actions for CI/CD",
         ];
         for (const msg of messages) {
             await engine.ingest(msg, { domains: [CHAT_DOMAIN_ID] });
@@ -311,6 +327,8 @@ describe("Full chat lifecycle (real)", () => {
             consolidation: { similarityThreshold: 0.5, minClusterSize: 2 },
         });
 
+        const graph = engine.getGraph();
+
         const semanticMemories = await chatCtx.getMemories({
             tags: [CHAT_SEMANTIC_TAG],
             attributes: { layer: "semantic" },
@@ -325,13 +343,54 @@ describe("Full chat lifecycle (real)", () => {
 
         // Verify summarizes edges on semantic memories
         if (semanticMemories.length > 0) {
-            const graph = engine.getGraph();
             for (const mem of semanticMemories) {
                 const sources = await graph.traverse(mem.id, "->summarizes->memory");
                 expect(sources.length).toBeGreaterThan(0);
                 console.log(`  Semantic ${mem.id} summarizes ${sources.length} episodic memories`);
             }
         }
+
+        // Verify validFrom is set on semantic memories
+        for (const mem of semanticMemories) {
+            const attrRows = await graph.query<{ attributes: Record<string, unknown> }[]>(
+                "SELECT attributes FROM owned_by WHERE in = $memId AND out = $domainId",
+                {
+                    memId: new StringRecordId(mem.id),
+                    domainId: new StringRecordId(`domain:${CHAT_DOMAIN_ID}`),
+                },
+            );
+            if (attrRows.length > 0) {
+                expect(attrRows[0].attributes.validFrom).toBeTypeOf("number");
+                console.log(`  Semantic ${mem.id} validFrom=${attrRows[0].attributes.validFrom}`);
+            }
+        }
+
+        // Check for contradictions detected during consolidation
+        const allEpisodic = await chatCtx.getMemories({
+            tags: [CHAT_EPISODIC_TAG],
+            attributes: { layer: "episodic" },
+        });
+        let invalidatedCount = 0;
+        for (const mem of allEpisodic) {
+            const attrRows = await graph.query<{ attributes: Record<string, unknown> }[]>(
+                "SELECT attributes FROM owned_by WHERE in = $memId AND out = $domainId",
+                {
+                    memId: new StringRecordId(mem.id),
+                    domainId: new StringRecordId(`domain:${CHAT_DOMAIN_ID}`),
+                },
+            );
+            if (attrRows.length > 0 && attrRows[0].attributes.invalidAt != null) {
+                invalidatedCount++;
+            }
+        }
+        console.log(
+            `[LIFECYCLE] Contradiction detection: ${invalidatedCount} episodic memories invalidated`,
+        );
+
+        // Check for contradicts edges
+        const contradictsEdges = await graph.query<{ id: string }[]>("SELECT id FROM contradicts");
+        const contradictsCount = contradictsEdges?.length ?? 0;
+        console.log(`[LIFECYCLE] Contradicts edges created: ${contradictsCount}`);
 
         // --- Phase 4: Prune with aggressive lambda ---
         // Use a very high lambda so recently created episodic memories decay below threshold
@@ -346,6 +405,30 @@ describe("Full chat lifecycle (real)", () => {
         console.log(
             `[LIFECYCLE] Phase 4: After pruning, ${episodicAfterPrune.length} episodic memories remain`,
         );
+
+        // Verify invalidated episodic memories survive pruning (they should be skipped)
+        let invalidatedAfterPrune = 0;
+        const episodicAfterPruneAll = await chatCtx.getMemories({
+            tags: [CHAT_EPISODIC_TAG],
+            attributes: { layer: "episodic" },
+        });
+        for (const mem of episodicAfterPruneAll) {
+            const attrRows = await graph.query<{ attributes: Record<string, unknown> }[]>(
+                "SELECT attributes FROM owned_by WHERE in = $memId AND out = $domainId",
+                {
+                    memId: new StringRecordId(mem.id),
+                    domainId: new StringRecordId(`domain:${CHAT_DOMAIN_ID}`),
+                },
+            );
+            if (attrRows.length > 0 && attrRows[0].attributes.invalidAt != null) {
+                invalidatedAfterPrune++;
+            }
+        }
+        console.log(
+            `[LIFECYCLE] After pruning: ${invalidatedAfterPrune} invalidated memories preserved (skipped by prune)`,
+        );
+        // Invalidated memories should survive pruning
+        expect(invalidatedAfterPrune).toBe(invalidatedCount);
 
         // --- Phase 5: Verify domain-scoped search isolation ---
         const chatSearch = await engine.search({
@@ -489,6 +572,23 @@ describe("buildContext tiered retrieval + user isolation (real)", () => {
                 attributes: { layer: "episodic", userId: "alice", weight: 1.0 },
             },
         });
+
+        // Add an invalidated episodic memory for Alice — should be excluded from context
+        await chatCtx.writeMemory({
+            content:
+                "Alice previously used class components but this fact is now outdated and invalidated",
+            tags: [CHAT_EPISODIC_TAG],
+            ownership: {
+                domain: CHAT_DOMAIN_ID,
+                attributes: {
+                    layer: "episodic",
+                    userId: "alice",
+                    weight: 1.0,
+                    invalidAt: Date.now() - 1000,
+                },
+            },
+        });
+
         await chatCtx.writeMemory({
             content: "Bob optimizes SQL queries using EXPLAIN ANALYZE and proper indexing",
             tags: [CHAT_EPISODIC_TAG],
@@ -538,6 +638,11 @@ describe("buildContext tiered retrieval + user isolation (real)", () => {
         expect(aliceLower).not.toContain("postgresql");
         expect(aliceLower).not.toContain("mysql");
         expect(aliceLower).not.toContain("database replication");
+
+        // Verify invalidated memories are excluded from context
+        expect(aliceLower).not.toContain("class components");
+        expect(aliceLower).not.toContain("outdated and invalidated");
+        console.log("[PASS] Invalidated memories excluded from buildContext");
 
         // --- Build context for Bob ---
         const bobContext = await engine.buildContext("database optimization and SQL", {
