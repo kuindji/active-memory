@@ -3,6 +3,7 @@ import { dirname } from "node:path";
 import { StringRecordId } from "surrealdb";
 import type {
     DomainConfig,
+    DomainRegistration,
     DomainSchedule,
     DomainContext,
     GraphApi,
@@ -11,40 +12,13 @@ import type {
     ContextResult,
 } from "../../core/types.js";
 import { countTokens, cosineSimilarity } from "../../core/scoring.js";
-import { TOPIC_TAG } from "../topic/types.js";
+import { createTopicLinkingPlugin } from "../../plugins/topic-linking.js";
 import { KB_DOMAIN_ID, KB_TAG, DEFAULT_CONSOLIDATE_INTERVAL_MS } from "./types.js";
 import type { KbDomainOptions } from "./types.js";
 import { kbSkills } from "./skills.js";
 import { processInboxBatch } from "./inbox.js";
 import { consolidateKnowledge } from "./schedules.js";
 import { isEntryValid, getKbAttrs, recordAccess, computeImportance } from "./utils.js";
-
-async function findMatchingTopicMemoryIds(text: string, graph: GraphApi): Promise<string[]> {
-    try {
-        const words = text
-            .toLowerCase()
-            .split(/\s+/)
-            .filter((w) => w.length > 3);
-        if (words.length === 0) return [];
-
-        const topicTagId = new StringRecordId(`tag:${TOPIC_TAG}`);
-        // Find topic nodes whose content contains any of the keywords
-        const results = await graph.query<Array<{ id: string; content: string }>>(
-            `SELECT in as id, (SELECT content FROM ONLY $parent.in).content as content FROM tagged WHERE out = $tagId`,
-            { tagId: topicTagId },
-        );
-        if (!Array.isArray(results) || results.length === 0) return [];
-
-        return results
-            .filter((r) => {
-                const content = (r.content ?? "").toLowerCase();
-                return words.some((w) => content.includes(w));
-            })
-            .map((r) => String(r.id));
-    } catch {
-        return [];
-    }
-}
 
 function buildSchedules(options?: KbDomainOptions): DomainSchedule[] {
     const schedules: DomainSchedule[] = [];
@@ -100,9 +74,11 @@ async function llmRerankMemories(
     }
 }
 
-export function createKbDomain(options?: KbDomainOptions): DomainConfig {
-    return {
-        id: KB_DOMAIN_ID,
+export function createKbDomain(options?: KbDomainOptions): DomainRegistration {
+    const domainId = options?.id ?? KB_DOMAIN_ID;
+
+    const domain: DomainConfig = {
+        id: domainId,
         name: "Knowledge Base",
         baseDir: KB_BASE_DIR,
         schema: {
@@ -143,8 +119,8 @@ export function createKbDomain(options?: KbDomainOptions): DomainConfig {
         ],
 
         async bootstrap(context: DomainContext) {
-            // Backfill classification/topics from owned_by attributes for existing entries
-            const domainRef = new StringRecordId(`domain:${KB_DOMAIN_ID}`);
+            // Backfill classification from owned_by attributes for existing entries
+            const domainRef = new StringRecordId(`domain:${domainId}`);
             const rows = await context.graph.query<
                 Array<{ in: string; attributes: Record<string, unknown> }>
             >(
@@ -158,27 +134,10 @@ export function createKbDomain(options?: KbDomainOptions): DomainConfig {
                 const cls = row.attributes?.classification as string | undefined;
                 if (!cls) continue;
 
-                const updates: Record<string, unknown> = { classification: cls };
-
-                // Try to get topics from about_topic edges
-                const topicRows = await context.graph.query<Array<{ content: string }>>(
-                    `SELECT (SELECT content FROM ONLY $parent.out).content AS content FROM about_topic WHERE in = $memId`,
-                    { memId: new StringRecordId(row.in) },
-                );
-                if (topicRows && topicRows.length > 0) {
-                    updates.topics = topicRows
-                        .map((t) => t.content)
-                        .filter((c) => typeof c === "string" && c.length > 0);
-                }
-
-                await context.graph.query(
-                    "UPDATE $memId SET classification = $cls, topics = $topics",
-                    {
-                        memId: new StringRecordId(row.in),
-                        cls: updates.classification,
-                        topics: updates.topics ?? [],
-                    },
-                );
+                await context.graph.query("UPDATE $memId SET classification = $cls", {
+                    memId: new StringRecordId(row.in),
+                    cls,
+                });
             }
         },
 
@@ -187,30 +146,11 @@ export function createKbDomain(options?: KbDomainOptions): DomainConfig {
         },
 
         search: {
-            async expand(query: SearchQuery, context: DomainContext): Promise<SearchQuery> {
-                if (!query.text) return query;
-
-                try {
-                    const topicIds = await findMatchingTopicMemoryIds(query.text, context.graph);
-                    if (topicIds.length === 0) return query;
-                    return {
-                        ...query,
-                        traversal: {
-                            from: topicIds,
-                            pattern: "<-about_topic<-memory.*",
-                            depth: 1,
-                        },
-                    };
-                } catch {
-                    return query;
-                }
-            },
-
             rank(_query: SearchQuery, candidates: ScoredMemory[]): ScoredMemory[] {
                 const now = Date.now();
                 return candidates
                     .map((c) => {
-                        const attrs = getKbAttrs(c.domainAttributes);
+                        const attrs = getKbAttrs(c.domainAttributes, domainId);
                         let score = c.score;
                         if (!isEntryValid(attrs, now)) {
                             score *= 0.05;
@@ -253,18 +193,18 @@ export function createKbDomain(options?: KbDomainOptions): DomainConfig {
             });
 
             let entries = results.entries.filter((e) =>
-                isEntryValid(getKbAttrs(e.domainAttributes), now),
+                isEntryValid(getKbAttrs(e.domainAttributes, domainId), now),
             );
 
             if (entries.length === 0) return empty;
 
             // Step 4.5a: Question search — matches query against LLM-generated questions
             if (useQuestionSearch) {
-                entries = await mergeQuestionSearch(entries, text, context);
+                entries = await mergeQuestionSearch(entries, text, context, domainId);
             }
 
             // Step 4.5b: Keyword search — catches entries the embedding rerank missed
-            entries = await mergeKeywordSearch(entries, text, context);
+            entries = await mergeKeywordSearch(entries, text, context, domainId);
 
             // Step 5: Optional LLM rerank
             if (useLlmRerank && context.llm) {
@@ -272,13 +212,19 @@ export function createKbDomain(options?: KbDomainOptions): DomainConfig {
             }
 
             // Step 6: Resolve children to parents
-            const resolved = await resolveToParents(entries, context, now);
+            const resolved = await resolveToParents(entries, context, now, domainId);
 
             // Step 7: Deduplicate near-duplicate content
             const { entries: deduped, aliases: dedupAliases } = deduplicateByContent(resolved, 0.5);
 
             // Step 8: MMR-based budget fill — balances relevance with diversity
-            const selected = await mmrBudgetFill(deduped, budgetTokens, mmrLambda, context.graph);
+            const selected = await mmrBudgetFill(
+                deduped,
+                budgetTokens,
+                mmrLambda,
+                context.graph,
+                domainId,
+            );
 
             if (selected.length === 0) return empty;
 
@@ -346,7 +292,9 @@ export function createKbDomain(options?: KbDomainOptions): DomainConfig {
             // Record access for importance tracking (fire-and-forget)
             Promise.all(
                 allMemories.map((m) =>
-                    recordAccess(context, m.id, getKbAttrs(m.domainAttributes)).catch(() => {}),
+                    recordAccess(context, m.id, getKbAttrs(m.domainAttributes, domainId)).catch(
+                        () => {},
+                    ),
                 ),
             ).catch(() => {});
 
@@ -356,6 +304,12 @@ export function createKbDomain(options?: KbDomainOptions): DomainConfig {
                 totalTokens: countTokens(finalContext),
             };
         },
+    };
+
+    return {
+        domain,
+        plugins: [createTopicLinkingPlugin()],
+        requires: ["topic-linking"],
     };
 }
 
@@ -416,13 +370,14 @@ async function resolveToParents(
     entries: ScoredMemory[],
     context: DomainContext,
     now: number,
+    domainId: string,
 ): Promise<ScoredMemory[]> {
     // Map: parentId → { parentMemory, bestScore }
     const parentMap = new Map<string, { mem: ScoredMemory; bestScore: number }>();
     const standalone: ScoredMemory[] = [];
 
     for (const entry of entries) {
-        const attrs = getKbAttrs(entry.domainAttributes);
+        const attrs = getKbAttrs(entry.domainAttributes, domainId);
         const parentId = attrs?.parentMemoryId as string | undefined;
 
         if (!parentId) {
@@ -449,7 +404,7 @@ async function resolveToParents(
         }
 
         // Fetch parent's domain attributes
-        const parentDomainRef = new StringRecordId(`domain:${KB_DOMAIN_ID}`);
+        const parentDomainRef = new StringRecordId(`domain:${domainId}`);
         const parentMemRef = new StringRecordId(parentId);
         const attrRows = await context.graph.query<Array<{ attributes: Record<string, unknown> }>>(
             "SELECT attributes FROM owned_by WHERE in = $memId AND out = $domainId LIMIT 1",
@@ -471,7 +426,7 @@ async function resolveToParents(
             score: entry.score,
             scores: {},
             tags: [],
-            domainAttributes: { [KB_DOMAIN_ID]: parentAttrs },
+            domainAttributes: { [domainId]: parentAttrs },
             eventTime: parentMemory.eventTime,
             createdAt: parentMemory.createdAt,
             tokenCount: parentMemory.tokenCount,
@@ -505,6 +460,7 @@ async function mergeKeywordSearch(
     entries: ScoredMemory[],
     queryText: string,
     context: DomainContext,
+    domainId: string = KB_DOMAIN_ID,
 ): Promise<ScoredMemory[]> {
     const now = Date.now();
     const STOP_WORDS = new Set([
@@ -728,7 +684,7 @@ async function mergeKeywordSearch(
             }
 
             const domainAttributes = attrMap.get(id) ?? {};
-            if (!isEntryValid(getKbAttrs(domainAttributes), now)) continue;
+            if (!isEntryValid(getKbAttrs(domainAttributes, domainId), now)) continue;
 
             const mc = matchCounts.get(id) ?? 0;
             const score = mc / keywords.length;
@@ -761,6 +717,7 @@ async function mergeQuestionSearch(
     entries: ScoredMemory[],
     queryText: string,
     context: DomainContext,
+    domainId: string = KB_DOMAIN_ID,
 ): Promise<ScoredMemory[]> {
     const now = Date.now();
 
@@ -817,7 +774,7 @@ async function mergeQuestionSearch(
             if (existingMap.has(id)) continue;
 
             const domainAttributes = attrMap.get(id) ?? {};
-            if (!isEntryValid(getKbAttrs(domainAttributes), now)) continue;
+            if (!isEntryValid(getKbAttrs(domainAttributes, domainId), now)) continue;
 
             // Low base score — question-search entries fill remaining budget
             // rather than displacing hybrid search results
@@ -852,6 +809,7 @@ async function mmrBudgetFill(
     budgetTokens: number,
     lambda: number,
     graph: GraphApi,
+    domainId: string = KB_DOMAIN_ID,
 ): Promise<Array<{ mem: ScoredMemory; classification: string }>> {
     if (candidates.length === 0) return [];
 
@@ -864,7 +822,7 @@ async function mmrBudgetFill(
             const tokens = countTokens(entry.content);
             if (usedTokens + tokens > budgetTokens) continue;
             usedTokens += tokens;
-            const attrs = getKbAttrs(entry.domainAttributes);
+            const attrs = getKbAttrs(entry.domainAttributes, domainId);
             const cls = (attrs?.classification as string) ?? "fact";
             result.push({ mem: entry, classification: cls });
         }
@@ -917,7 +875,7 @@ async function mmrBudgetFill(
         const tokens = countTokens(entry.content);
         usedTokens += tokens;
 
-        const attrs = getKbAttrs(entry.domainAttributes);
+        const attrs = getKbAttrs(entry.domainAttributes, domainId);
         const cls = (attrs?.classification as string) ?? "fact";
         selected.push({ mem: entry, classification: cls });
 
@@ -958,4 +916,5 @@ async function fetchEmbeddings(ids: string[], graph: GraphApi): Promise<Map<stri
     return map;
 }
 
-export const kbDomain = createKbDomain();
+const kbRegistration = createKbDomain();
+export const kbDomain = kbRegistration.domain;

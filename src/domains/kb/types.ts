@@ -41,6 +41,7 @@ export const DEFAULT_IMPORTANCE: Record<KbClassification, number> = {
 };
 
 export interface KbDomainOptions {
+    id?: string;
     consolidateSchedule?: {
         enabled?: boolean;
         intervalMs?: number;
