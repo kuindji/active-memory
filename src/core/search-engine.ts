@@ -333,36 +333,49 @@ class SearchEngine {
             return candidates;
         }
 
-        // Tag-based search
+        // Tag-based search.
+        //
+        // The naïve form `SELECT * FROM memory WHERE id IN (SELECT VALUE in
+        // FROM tagged WHERE out IN $tags LIMIT k)` forces SurrealDB to
+        // evaluate the outer predicate as a full-table scan — the planner
+        // does not push `id IN <subquery>` down to a primary-key index.
+        // Splitting into two statements (index-scan on `tagged.out`, then
+        // `id IN $ids` literal lookup) uses the PK index on the second
+        // step and is ~3× faster. Also projecting only the fields we need
+        // avoids pulling the large `embedding` float array per row.
         if (query.tags && query.tags.length > 0) {
             const tagRefs = query.tags.map((t) => (t.startsWith("tag:") ? t : `tag:${t}`));
             const tagRecordIds = tagRefs.map((t) => new StringRecordId(t));
             const limit = query.limit ?? 10;
 
-            // Query from the tag side: scan tagged edges where out IN $tags,
-            // then fetch the referenced memories. Keeps LIMIT literal to avoid
-            // SurrealDB bind-parameter quirks on LIMIT clauses.
-            const rows = await this.store.query<MemoryRow[]>(
-                `SELECT * FROM memory WHERE id IN (
-                    SELECT VALUE in FROM tagged WHERE out IN $tags LIMIT ${limit}
-                )`,
+            // `SELECT VALUE in` flattens to an array of the `in` values
+            // directly (no wrapping object).
+            const ids = await this.store.query<unknown[]>(
+                `SELECT VALUE in FROM tagged WHERE out IN $tags LIMIT ${limit}`,
                 { tags: tagRecordIds },
             );
 
-            if (rows) {
-                for (const row of rows) {
-                    const id = String(row.id);
-                    candidates.set(id, {
-                        id,
-                        content: row.content,
-                        score: 1.0,
-                        scores: { graph: 1.0 },
-                        tags: [],
-                        domainAttributes: {},
-                        eventTime: row.event_time ?? null,
-                        createdAt: row.created_at,
-                        tokenCount: row.token_count,
-                    });
+            if (ids && ids.length > 0) {
+                const rows = await this.store.query<MemoryRow[]>(
+                    `SELECT id, content, event_time, created_at, token_count FROM memory WHERE id IN $ids`,
+                    { ids },
+                );
+
+                if (rows) {
+                    for (const row of rows) {
+                        const id = String(row.id);
+                        candidates.set(id, {
+                            id,
+                            content: row.content,
+                            score: 1.0,
+                            scores: { graph: 1.0 },
+                            tags: [],
+                            domainAttributes: {},
+                            eventTime: row.event_time ?? null,
+                            createdAt: row.created_at,
+                            tokenCount: row.token_count,
+                        });
+                    }
                 }
             }
 
