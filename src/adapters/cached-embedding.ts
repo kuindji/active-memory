@@ -14,15 +14,20 @@ interface CachedEmbeddingOptions {
 }
 
 class CachedEmbeddingAdapter implements EmbeddingAdapter {
-    readonly dimension: number;
     private readonly inner: EmbeddingAdapter;
     private readonly maxEntries: number;
     private readonly cache = new Map<string, number[]>();
 
     constructor(inner: EmbeddingAdapter, options: CachedEmbeddingOptions = {}) {
         this.inner = inner;
-        this.dimension = inner.dimension;
         this.maxEntries = options.maxEntries ?? 10_000;
+    }
+
+    /** Delegate to inner so lazy adapters (e.g. OnnxEmbeddingAdapter) report the
+     *  real dimension after their first embed() call. A captured copy would stay
+     *  stuck at 0 even after priming, which silently disables the HNSW index. */
+    get dimension(): number {
+        return this.inner.dimension;
     }
 
     async embed(text: string): Promise<number[]> {
