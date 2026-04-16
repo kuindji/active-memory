@@ -1057,7 +1057,9 @@ class MemoryEngine {
                     memData.embedding = await embedding.embed(entry.content);
                 }
 
-                const memId = await graph.createNode("memory", memData);
+                const memId = entry.id
+                    ? await graph.createNodeWithId(entry.id, memData)
+                    : await graph.createNode("memory", memData);
 
                 if (entry.tags) {
                     for (const tag of entry.tags) {

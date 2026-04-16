@@ -207,6 +207,10 @@ export interface OwnedMemory {
 
 export interface WriteMemoryEntry {
     content: string;
+    /** Optional explicit record id (e.g. "memory:usa-recession-2001"). When provided
+     *  the node is created with that id so callers holding a stable identifier can
+     *  short-circuit name/semantic dedup on subsequent writes. */
+    id?: string;
     eventTime?: number | null;
     tags?: string[];
     references?: Reference[];

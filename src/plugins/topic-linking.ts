@@ -14,6 +14,11 @@ import type {
 interface ExtractedTopic {
     /** The topic name used for search/create/match. */
     name: string;
+    /** Optional stable topic key. When present, used as the memory id (`memory:<id>`)
+     *  so repeated emissions of the same topic short-circuit name/semantic dedup via
+     *  a direct record-id lookup. Callers with deterministic topic identities
+     *  (rule-based extractors, LLM tuples returning an id) should set this. */
+    id?: string;
     /** Arbitrary domain-specific metadata. Passed to afterTopicLink/afterAllTopicsLinked hooks. */
     meta?: Record<string, unknown>;
 }
@@ -137,38 +142,82 @@ function createTopicLinkingPlugin(options?: TopicLinkingOptions): DomainPlugin {
     async function linkSingleTopic(
         context: DomainContext,
         memoryId: string,
-        topicName: string,
+        topic: ExtractedTopic,
     ): Promise<TopicLinkState> {
         return context.debug.time(
             "topicLinking.linkSingleTopic",
-            () => linkSingleTopicImpl(context, memoryId, topicName),
-            { chars: topicName.length },
+            () => linkSingleTopicImpl(context, memoryId, topic),
+            { chars: topic.name.length, hasId: topic.id ? 1 : 0 },
         );
     }
 
     async function linkSingleTopicImpl(
         context: DomainContext,
         memoryId: string,
-        topicName: string,
+        topic: ExtractedTopic,
     ): Promise<TopicLinkState> {
+        const topicName = topic.name;
         const key = normalizeTopicName(topicName);
+        const providedMemoryId = topic.id ? `memory:${topic.id}` : undefined;
+        const domainRef = new StringRecordId(`domain:${topicDomainId}`);
+
+        let topicMemoryId: string | undefined;
+        let existingAttrs: Record<string, unknown> | undefined;
+        let isNew = false;
+
+        // Tier 0: caller-provided stable id → direct record-id lookup (~0.3ms RecordIdScan).
+        // On hit, skip name/semantic dedup entirely. On miss, fall through so existing
+        // tiers can still catch a name-equivalent topic that a prior run wrote under a
+        // different id.
+        if (providedMemoryId) {
+            topicMemoryId = await context.debug.time(
+                "topicLinking.tier0",
+                async () => {
+                    try {
+                        const rows = await context.graph.query<
+                            Array<{ id: string; attrs?: Record<string, unknown> | null }>
+                        >(
+                            `SELECT id,
+                                    (SELECT VALUE attributes FROM owned_by
+                                       WHERE in = $parent.id AND out = $domainId)[0] AS attrs
+                             FROM memory WHERE id = $memId LIMIT 1`,
+                            {
+                                memId: new StringRecordId(providedMemoryId),
+                                domainId: domainRef,
+                            },
+                        );
+                        const first = Array.isArray(rows) ? rows[0] : undefined;
+                        if (!first?.id) return undefined;
+                        if (first.attrs && typeof first.attrs === "object") {
+                            existingAttrs = first.attrs;
+                        }
+                        return String(first.id);
+                    } catch {
+                        return undefined;
+                    }
+                },
+                { chars: providedMemoryId.length },
+            );
+        }
 
         // Tier A: process cache (normalized-name → {id, attrs}). Zero DB cost on hit.
-        const cached = key ? nameCache.get(key) : undefined;
-        let topicMemoryId: string | undefined = cached?.id;
-        let existingAttrs: Record<string, unknown> | undefined = cached?.attrs;
-        let isNew = false;
+        if (!topicMemoryId) {
+            const cached = key ? nameCache.get(key) : undefined;
+            if (cached) {
+                topicMemoryId = cached.id;
+                existingAttrs = cached.attrs;
+            }
+        }
 
         // Tier B: indexed exact-match DB lookup on cache miss. O(log N) via idx_memory_name_normalized.
         // Also fetches existing domain attributes so the updateAttributes call below doesn't clobber them.
         if (!topicMemoryId && key) {
-            const domainRef = new StringRecordId(`domain:${topicDomainId}`);
             topicMemoryId = await context.debug.time(
                 "topicLinking.exactLookup",
                 async () => {
                     try {
                         const rows = await context.graph.query<
-                            Array<{ id: unknown; attrs?: Record<string, unknown> | null }>
+                            Array<{ id: string; attrs?: Record<string, unknown> | null }>
                         >(
                             `SELECT id,
                                     (SELECT VALUE attributes FROM owned_by
@@ -237,6 +286,7 @@ function createTopicLinkingPlugin(options?: TopicLinkingOptions): DomainPlugin {
             topicMemoryId = await context.debug.time("topicLinking.writeMemory", async () => {
                 const newId = await context.writeMemory({
                     content: topicName,
+                    id: providedMemoryId,
                     tags: [topicTag],
                     ownership: { domain: topicDomainId, attributes: seedAttrs },
                 });
@@ -262,13 +312,13 @@ function createTopicLinkingPlugin(options?: TopicLinkingOptions): DomainPlugin {
         }
 
         await context.debug.time("topicLinking.relateAboutTopic", () =>
-            context.graph.relate(memoryId, "about_topic", topicMemoryId!, {
+            context.graph.relate(memoryId, "about_topic", topicMemoryId, {
                 domain: context.domain,
             }),
         );
 
         return {
-            topicMemoryId: topicMemoryId!,
+            topicMemoryId,
             isNew,
             topicAttributes: existingAttrs,
             cacheKey: key || undefined,
@@ -344,11 +394,12 @@ function createTopicLinkingPlugin(options?: TopicLinkingOptions): DomainPlugin {
             for (const topic of topics) {
                 const trimmed = topic.name.trim();
                 if (!trimmed) continue;
+                if (trimmed !== topic.name) topic.name = trimmed;
 
                 const { topicMemoryId, isNew, topicAttributes, cacheKey } = await linkSingleTopic(
                     context,
                     entry.memory.id,
-                    trimmed,
+                    topic,
                 );
 
                 if (!topic.meta) {
