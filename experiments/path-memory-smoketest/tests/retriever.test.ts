@@ -19,9 +19,13 @@ describe("Retriever", () => {
         await store.ingest({ text: "alex moves to la", validFrom: 1 });
         await store.ingest({ text: "bob lives in boston", validFrom: 2 });
         const probeVec = await emb.embed("alex moves to la");
-        const results = retriever.retrieve([{ text: "alex moves to la", embedding: probeVec }]);
+        const results = retriever.retrieve([{ text: "alex moves to la", embedding: probeVec }], {
+            anchorTopK: 1,
+        });
         expect(results.length).toBeGreaterThan(0);
-        expect(results[0].path.nodeIds).toContain("c1");
+        // With top-1 anchors, the closest match to the probe is the only anchor,
+        // so every returned path must include it.
+        for (const r of results) expect(r.path.nodeIds).toContain("c1");
     });
 
     test("multi-probe: a single path covering both probes ranks above solo paths", async () => {
@@ -85,7 +89,62 @@ describe("Retriever", () => {
         expect(top.breakdown.edgeTypeDiversity).toBeLessThanOrEqual(1);
         expect(top.breakdown.recency).toBeGreaterThanOrEqual(0);
         expect(top.breakdown.recency).toBeLessThanOrEqual(1);
+        expect(top.breakdown.pathQuality).toBeGreaterThanOrEqual(0);
+        expect(top.breakdown.pathQuality).toBeLessThanOrEqual(1);
         expect(top.breakdown.lengthPenalty).toBeGreaterThanOrEqual(0);
+    });
+
+    test("pathQuality is 0 for solo paths and the edge-weight average for multi-edge paths", async () => {
+        const { emb, store, retriever } = setup();
+        await store.ingest({ text: "alex moves to la", validFrom: 1 });
+        await store.ingest({ text: "alex starts a new job", validFrom: 2 });
+        const probeA = await emb.embed("alex moves to la");
+        const probeB = await emb.embed("alex starts a new job");
+
+        const results = retriever.retrieve(
+            [
+                { text: "a", embedding: probeA },
+                { text: "b", embedding: probeB },
+            ],
+            { anchorTopK: 1 },
+        );
+
+        const solo = results.find((r) => r.path.nodeIds.length === 1);
+        const multi = results.find((r) => r.path.nodeIds.length > 1);
+        // Solo paths have no edges to evaluate — pathQuality is 0 (not a free boost).
+        expect(solo?.breakdown.pathQuality).toBe(0);
+        if (multi && multi.path.edges.length > 0) {
+            const expected =
+                multi.path.edges.reduce((s, e) => s + e.weight, 0) / multi.path.edges.length;
+            expect(multi.breakdown.pathQuality).toBeCloseTo(expected, 5);
+        }
+    });
+
+    test("informational length-penalty credits anchor-dense paths", async () => {
+        const { emb, store, retriever } = setup();
+        // Three anchor-worthy claims. All share "alex" so lexical edges form.
+        await store.ingest({ text: "alex moves", validFrom: 1 });
+        await store.ingest({ text: "alex jumps", validFrom: 2 });
+        await store.ingest({ text: "alex runs", validFrom: 3 });
+
+        const pA = await emb.embed("alex moves");
+        const pB = await emb.embed("alex jumps");
+        const pC = await emb.embed("alex runs");
+
+        const results = retriever.retrieve(
+            [
+                { text: "a", embedding: pA },
+                { text: "b", embedding: pB },
+                { text: "c", embedding: pC },
+            ],
+            { anchorTopK: 1 },
+        );
+
+        // Pure-anchor path (all 3 nodes are anchors) should have lengthPenalty 0.
+        const allAnchorPath = results.find((r) => r.path.nodeIds.length === 3);
+        if (allAnchorPath) {
+            expect(allAnchorPath.breakdown.lengthPenalty).toBe(0);
+        }
     });
 
     test("empty probe list returns no paths", () => {

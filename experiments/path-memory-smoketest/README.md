@@ -84,7 +84,7 @@ tests/
   helpers.ts      fake/deterministic embedder + tokenize stub for unit tests
 ```
 
-## Tier-1 results (last run, defaults)
+## Tier-1 results (post-Phase 1, defaults)
 
 **Eval (A) — vs flat vector baseline (P/R @ K=|ideal|):**
 
@@ -93,17 +93,19 @@ Queries: 12    path wins: 3    baseline wins: 3    ties: 6
 Mean F1 — path: 0.530    baseline: 0.507
 ```
 
-The path retriever marginally edges out flat vector search on average F1, with
-an even win/loss split. Notable observations:
+Aggregate unchanged from pre-Phase 1. Phase 1 landed informational
+length penalty + IDF-weighted edge infrastructure; `pathQuality`
+scoring and `lexicalIdfFloor` pruning are available as knobs but off by
+default because no swept configuration improved mean F1.
+
+Query-level highlights:
 
 - **Path wins decisively on as-of queries** (e.g. "where alex lived in 2015"
   → F1 1.00 vs 0.00). Bitemporal-light primitive validates.
 - **Path wins on multi-claim coverage queries** (hobbies, google work artifacts)
   — multi-probe matching surfaces related claims the baseline misses at K.
-- **Baseline wins on queries with strong literal cues** ("marriage and partner"
-  natural query contains "Sam" + "marriage" — direct cosine hits are excellent).
-  This exposes a real failure mode: lexical edges on ubiquitous tokens like
-  "alex" pull noisy claims into paths.
+- **Baseline still wins on queries with strong literal cues** ("marriage
+  and partner" natural query contains "Sam" + "marriage").
 
 **Eval (B) — multi-turn arc convergence:**
 
@@ -114,35 +116,26 @@ Arcs: 3    narrowed: 3    coherent (≥0.5): 2
 - *family arc* — converges cleanly (date_sam, child_lily, met_sam at top across
   turns)
 - *location arc (asOf)* — converges (loc_sf surfaces consistently)
-- *career arc* — does NOT converge cleanly. Accumulating probes across the full
-  arc pulls in noise via lexical edges on "Alex" — the system loses topical
-  focus. Real failure mode worth investigating in tier 2.
+- *career arc* — does NOT converge. Accumulating probes still pull in noise
+  via lexical edges on "Alex" because BFS-by-hops treats noise and real
+  edges identically — weight-aware traversal (Phase 1.5) is the next step.
 
 ## Hypothesis status
 
-**Partially supported.** The architecture works end-to-end, surfaces sensible
-results, validates the bitemporal-light primitive on as-of queries, and beats
-flat vector search on a subset of queries — but does not dominate baseline at
-default weights. Two clear failure modes surfaced:
-
-1. **Lexical edge noise from ubiquitous tokens** (a single common token pulls
-   topically-unrelated claims into paths). Likely fix: IDF-weighted lexical
-   edges, or a min-jaccard threshold above 0.
-2. **Length penalty trades off against multi-anchor traversal**. Default
-   weights make solo anchor paths competitive with multi-anchor paths.
-   Likely fix: scale length penalty by *informational* length (claims added)
-   not raw hop count.
-
-Both are tuning issues, not architectural ones — appropriate findings for a
-smoke-test at this scope.
+**Partially supported, post-Phase 1.** Architecture works end-to-end,
+bitemporal-light validates, path retrieval beats baseline on specific
+query shapes, but doesn't dominate mean F1 at default weights. One of
+the two original failure modes is resolved (length penalty), the other
+(lexical-edge noise) needs the path *choice* to be weight-aware, not
+just the scoring.
 
 ## Out of scope (for follow-on work)
 
+- Weight-aware traversal / Dijkstra over `1 − edgeWeight` — Phase 1.5
 - Tiers 2 (Greek history) and 3 (Wikipedia) datasets
 - Access tracking / well-worn-path index
 - Agent profile knob (facts ↔ abstractions weighting)
 - Context-building step that pre-summarizes a path for a downstream prompt
-- IDF-weighted lexical edges
 - Auto-tuning of scoring weights
 - Heuristic supersession (currently supersession must be marked explicitly)
 - Persistence — everything is in-memory, reconstructible from data files

@@ -9,6 +9,7 @@ export type PathMemoryConfig = {
     embedder: EmbeddingAdapter;
     semanticThreshold?: number;
     similarity?: GraphConfig["similarity"];
+    lexicalIdfFloor?: number;
 };
 
 export class PathMemory {
@@ -26,6 +27,7 @@ export class PathMemory {
         this.graph = new GraphIndex({
             semanticThreshold: config.semanticThreshold,
             similarity: config.similarity,
+            lexicalIdfFloor: config.lexicalIdfFloor,
         });
         this.store.subscribe((e) => {
             if (e.kind === "ingested") this.graph.addClaim(e.claim);

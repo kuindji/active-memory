@@ -175,13 +175,16 @@ Per the approved plan (`~/.claude/plans/swirling-churning-spindle.md`):
 5. **Mode** — `current` (default, fast, only non-superseded claims) or
    `asOf(t)` (opt-in, walks history to reconstruct state at time t).
 
-### Results (tier-1, default weights, last run)
+### Results (tier-1, post-Phase-1, default weights)
 
 **Eval (A) — vs flat vector baseline (P/R @ K = |ideal|):**
 ```
 Queries: 12    path wins: 3    baseline wins: 3    ties: 6
 Mean F1 — path: 0.530    baseline: 0.507
 ```
+
+Same aggregate numbers as the pre-Phase-1 run (0.530) — see Phase 1
+findings below for what did and didn't move.
 
 Highlights:
 - Path retriever **wins decisively on as-of queries** (where-did-alex-live-in-2015:
@@ -202,26 +205,74 @@ Arcs: 3    narrowed: 3    coherent (≥0.5): 2
 - Career arc: does NOT converge — accumulating probes across "what-did-alex-study"
   through "role-at-microsoft" pulls in noise via lexical edges on "Alex"
 
+### Phase 1 findings
+
+Phase 1 landed three changes (see `~/.claude/plans/temporal-churning-dijkstra.md`):
+
+1. **Informational length penalty** — replace `hops/maxDepth` with
+   `max(0, hops - (anchors-1))/maxDepth`. A pure-anchor path pays no
+   penalty; only connective (non-anchor) hops cost. This is the only
+   change active by default and is the real Phase-1 win — no regression,
+   slightly more decisive outcomes on a handful of queries.
+
+2. **IDF-weighted lexical edges** — `GraphIndex` now tracks document
+   frequency and recomputes lexical edge weights on each ingest using
+   smoothed IDF-jaccard:
+   `w = sum(idf(shared)) / sum(idf(union))`,
+   `idf(t) = ln((N+1)/(df(t)+1)) + 1`. Weights are correct (verified by
+   unit tests) — ubiquitous-token edges have substantially lower weight
+   than rare-token edges.
+
+3. **`pathQuality` score term** — available via
+   `RetrievalOptions.weights.pathQuality`, defaulting to **0**. Solo
+   paths get `pathQuality=0` (no edges to evaluate); multi-edge paths
+   get the average edge weight. Default zero because a sweep across
+   `pathQuality ∈ {0.05, 0.1, 0.2, 0.3, 0.5, 1.0}` and
+   `lexicalIdfFloor ∈ {0, 0.15, 0.2, 0.25, 0.3}` on eval (A) showed
+   **no configuration improved mean F1 above 0.530**. Turning on
+   `pathQuality` with `floor=0` tips some single-claim queries into
+   losses (first-child, as-of-2015) because low-weight lexical hops
+   dilute scoring in ways the current BFS can't compensate for; turning
+   on `floor` prunes edges BFS needs for legitimate connections.
+
+### What this tells us
+
+The IDF signal is present in the graph but not actionable with the
+current BFS. Shortest-path-by-hops treats all edges equally, so the
+weight distinction only reaches scoring, where it behaves like noise at
+this dataset size. The unit tests (`graph.test.ts`) confirm the IDF
+machinery works — it just doesn't lift ranking quality through the
+score alone.
+
+**Likely Phase 1.5:** weight-aware traversal (Dijkstra with
+`1 − edgeWeight` or similar) so the path *choice* respects IDF, not just
+its scoring. This was flagged as out-of-scope for Phase 1 deliberately
+so we could observe score-level effects first; the observation is that
+score alone isn't enough.
+
+**Career-arc convergence still fails** for the same reason: probe
+accumulation reaches unrelated claims via low-weight "alex" edges that
+BFS freely traverses.
+
 ### Hypothesis status
 
-**Partially supported.** Architecture works end-to-end, bitemporal-light
-validates strongly, multi-probe path-matching adds value on specific query
-types — but doesn't dominate flat baseline at default weights. Two concrete
-failure modes surfaced:
+**Partially supported, post-Phase 1.** Architecture works end-to-end,
+bitemporal-light validates strongly, multi-probe path-matching adds value
+on specific query types — but still doesn't dominate the flat baseline at
+default weights. Of the two Phase-1 failure modes originally identified:
 
-1. **Lexical edge noise from ubiquitous tokens.** A common token like
-   "Alex" (appears in every claim) creates artificially-strong lexical
-   edges that pull topically-unrelated claims into paths. Needs IDF-weighted
-   lexical edges.
-2. **Length-penalty / multi-anchor trade-off.** Default length penalty
-   makes a solo anchor (depth 0, no edges) competitive with a real
-   multi-anchor path. Needs rebalancing, or better: scale penalty by
-   *informational* length (novel claims introduced) rather than raw hop
-   count.
+1. **Length-penalty / multi-anchor trade-off** — *fixed*. Informational
+   length penalty (hops minus anchors-in-path) is live by default and
+   does not regress F1.
+2. **Lexical edge noise from ubiquitous tokens** — *not fixed at the
+   ranking layer*. IDF-weighted edge weights are correctly computed and
+   observable, but neither `pathQuality` scoring nor `lexicalIdfFloor`
+   pruning improves mean F1 on tier-1. The signal is present in the
+   graph; BFS-by-hops ignores it.
 
-Both are tuning issues, not architectural ones — appropriate findings for a
-smoke-test at this scope. No primitives need to be added or removed; the
-next iteration is parameter and edge-weighting work.
+The next iteration is **weight-aware traversal** (Phase 1.5 — Dijkstra
+over `1 − edgeWeight`) so path *choice* respects IDF. Score-level
+interventions proved insufficient on tier-1.
 
 ### Files delivered
 
@@ -243,18 +294,20 @@ experiments/path-memory-smoketest/
 ├── eval/
 │   ├── baseline.ts             # flat vector-search baseline
 │   ├── queries-tier1.ts        # 12 queries with marked ideal answers
-│   └── conversation-traces-tier1.ts  # 3 multi-turn traces
+│   ├── conversation-traces-tier1.ts  # 3 multi-turn traces
+│   └── sweep.ts                # manual config-sweep helper over eval (A)
 └── tests/
     ├── helpers.ts              # deterministic fake embedder + wiring
     ├── embedder.test.ts        # real embedder smoke test
     ├── store.test.ts           # 7 bitemporal invariants
-    ├── graph.test.ts           # 10 edge-formation invariants
-    ├── retriever.test.ts       # 7 retrieval behaviors
+    ├── graph.test.ts           # 13 edge-formation + IDF invariants
+    ├── retriever.test.ts       # 9 retrieval behaviors
     ├── eval-vs-baseline.test.ts   # eval (A) — vs flat baseline
     └── eval-iterative.test.ts  # eval (B) — multi-turn convergence
 ```
 
-28 tests pass. Typecheck clean. Lint clean.
+33 tests pass. Typecheck clean. Smoke-test lint clean (pre-existing
+warnings in `src/plugins/topic-linking.ts` unrelated to this branch).
 
 ---
 
@@ -264,27 +317,37 @@ Scope ordered by ROI on the information gained. Each item is independently
 landable and doesn't require the previous one — prioritize based on which
 question you most want answered next.
 
-### Phase 1 — Address the two tier-1 failure modes (high confidence, ~1 day)
+### Phase 1 — tier-1 failure-mode fixes — **done**
 
-Both are narrow, testable changes to existing code. No new primitives.
+See "Phase 1 findings" in Part 2. Landed:
+- Informational length penalty (live, default).
+- IDF-weighted lexical edges (computed on each ingest; exposed via
+  `edge.weight` and `GraphIndex.idf(token)`).
+- `pathQuality` score term + `lexicalIdfFloor` graph-config knob — both
+  infrastructure, default weights/floor disable them because no sweeped
+  configuration lifted mean F1 above 0.530 on tier-1.
 
-**1a. IDF-weighted lexical edges.**
-- Compute inverse document frequency across claim tokens at ingestion.
-- Lexical edge weight becomes sum(IDF of shared tokens) / sum(IDF of union
-  tokens) rather than raw jaccard.
-- Common tokens like "alex" contribute almost nothing; rare tokens
-  ("neurips", "microsoft") contribute heavily.
-- Re-run eval (A) and eval (B) and compare F1 / coherence.
+### Phase 1.5 — weight-aware traversal (new; high ROI)
 
-**1b. Length-penalty rebalance.**
-- Try scaling length penalty by *novel information*: a path of 5 nodes where
-  4 are anchors is more valuable than 5 nodes where 1 is an anchor.
-- Penalty proposal: `lp = (hops - (anchors_in_path - 1)) / maxDepth`
-- Alternative: weight by edge `weight` (strong-weight edges cost less).
-- Small-search over weight ratios. Not full auto-tuning, just manual sweep.
+The natural follow-up to Phase 1. Replace bounded BFS with
+bounded-depth Dijkstra over edge cost `1 − weight` (temporal cost≈0,
+strong semantic cost small, ubiquitous-lexical cost ≈1). The shortest
+*cost* path is different from the shortest *hop* path; low-weight
+lexical noise no longer looks like a free bridge.
 
-Both should be done in the same branch so effects can be attributed
-separately.
+Work:
+- Introduce a bounded-cost shortest-path function that still honors
+  `bfsMaxDepth` and the `isValid` mode filter.
+- Keep `pathQuality` and/or `lexicalIdfFloor` available but re-evaluate
+  defaults under weighted traversal — both may become useful again when
+  traversal itself is weight-aware.
+- Re-run eval (A) and (B). Expected outcome: career-arc convergence
+  improves; "marriage and partner" / "family" regressions shrink
+  because noise bridges cost more than real bridges.
+
+If this doesn't lift tier-1 F1 above 0.58ish, the conclusion is
+primitive-limited, not tuning-limited, and we revisit the retrieval
+model before tier-2.
 
 ### Phase 2 — Tier-2 dataset (Greek history) — medium scope
 
@@ -378,11 +441,14 @@ tier-3 results are in.
 
 ### Recommended next-session entry point
 
-**Start with Phase 1** (IDF lexical weights + length penalty rebalance) —
-it's the cheapest set of changes that will produce the most interpretable
-signal about whether the architecture's ceiling is tuning or fundamental.
-If Phase 1 lifts tier-1 path-F1 by, say, 0.08+ points, the architecture is
-vindicated. If not, we need to reconsider primitives before expanding scope.
+**Start with Phase 1.5** (weight-aware traversal). Phase 1's score-level
+use of IDF weights didn't lift F1; the signal needs to influence *path
+choice*, not just ranking. Implement bounded-cost Dijkstra over
+`1 − edgeWeight`, re-run eval (A) and (B), and compare.
+
+If Phase 1.5 also fails to lift tier-1 F1 above ~0.58, primitives are
+the bottleneck — revisit the retrieval model (probe composition,
+anchor selection, or substitute for lexical edges) before tier-2.
 
 Then let the results decide whether to go wider (tier-2 dataset) or
 deeper (access tracking + agent profile).

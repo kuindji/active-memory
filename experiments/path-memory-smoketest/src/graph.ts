@@ -4,20 +4,26 @@ import type { Claim, ClaimId, Edge, EdgeType } from "./types.js";
 export type GraphConfig = {
     semanticThreshold?: number;
     similarity?: (a: number[], b: number[]) => number;
+    lexicalIdfFloor?: number;
 };
 
 const DEFAULT_SEMANTIC_THRESHOLD = 0.65;
+const DEFAULT_LEXICAL_IDF_FLOOR = 0;
 
 export class GraphIndex {
     private readonly nodes = new Map<ClaimId, Claim>();
     private readonly adjacency = new Map<ClaimId, Edge[]>();
     private readonly temporalChain: ClaimId[] = [];
+    private readonly documentFrequency = new Map<string, number>();
+    private documentCount = 0;
     private readonly semanticThreshold: number;
     private readonly similarity: (a: number[], b: number[]) => number;
+    private readonly lexicalIdfFloor: number;
 
     constructor(config: GraphConfig = {}) {
         this.semanticThreshold = config.semanticThreshold ?? DEFAULT_SEMANTIC_THRESHOLD;
         this.similarity = config.similarity ?? cosineSimilarity;
+        this.lexicalIdfFloor = config.lexicalIdfFloor ?? DEFAULT_LEXICAL_IDF_FLOOR;
     }
 
     addClaim(claim: Claim): void {
@@ -27,12 +33,19 @@ export class GraphIndex {
         this.nodes.set(claim.id, claim);
         this.adjacency.set(claim.id, []);
 
+        for (const token of new Set(claim.tokens)) {
+            this.documentFrequency.set(token, (this.documentFrequency.get(token) ?? 0) + 1);
+        }
+        this.documentCount++;
+
         for (const otherId of this.nodes.keys()) {
             if (otherId === claim.id) continue;
             const other = this.nodes.get(otherId);
             if (!other) continue;
             this.buildLexicalAndSemanticEdges(claim, other);
         }
+
+        this.recomputeLexicalWeights();
 
         this.insertIntoTemporalChain(claim);
     }
@@ -58,22 +71,43 @@ export class GraphIndex {
         return out;
     }
 
+    idf(token: string): number {
+        const df = this.documentFrequency.get(token) ?? 0;
+        return Math.log((this.documentCount + 1) / (df + 1)) + 1;
+    }
+
+    private lexicalWeight(sharedTokens: string[], unionTokens: string[]): number {
+        let sharedIdf = 0;
+        for (const t of sharedTokens) sharedIdf += this.idf(t);
+        let unionIdf = 0;
+        for (const t of unionTokens) unionIdf += this.idf(t);
+        return unionIdf > 0 ? sharedIdf / unionIdf : 0;
+    }
+
     private buildLexicalAndSemanticEdges(a: Claim, b: Claim): void {
         const aSet = new Set(a.tokens);
         const bSet = new Set(b.tokens);
         const shared: string[] = [];
-        for (const t of aSet) if (bSet.has(t)) shared.push(t);
+        const union: string[] = [];
+        for (const t of aSet) {
+            union.push(t);
+            if (bSet.has(t)) shared.push(t);
+        }
+        for (const t of bSet) {
+            if (!aSet.has(t)) union.push(t);
+        }
 
         if (shared.length >= 1) {
-            const unionSize = aSet.size + bSet.size - shared.length;
-            const jaccard = unionSize > 0 ? shared.length / unionSize : 0;
-            this.pushBidirectional({
-                type: "lexical",
-                from: a.id,
-                to: b.id,
-                weight: jaccard,
-                meta: { sharedTokens: shared },
-            });
+            const weight = this.lexicalWeight(shared, union);
+            if (weight >= this.lexicalIdfFloor) {
+                this.pushBidirectional({
+                    type: "lexical",
+                    from: a.id,
+                    to: b.id,
+                    weight,
+                    meta: { sharedTokens: shared, unionTokens: union },
+                });
+            }
         }
 
         const sim = this.similarity(a.embedding, b.embedding);
@@ -85,6 +119,18 @@ export class GraphIndex {
                 weight: sim,
                 meta: { similarity: sim },
             });
+        }
+    }
+
+    private recomputeLexicalWeights(): void {
+        for (const list of this.adjacency.values()) {
+            for (const edge of list) {
+                if (edge.type !== "lexical") continue;
+                const shared = edge.meta?.sharedTokens;
+                const union = edge.meta?.unionTokens;
+                if (!shared || !union) continue;
+                edge.weight = this.lexicalWeight(shared, union);
+            }
         }
     }
 

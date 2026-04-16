@@ -28,7 +28,7 @@ describe("GraphIndex", () => {
         expect(g.getNode("c1")).toBe(c);
     });
 
-    test("lexical edges form between claims sharing tokens, weighted by jaccard", () => {
+    test("lexical edges form between claims sharing tokens, weighted by IDF-jaccard", () => {
         const g = new GraphIndex({ semanticThreshold: 99 }); // disable semantic
         g.addClaim(makeClaim("c1", "alex moves to la", ["alex", "moves", "la"], [1, 0, 0], 1));
         g.addClaim(
@@ -37,9 +37,65 @@ describe("GraphIndex", () => {
         const edges = g.neighbors("c1", ["lexical"]);
         expect(edges).toHaveLength(1);
         expect(edges[0].to).toBe("c2");
-        // shared {alex} ∪ {alex, moves, la, works, google} = 5; jaccard = 1/5 = 0.2
-        expect(edges[0].weight).toBeCloseTo(0.2, 5);
+        // docCount=2; df(alex)=2 (in both), df(moves,la,works,google)=1 each
+        // idf(alex) = ln((2+1)/(2+1))+1 = 1
+        // idf(others) = ln((2+1)/(1+1))+1 = ln(1.5)+1 ≈ 1.4055
+        // sharedIdf = 1; unionIdf = 1 + 4*1.4055 = 6.622
+        // weight ≈ 1/6.622 ≈ 0.151
+        expect(edges[0].weight).toBeCloseTo(0.151, 2);
         expect(edges[0].meta?.sharedTokens).toEqual(["alex"]);
+        expect(edges[0].meta?.unionTokens?.length).toBe(5);
+    });
+
+    test("ubiquitous-token lexical edges have lower weight than rare-token edges", () => {
+        const g = new GraphIndex({ semanticThreshold: 99 });
+        // ubiquitous: every claim mentions "alex"
+        g.addClaim(makeClaim("a1", "alex moves", ["alex", "moves"], [1, 0, 0], 1));
+        g.addClaim(makeClaim("a2", "alex jumps", ["alex", "jumps"], [0, 1, 0], 2));
+        g.addClaim(makeClaim("a3", "alex runs", ["alex", "runs"], [0, 0, 1], 3));
+        g.addClaim(makeClaim("a4", "alex reads", ["alex", "reads"], [1, 1, 0], 4));
+        // rare: two claims that share a unique token "neurips"
+        g.addClaim(
+            makeClaim("b1", "alex spoke at neurips", ["alex", "spoke", "neurips"], [1, 0, 1], 5),
+        );
+        g.addClaim(
+            makeClaim("b2", "alex wrote for neurips", ["alex", "wrote", "neurips"], [0, 1, 1], 6),
+        );
+        const aliceEdges = g.neighbors("a1", ["lexical"]);
+        const a1a2 = aliceEdges.find((e) => e.to === "a2");
+        const bobEdges = g.neighbors("b1", ["lexical"]);
+        const b1b2 = bobEdges.find((e) => e.to === "b2");
+        expect(a1a2).toBeDefined();
+        expect(b1b2).toBeDefined();
+        // rare-token edge (shares neurips + alex) should outweigh ubiquitous-only edge
+        expect((b1b2 as { weight: number }).weight).toBeGreaterThan(
+            (a1a2 as { weight: number }).weight,
+        );
+    });
+
+    test("lexical weights are recomputed as new claims shift DF", () => {
+        const g = new GraphIndex({ semanticThreshold: 99 });
+        g.addClaim(makeClaim("c1", "alex moves", ["alex", "moves"], [1, 0, 0], 1));
+        g.addClaim(makeClaim("c2", "alex jumps", ["alex", "jumps"], [0, 1, 0], 2));
+        const before = g.neighbors("c1", ["lexical"]).find((e) => e.to === "c2");
+        expect(before).toBeDefined();
+        const weightBefore = (before as { weight: number }).weight;
+        // Add a third "alex" claim — df(alex) goes up, idf(alex) down, weight drops
+        g.addClaim(makeClaim("c3", "alex runs", ["alex", "runs"], [0, 0, 1], 3));
+        const after = g.neighbors("c1", ["lexical"]).find((e) => e.to === "c2");
+        expect(after).toBeDefined();
+        const weightAfter = (after as { weight: number }).weight;
+        expect(weightAfter).toBeLessThan(weightBefore);
+    });
+
+    test("lexicalIdfFloor suppresses edges below the floor", () => {
+        const g = new GraphIndex({ semanticThreshold: 99, lexicalIdfFloor: 0.2 });
+        // Two claims sharing only "alex" — weight ≈ 0.151, below floor
+        g.addClaim(makeClaim("c1", "alex moves to la", ["alex", "moves", "la"], [1, 0, 0], 1));
+        g.addClaim(
+            makeClaim("c2", "alex works at google", ["alex", "works", "google"], [0, 1, 0], 2),
+        );
+        expect(g.neighbors("c1", ["lexical"])).toHaveLength(0);
     });
 
     test("no lexical edge when no tokens shared", () => {

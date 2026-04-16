@@ -15,6 +15,7 @@ export type EdgeType = "temporal" | "lexical" | "semantic";
 
 export type EdgeMeta = {
     sharedTokens?: string[];
+    unionTokens?: string[];
     similarity?: number;
     deltaT?: number;
 };
@@ -45,6 +46,7 @@ export type ScoreBreakdown = {
     probeCoverage: number;
     edgeTypeDiversity: number;
     recency: number;
+    pathQuality: number;
     lengthPenalty: number;
 };
 
@@ -65,6 +67,7 @@ export type RetrievalOptions = {
         probeCoverage?: number;
         edgeTypeDiversity?: number;
         recency?: number;
+        pathQuality?: number;
         lengthPenalty?: number;
     };
 };

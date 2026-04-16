@@ -22,6 +22,7 @@ const DEFAULTS = {
         probeCoverage: 1.0,
         edgeTypeDiversity: 0.3,
         recency: 0.1,
+        pathQuality: 0,
         lengthPenalty: 0.1,
     },
 };
@@ -99,7 +100,8 @@ export class Retriever {
             const score =
                 breakdown.probeCoverage * weights.probeCoverage +
                 breakdown.edgeTypeDiversity * weights.edgeTypeDiversity +
-                breakdown.recency * weights.recency -
+                breakdown.recency * weights.recency +
+                breakdown.pathQuality * weights.pathQuality -
                 breakdown.lengthPenalty * weights.lengthPenalty;
             scored.push({ path, score, breakdown });
         }
@@ -189,9 +191,23 @@ export class Retriever {
         const recency = now > 0 ? mostRecent / now : 0;
 
         const hops = Math.max(0, path.nodeIds.length - 1);
-        const lengthPenalty = maxDepth > 0 ? hops / maxDepth : 0;
+        let anchorsInPath = 0;
+        for (const nid of path.nodeIds) {
+            if (probesByAnchor.has(nid)) anchorsInPath++;
+        }
+        const informationalHops = Math.max(0, hops - Math.max(0, anchorsInPath - 1));
+        const lengthPenalty = maxDepth > 0 ? informationalHops / maxDepth : 0;
 
-        return { probeCoverage, edgeTypeDiversity, recency, lengthPenalty };
+        let pathQuality: number;
+        if (path.edges.length === 0) {
+            pathQuality = 0;
+        } else {
+            let sum = 0;
+            for (const e of path.edges) sum += e.weight;
+            pathQuality = sum / path.edges.length;
+        }
+
+        return { probeCoverage, edgeTypeDiversity, recency, pathQuality, lengthPenalty };
     }
 }
 
