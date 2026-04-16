@@ -240,6 +240,8 @@ function createTopicLinkingPlugin(options?: TopicLinkingOptions): DomainPlugin {
         }
 
         // Tier C (existing): similarity search — catches near-name matches the exact tiers miss.
+        // Vector-only: HNSW is O(log N) and dedup is exact-match-adjacent — fulltext/graph
+        // contribute drift without recall benefit for short topic names.
         if (!topicMemoryId) {
             const searchResult = await context.debug.time(
                 "topicLinking.dedupSearch",
@@ -247,6 +249,7 @@ function createTopicLinkingPlugin(options?: TopicLinkingOptions): DomainPlugin {
                     context.search({
                         text: topicName,
                         tags: [topicTag],
+                        mode: "vector",
                         minScore,
                         skipPluginExpansion: true,
                         skipConnections: true,
