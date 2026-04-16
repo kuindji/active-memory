@@ -751,6 +751,7 @@ class MemoryEngine {
                                 `inbox:assert-claim:${domain.id}`,
                                 now,
                             );
+                            await this.inboxProcessor.ensureAssertClaimTagLinked(assertTagId);
                             await this.graph.relate(memId, "tagged", assertTagId);
                             hasAnyTarget = true;
                         }

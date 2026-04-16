@@ -87,6 +87,12 @@ type TagFilter = { type: "assert-claim" } | { type: "domain"; domainId: string }
 const PROCESSING_ROOT_LABEL = "inbox:processing:_root";
 const PROCESSING_ROOT_TAG_ID = `tag:\`${PROCESSING_ROOT_LABEL}\``;
 
+// Same pattern for assert-claim discovery: each inbox:assert-claim:<domainId> tag gets
+// a child_of edge to this root so fetchCandidateIds(assert-claim) can resolve active
+// tags via idx_child_of_out instead of scanning `tagged` by out.label prefix.
+const ASSERT_CLAIM_ROOT_LABEL = "inbox:assert-claim:_root";
+const ASSERT_CLAIM_ROOT_TAG_ID = `tag:\`${ASSERT_CLAIM_ROOT_LABEL}\``;
+
 class InboxProcessor {
     private timeout: ReturnType<typeof setTimeout> | null = null;
     private running = false;
@@ -142,28 +148,38 @@ class InboxProcessor {
      * Returns IDs in created_at ASC order.
      */
     private async fetchCandidateIds(filter: TagFilter): Promise<string[]> {
-        let query: string;
-
-        if (filter.type === "assert-claim") {
-            // Find memories that have at least one inbox:assert-claim:* tag
-            query = `SELECT in FROM tagged
-        WHERE out.label IS NOT NONE
-          AND string::starts_with(out.label, 'inbox:assert-claim:')`;
-        } else {
-            // Find memories with the specific domain inbox tag
-            query = `SELECT in FROM tagged
-        WHERE out = $domainTag`;
-        }
-
-        const vars: Record<string, unknown> = {};
-        if (filter.type === "domain") {
-            vars.domainTag = new StringRecordId(`tag:\`inbox:${filter.domainId}\``);
-        }
-
         const candidates = await this.debug.time(
             "buildSimilarityBatch.fetchInboxTagged",
-            () =>
-                this.store.query<Array<{ in: RecordIdLike | string }>>(query, vars),
+            async () => {
+                if (filter.type === "assert-claim") {
+                    // Two index-scans mirroring fetchProcessing: resolve active
+                    // assert-claim tag ids via the sentinel root (idx_child_of_out),
+                    // then match tagged rows by `out IN $tagIds` (idx_tagged_out).
+                    // Replaces a full scan of `tagged` via out.label prefix predicate.
+                    const tagRows = await this.store.query<Array<{ in: RecordIdLike | string }>>(
+                        `SELECT in FROM child_of WHERE out = $root`,
+                        { root: new StringRecordId(ASSERT_CLAIM_ROOT_TAG_ID) },
+                    );
+                    if (!tagRows || tagRows.length === 0) return [];
+                    const tagIds = tagRows.map((r) => new StringRecordId(String(r.in)));
+                    return (
+                        (await this.store.query<Array<{ in: RecordIdLike | string }>>(
+                            `SELECT in FROM tagged WHERE out IN $tagIds`,
+                            { tagIds },
+                        )) ?? []
+                    );
+                }
+                return (
+                    (await this.store.query<Array<{ in: RecordIdLike | string }>>(
+                        `SELECT in FROM tagged WHERE out = $domainTag`,
+                        {
+                            domainTag: new StringRecordId(
+                                `tag:\`inbox:${filter.domainId}\``,
+                            ),
+                        },
+                    )) ?? []
+                );
+            },
             { filter: filter.type },
         );
         if (!candidates || candidates.length === 0) return [];
@@ -617,6 +633,55 @@ class InboxProcessor {
         this.processingRootReady = true;
     }
 
+    private assertClaimRootReady = false;
+    private assertClaimBackfilled = false;
+    private readonly assertClaimLinked = new Set<string>();
+
+    private async ensureAssertClaimRoot(): Promise<void> {
+        if (this.assertClaimRootReady) return;
+        try {
+            await this.store.createNodeWithId(ASSERT_CLAIM_ROOT_TAG_ID, {
+                label: ASSERT_CLAIM_ROOT_LABEL,
+                created_at: Date.now(),
+            });
+        } catch {
+            // Already exists
+        }
+        this.assertClaimRootReady = true;
+    }
+
+    async ensureAssertClaimTagLinked(tagId: string): Promise<void> {
+        if (this.assertClaimLinked.has(tagId)) return;
+        await this.ensureAssertClaimRoot();
+        await this.store.relate(tagId, "child_of", ASSERT_CLAIM_ROOT_TAG_ID);
+        this.assertClaimLinked.add(tagId);
+    }
+
+    private async backfillAssertClaimLinks(): Promise<void> {
+        if (this.assertClaimBackfilled) return;
+        await this.ensureAssertClaimRoot();
+        const linkedRows = await this.store.query<Array<{ in: RecordIdLike | string }>>(
+            `SELECT in FROM child_of WHERE out = $root`,
+            { root: new StringRecordId(ASSERT_CLAIM_ROOT_TAG_ID) },
+        );
+        for (const row of linkedRows ?? []) {
+            this.assertClaimLinked.add(String(row.in));
+        }
+        const tagRows = await this.store.query<Array<{ id: RecordIdLike | string }>>(
+            `SELECT id FROM tag WHERE string::starts_with(label, 'inbox:assert-claim:')
+             AND label != $rootLabel`,
+            { rootLabel: ASSERT_CLAIM_ROOT_LABEL },
+        );
+        for (const row of tagRows ?? []) {
+            const tagId = String(row.id);
+            if (!this.assertClaimLinked.has(tagId)) {
+                await this.store.relate(tagId, "child_of", ASSERT_CLAIM_ROOT_TAG_ID);
+                this.assertClaimLinked.add(tagId);
+            }
+        }
+        this.assertClaimBackfilled = true;
+    }
+
     private toMemoryEntry(raw: RawMemoryRow): MemoryEntry {
         return {
             id: String(raw.id),
@@ -931,6 +996,7 @@ class InboxProcessor {
 
                 try {
                     await this.recoverStaleBatches();
+                    await this.backfillAssertClaimLinks();
                     const asserted = await this.processAssertionBatch();
                     const processed = await this.processInboxBatch();
                     return asserted > 0 || processed > 0;
