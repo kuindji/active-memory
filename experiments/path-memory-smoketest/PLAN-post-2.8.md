@@ -40,10 +40,10 @@ stated explicitly in the "Relation to existing systems" section.
 |---|---|---|
 | **2.9** Corpus-shape (Option R) | **DONE** (commit `01e1532`) | **PASS 8/8** on edgeRatio ≥ 5× uniform (mean 7.72×). Nodes stay flat (nodeRatio ≈ 1.00), edges concentrate sharply, path-as-returned signatures never repeat (0/40 sessions). Path-keyed Phase-4 design is retired; edge-hotness cache + Phase-2.10 activation profile are the real targets. |
 | **2.10** Spreading activation (Option O) | **KILLED — opt-in only** | Best Option O: 0.682 tier-1 / 0.522 tier-2 vs Phase 2.8 baseline 0.703/0.627 (regress -0.021/-0.105). Eval-B coherence flat at 1/4 (target 2/4). Inhibition load-bearing on tier-1 (β=0 drops 0.682→0.536) but slightly *hurts* tier-2 — small-graph dilution + tier-2 failure modes ≠ vocabulary-distractor. Ships as `AnchorScoring.kind = "spreading-activation"`; defaults unchanged. See CONTEXT.md § Phase 2.10. |
-| **2.11** Per-view routing (Option P) | **NEXT** | Promoted — remaining architectural hypothesis is that single-adjacency merge of temporal/lexical/semantic discards routing signal. Open question: do Phase 7 first to test 2.10's "small-graph dilution" hypothesis at LongMemEval scale? |
+| **2.11** Per-view routing (Option P) | **DEFERRED — after Phase 7** | Router dry-run (2026-04-17, `scripts/phase-2.11-router-dryrun.ts`) refuted probe-level routing on current evals: eval-A tier-2 probes produce **1 unique weight tuple across all 38 probes** (`{0.000, 0.300, 0.700}`); eval-B tier-2 produces 2 tuples across 26 probes (only 2 probes hit temporal). Root cause: Greek-history probes don't use temporal keywords ("ruler of Egypt" not "when did X rule Egypt"), and at any IDF threshold ≥ 2.0 every probe has at least one rare token, so the lexical channel fires uniformly. MAGMA's router works on LongMemEval because that benchmark has genuine temporal questions; our corpora don't. Retry after Phase 7 on LongMemEval, where the router has real partitioning work to do. Router module + tests (`src/view-router.ts`, `tests/view-router.test.ts`) are in-tree as a checkpoint — not wired into the retriever. Reading note at `notes/phase-2.11-reading.md`. |
 | **2.12** Differentiable scorer (Option Q) | Deferred | Unchanged. |
 | **Phase 4** Cache | **Both sub-options dead** | 4b activation-persistence killed with Option O. 4a edge-hotness soft-gate shipped as pre-experiment (commit TBD) and **refuted on eval-C** (+35% latency regress on 8/8 traces, coverage flat). Code ships disabled-only. Hard-prune variant remains theoretically possible but is out of scope. Phase-4 slot reverts to open. |
-| **Phase 7** LongMemEval retarget | Possibly NEXT before 2.11 | Also serves as the scale-generalization check for both 2.9 (edge concentration) and 2.10's small-graph dilution argument. |
+| **Phase 7** LongMemEval retarget | **NEXT** | Promoted after Phase 2.11 dry-run refuted probe-level routing on current evals (see 2.11 row). Also serves as the scale-generalization check for both 2.9 (edge concentration) and 2.10's small-graph dilution argument, and unblocks the deferred 2.11 retry. |
 
 **Key 2.9 interpretation** (full details in `CONTEXT.md` § "Phase 2.9" and memory `path_memory_phase29.md`):
 
@@ -236,6 +236,17 @@ infrastructure and move to Phase 2.11.
 
 ## Phase 2.11 — Option P: MAGMA-inspired per-view routing (medium, contingent)
 
+> **STATUS (2026-04-17): DEFERRED until after Phase 7.** Router
+> dry-run on eval-A tier-2 produced **1 unique weight tuple across
+> all 38 probes** — probe-level routing has nothing to route on
+> the Greek-history corpus. Router module (`src/view-router.ts` +
+> tests) ships as an in-tree checkpoint; retriever integration is
+> not done. Retry on LongMemEval once Phase 7's adapter lands.
+> Dry-run script preserved at
+> `scripts/phase-2.11-router-dryrun.ts`. Reading note at
+> `notes/phase-2.11-reading.md`. See also `~/.claude/plans/
+> curried-toasting-sprout.md`.
+
 **Read before implementing.** REQUIRED reading — this phase adapts
 MAGMA's multi-view architecture.
 - **MAGMA paper** — https://arxiv.org/abs/2601.03236
@@ -420,14 +431,14 @@ runs per phase become cheap.
 | 1 | **2.9** Corpus-shape experiment (Option R) | Small | **DONE** (PASS 8/8) | — |
 | 2a | **4a pre-experiment** Edge-hotness soft-gate | Small (½ sess.) | **DONE — refuted** (eval-A hold; +35% eval-C latency regress on 8/8 traces). Ships disabled-only | — |
 | 2 | **2.10** Spreading activation (Option O) | Medium | **DONE — killed, opt-in only** | — |
-| 3 | **2.11** Per-view routing (Option P) | Medium | **NEXT** | Primary research bet after 2.10/4a both refuted |
-| 4 | **7 retarget** LongMemEval harness | Small | Pending | Enables external comparison + gives Phase 2.12 labels; also re-measures 2.9 edge-concentration at scale |
-| 5 | **2.12** Differentiable scorer (Option Q) | Large | Deferred | Only after 2.11 + Phase 7 |
-| 6 | **Phase 4** (hard-prune 4a, or new shape after 2.11) | Small–medium | Soft-gate refuted; slot open | Execution depends on 2.11 outcome |
+| 3 | **7 retarget** LongMemEval harness | Small | **NEXT** | Promoted past 2.11 after router dry-run refuted probe-level routing on current evals. Enables external comparison + gives Phase 2.12 labels; also re-measures 2.9 edge-concentration at scale; unblocks 2.11 retry |
+| 4 | **2.11** Per-view routing (Option P) | Medium | **DEFERRED — retry after Phase 7** | Router module in-tree as checkpoint; not wired. Retry on LongMemEval where router has genuine temporal/entity probes to partition |
+| 5 | **2.12** Differentiable scorer (Option Q) | Large | Deferred | Only after Phase 7 + 2.11 retry |
+| 6 | **Phase 4** (hard-prune 4a, or new shape after 2.11) | Small–medium | Soft-gate refuted; slot open | Execution depends on 2.11 retry outcome |
 
-**Recommended next-session entry point:** Phase 2.11 (MAGMA per-view routing), OR Phase 7 retarget first to test 2.10/2.11 hypotheses at scale. Open strategic question carries over from Phase 2.10.
+**Recommended next-session entry point:** Phase 7 retarget (LongMemEval harness adapter). 2.11 retry follows Phase 7 once the router has a corpus it can actually partition.
 
-Do not commit to 4/5/6 until 2.11 lands.
+Do not commit to 4/5/6 until 2.11 retry lands.
 
 ## Dead primitives (re-issued under BGE-small)
 
