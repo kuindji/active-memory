@@ -309,6 +309,56 @@ const CONFIGS: Config[] = [
             anchorScoring: { kind: "min-cosine-gate", tau: 0.2 },
         },
     },
+    // --- Phase 2.5 Option L (expand anchor candidate set) — eval-A watch --
+    // Primary criterion is eval-B (iterative-sweep); these rows only exist
+    // to gate the ±0.02 regression check against the "A3 bfs
+    // probe=weighted-fusion tau=0.2" row above (eval-A's Phase-2.1 proxy —
+    // session-decay isn't plumbed through sweep.ts's one-shot queries).
+    {
+        label: "L bfs wfusion tau=0.2 anchorTopK=10",
+        options: {
+            traversal: "bfs",
+            probeComposition: "weighted-fusion",
+            weightedFusionTau: 0.2,
+            anchorTopK: 10,
+        },
+    },
+    {
+        label: "L bfs wfusion tau=0.2 anchorTopK=15",
+        options: {
+            traversal: "bfs",
+            probeComposition: "weighted-fusion",
+            weightedFusionTau: 0.2,
+            anchorTopK: 15,
+        },
+    },
+    // --- Phase 2.6 Option M (idf-weighted-fusion) — eval-A watch ----------
+    // Primary criterion remains eval-B (iterative-sweep); these rows exist
+    // so the ±0.02 regression check is legible in the same artifact.
+    // Baseline reference: "A3 bfs probe=weighted-fusion tau=0.2" (0.510
+    // tier-1 / 0.548 tier-2). α=0 must not move vs. the Option I τ=0.2
+    // row that already lives in this file.
+    {
+        label: "M bfs idf-fusion τ=0.2 α=0 (isolation)",
+        options: {
+            traversal: "bfs",
+            anchorScoring: { kind: "idf-weighted-fusion", tau: 0.2, alpha: 0 },
+        },
+    },
+    {
+        label: "M bfs idf-fusion τ=0.2 α=0.5",
+        options: {
+            traversal: "bfs",
+            anchorScoring: { kind: "idf-weighted-fusion", tau: 0.2, alpha: 0.5 },
+        },
+    },
+    {
+        label: "M bfs idf-fusion τ=0.2 α=1.0",
+        options: {
+            traversal: "bfs",
+            anchorScoring: { kind: "idf-weighted-fusion", tau: 0.2, alpha: 1.0 },
+        },
+    },
 ];
 
 async function runConfig(config: Config): Promise<{ mean: number; wins: number; losses: number }> {

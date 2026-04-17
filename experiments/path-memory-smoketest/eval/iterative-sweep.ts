@@ -239,6 +239,162 @@ const CONFIGS: Config[] = [
             sessionDecayTau: 0.3,
         },
     },
+
+    // --- Phase 2.5 sweep: Option L (expand anchor candidate set) ----------
+    // Per-turn diagnostic after Phase 2.4 showed `phil_plato_forms` is never
+    // in the Academy-arc turn-3 anchor top-5 at any config. Option L widens
+    // `anchorTopK` so the candidate simply has a chance to surface. Pair
+    // with the Phase-2.1-best scorer so the only moving variable is the
+    // candidate-set size. Cross-rows at H-best and J-best check whether
+    // the extra candidates interact with cluster boost / coverage bonus.
+    {
+        label: "L wfusion tau=0.2 + decay=0.3 anchorTopK=10",
+        options: {
+            traversal: "bfs",
+            probeComposition: "weighted-fusion",
+            weightedFusionTau: 0.2,
+            sessionDecayTau: 0.3,
+            anchorTopK: 10,
+        },
+    },
+    {
+        label: "L wfusion tau=0.2 + decay=0.3 anchorTopK=15",
+        options: {
+            traversal: "bfs",
+            probeComposition: "weighted-fusion",
+            weightedFusionTau: 0.2,
+            sessionDecayTau: 0.3,
+            anchorTopK: 15,
+        },
+    },
+    {
+        // Stretch row — only informative if 10/15 leave the floor unchanged.
+        label: "L wfusion tau=0.2 + decay=0.3 anchorTopK=20",
+        options: {
+            traversal: "bfs",
+            probeComposition: "weighted-fusion",
+            weightedFusionTau: 0.2,
+            sessionDecayTau: 0.3,
+            anchorTopK: 20,
+        },
+    },
+    {
+        // Cross with best-so-far H config — does widening interact with
+        // cluster-affinity boost?
+        label: "L×H k=6 β=1.0 tau=0.2 + decay=0.3 anchorTopK=10",
+        options: {
+            traversal: "bfs",
+            anchorScoring: { kind: "cluster-affinity-boost", tau: 0.2, beta: 1.0, k: 6 },
+            sessionDecayTau: 0.3,
+            anchorTopK: 10,
+        },
+    },
+    {
+        label: "L×H k=6 β=1.0 tau=0.2 + decay=0.3 anchorTopK=15",
+        options: {
+            traversal: "bfs",
+            anchorScoring: { kind: "cluster-affinity-boost", tau: 0.2, beta: 1.0, k: 6 },
+            sessionDecayTau: 0.3,
+            anchorTopK: 15,
+        },
+    },
+    {
+        // Cross with J coverage-bonus — same question, different aggregate.
+        label: "L×J cov-bonus exp=2 tau=0.2 + decay=0.3 anchorTopK=10",
+        options: {
+            traversal: "bfs",
+            anchorScoring: { kind: "density-coverage-bonus", tau: 0.2, exponent: 2 },
+            sessionDecayTau: 0.3,
+            anchorTopK: 10,
+        },
+    },
+
+    // --- Phase 2.6 sweep: Option M (idf-weighted-fusion anchor scoring) ---
+    // Per-turn diagnostic after Phase 2.4 identified tier-2 failure mode #1
+    // as a vocabulary distractor: generic-token claims (e.g. `pw_pausanias_
+    // commands` matching the probe word "generals") outrank specific
+    // claims. A2 `cosine-idf-mass` already exists but runs only in the per-
+    // probe top-K path, which is bypassed by weighted-fusion composition.
+    // Option M ports the IDF-mass multiplier into the aggregate itself:
+    //   score(c) = (1 + α · normIdf(c)) · Σ_p w(p) · max(0, cos(p,c) - τ)
+    // α=0 isolation row must match Phase-2.1-best exactly. Sweep α over
+    // {0.3, 0.5, 0.7, 1.0}; τ=0.2 + decay=0.3 matches Phase-2.1-best.
+    {
+        label: "M idf-fusion τ=0.2 α=0 + decay=0.3 (isolation)",
+        options: {
+            traversal: "bfs",
+            anchorScoring: { kind: "idf-weighted-fusion", tau: 0.2, alpha: 0 },
+            sessionDecayTau: 0.3,
+        },
+    },
+    {
+        label: "M idf-fusion τ=0.2 α=0.3 + decay=0.3",
+        options: {
+            traversal: "bfs",
+            anchorScoring: { kind: "idf-weighted-fusion", tau: 0.2, alpha: 0.3 },
+            sessionDecayTau: 0.3,
+        },
+    },
+    {
+        label: "M idf-fusion τ=0.2 α=0.5 + decay=0.3",
+        options: {
+            traversal: "bfs",
+            anchorScoring: { kind: "idf-weighted-fusion", tau: 0.2, alpha: 0.5 },
+            sessionDecayTau: 0.3,
+        },
+    },
+    {
+        label: "M idf-fusion τ=0.2 α=0.7 + decay=0.3",
+        options: {
+            traversal: "bfs",
+            anchorScoring: { kind: "idf-weighted-fusion", tau: 0.2, alpha: 0.7 },
+            sessionDecayTau: 0.3,
+        },
+    },
+    {
+        label: "M idf-fusion τ=0.2 α=1.0 + decay=0.3",
+        options: {
+            traversal: "bfs",
+            anchorScoring: { kind: "idf-weighted-fusion", tau: 0.2, alpha: 1.0 },
+            sessionDecayTau: 0.3,
+        },
+    },
+    {
+        // Stretch — if α up to 1.0 under-moves the ranking, check whether
+        // a stronger multiplier helps. Also documents the monotonicity
+        // direction (if perf degrades past some α, that's the best-α
+        // signal).
+        label: "M idf-fusion τ=0.2 α=2.0 + decay=0.3",
+        options: {
+            traversal: "bfs",
+            anchorScoring: { kind: "idf-weighted-fusion", tau: 0.2, alpha: 2.0 },
+            sessionDecayTau: 0.3,
+        },
+    },
+    {
+        // No-decay isolation: any lift here is attributable to IDF mass,
+        // not Phase-2.1 session decay. Paired with α=0.5 as a mid-sweep
+        // point.
+        label: "M idf-fusion τ=0.2 α=0.5 no decay",
+        options: {
+            traversal: "bfs",
+            anchorScoring: { kind: "idf-weighted-fusion", tau: 0.2, alpha: 0.5 },
+        },
+    },
+    {
+        // Session-weight isolation toggle — parallels the J / I pattern.
+        label: "M idf-fusion τ=0.2 α=0.5 useSessionWeights=false + decay=0.3",
+        options: {
+            traversal: "bfs",
+            anchorScoring: {
+                kind: "idf-weighted-fusion",
+                tau: 0.2,
+                alpha: 0.5,
+                useSessionWeights: false,
+            },
+            sessionDecayTau: 0.3,
+        },
+    },
 ];
 
 async function runConfig(config: Config): Promise<{

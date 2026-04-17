@@ -80,6 +80,12 @@ export type AnchorScoring =
           temperature?: number;
           useSessionWeights?: boolean;
           seed?: number;
+      }
+    | {
+          kind: "idf-weighted-fusion";
+          tau: number;
+          alpha: number;
+          useSessionWeights?: boolean;
       };
 
 export type ProbeComposition = "union" | "intersection" | "weighted-fusion";

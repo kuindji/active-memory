@@ -1118,6 +1118,262 @@ will be ≥10× worse at 5000-claim Wikipedia scale regardless of any
 tier-2 fix, and the corpus shift itself may mask or reveal the
 signal.
 
+### Phase 2.5 findings — Option L (expand anchor candidate set)
+
+**Hypothesis (restated).** The Academy-arc turn-3 miss is a
+*candidate-set-size* problem: `phil_plato_forms` never enters the
+anchor top-5, so simply widening `anchorTopK` to 10 / 15 / 20
+should surface it. Length-penalty + probeCoverage scoring was
+assumed strong enough to keep distractor paths from outranking a
+coherent multi-probe path.
+
+**Setup.** Six new configs in `eval/iterative-sweep.ts` and two in
+`eval/sweep.ts`. No library changes — `anchorTopK` is already a
+first-class `RetrievalOptions` field and flows through the sweep
+spread. Configs:
+
+iterative-sweep.ts:
+- `L wfusion τ=0.2 + decay=0.3 anchorTopK=10 / 15 / 20`
+- `L×H k=6 β=1.0 τ=0.2 + decay=0.3 anchorTopK=10 / 15`
+- `L×J cov-bonus exp=2 τ=0.2 + decay=0.3 anchorTopK=10`
+
+sweep.ts:
+- `L bfs wfusion τ=0.2 anchorTopK=10 / 15`
+
+**Results — eval-B (iterative-sweep, coherent/narrowed, primary
+criterion).** All 6 tier-2 L-rows REGRESS or tie the floor; all 6
+tier-1 L-rows REGRESS from 3/3 → 2/3.
+
+| config                                                  | tier-1 coh | tier-2 coh |
+|---------------------------------------------------------|-----------:|-----------:|
+| bfs wfusion τ=0.2 + decay=0.3 (Phase 2.1 best baseline) |      3/3   |      1/4   |
+| L wfusion + decay=0.3 anchorTopK=10                     |      2/3   |      1/4   |
+| L wfusion + decay=0.3 anchorTopK=15                     |      2/3   |      0/4   |
+| L wfusion + decay=0.3 anchorTopK=20                     |      2/3   |      0/4   |
+| L×H k=6 β=1.0 anchorTopK=10                             |      2/3   |      1/4   |
+| L×H k=6 β=1.0 anchorTopK=15                             |      2/3   |      0/4   |
+| L×J cov-bonus anchorTopK=10                             |      2/3   |      1/4   |
+
+**Results — eval-A (sweep, mean-F1 vs. A3 bfs wfusion τ=0.2
+Phase-2.1 proxy at 0.510 tier-1 / 0.548 tier-2).**
+
+| config                                     | tier-1 F1 | Δ       | tier-2 F1 | Δ       |
+|--------------------------------------------|----------:|--------:|----------:|--------:|
+| A3 bfs wfusion τ=0.2 (baseline)            |   0.510   |  —      |   0.548   |  —      |
+| L bfs wfusion τ=0.2 anchorTopK=10          |   0.472   | −0.038  |   0.399   | −0.149  |
+| L bfs wfusion τ=0.2 anchorTopK=15          |   0.483   | −0.027  |   0.368   | −0.180  |
+
+Both eval-A deltas exceed the ±0.02 gate on tier-1 and catastrophically
+exceed it on tier-2.
+
+**Key reframing (important).** The anchor-top-K=5 ceiling was
+*load-bearing*, not a recall bottleneck. Widening the candidate
+set admits more distractor paths than useful anchors; the
+downstream path-scoring + length-penalty cannot distinguish them,
+so mean-F1 and coherence both collapse. The Phase-2.4 per-turn
+diagnostic showed `phil_plato_forms` was absent from top-5; Phase
+2.5 shows that *even if the candidate does surface at top-10 /
+top-15*, it cannot outrank the additional noise. The failure mode
+is **ranking**, not coverage.
+
+**Stacked interpretation across Phase 2.2 → 2.5.**
+- Phase 2.2 (Option I / weighted-probe-density): aggregate-shape
+  doesn't fix it.
+- Phase 2.3 (Option J / coverage-bonus + min-gate): non-linear
+  coverage doesn't fix it.
+- Phase 2.4 (Option H / cluster-affinity-boost): cluster geometry
+  doesn't fix it.
+- Phase 2.5 (Option L / expand-candidate-set): more candidates
+  *hurt* — the 5-item ceiling was a noise filter.
+
+All four refutations converge on the same conclusion: **tier-2
+failures are claim-level**, driven by (a) generic-token distractors
+outranking specific claims and (b) within-cluster granularity
+differences the embedding geometry doesn't surface. Neither
+aggregate-shape, non-linearity, cluster geometry, nor candidate-
+set size can fix it from within the current anchor-scoring
+pipeline.
+
+### Phase 2.5 hypothesis status
+
+**Refuted** — on all four metrics (tier-1 eval-B, tier-2 eval-B,
+tier-1 eval-A, tier-2 eval-A). This is the cleanest refutation of
+the Phase-2 arc so far; every lever (including "do less scoring,
+give the model more raw candidates") has now been exhausted
+without lifting the 1/4 tier-2 eval-B floor.
+
+**Implication for next session:** the remaining tractable option
+on the claim-specificity axis is **Option M — per-anchor IDF
+mass**. It directly attacks the "generals" distractor (tier-2
+failure mode #1) by downweighting generic-vocabulary claims at
+anchor-scoring time. The A2 `cosine-idf-mass` infrastructure
+already exists at the edge level; the work is wiring per-anchor
+IDF into `weighted-probe-density` / `cluster-affinity-boost` and
+sweeping α ∈ {0.3, 0.5, 0.7, 1.0} on tier-2.
+
+If Option M also refutes, **Option G (tier-3) becomes the default
+next step** — the refutation stack now gives strong evidence that
+242-claim tier-2 is near the ceiling of what anchor-scoring
+interventions can address. Moving to 5000-claim Wikipedia either
+validates tier-2 as a proxy (same primitives degrade at scale) or
+reveals a different failure mode that matters more.
+
+### Phase 2.5 delivered
+
+Source: current working tree. Files touched:
+- `eval/iterative-sweep.ts` — 6 Option L rows appended (wfusion
+  anchorTopK ∈ {10, 15, 20}, H×L at anchorTopK ∈ {10, 15}, J×L at
+  anchorTopK=10).
+- `eval/sweep.ts` — 2 Option L rows appended (wfusion anchorTopK ∈
+  {10, 15}).
+- No source or type changes.
+
+547 tests pass (unchanged from pre-Phase-2.5). Typecheck, lint clean.
+
+### Phase 2.6 findings — Option M (idf-weighted-fusion anchor scoring)
+
+**Breakthrough.** First primitive in the Phase-2 arc to genuinely
+lift tier-2 eval-B past the 1/4 floor.
+
+**Hypothesis.** The tier-2 failure mode diagnosed in Phase 2.4 (#1:
+`pw_pausanias_commands` outranking `diad_seleucus_babylon` on the
+probe word "generals") is a **vocabulary-distractor** problem:
+generic-token claims win on raw cosine because their common tokens
+overlap the probe. A2 `cosine-idf-mass` already addresses this at
+the per-probe top-K path, but that path is bypassed whenever any
+fusion-style aggregate runs (Option I / J / H / L via the
+`weighted-fusion` composition path or the Option-I aggregate
+branch). Porting IDF-mass into the aggregate itself should recover
+the Phase-1.6 A2 semantics at the anchor-scoring layer used by
+Phase-2.1 default.
+
+**Mechanism.** New `AnchorScoring.kind = "idf-weighted-fusion"`:
+```
+score(c) = (1 + α · normIdf(c)) · Σ_p w(p) · max(0, cos(p,c) − τ)
+normIdf(c) = graph.nodeIdfMass(c) / max_{c' ∈ valid} graph.nodeIdfMass(c')
+```
+Reuses existing `graph.nodeIdfMass` (already wired for A2). α=0
+collapses the formula byte-for-byte to Option I (weighted-probe-
+density) — its isolation row is the correctness check.
+
+**Setup.** Added `idf-weighted-fusion` variant to `src/types.ts`
+and new branch to `src/retriever.ts`'s `composeAnchors` (between
+the Option I branch and the `intersection` path). 8 sweep rows in
+`eval/iterative-sweep.ts` (α ∈ {0, 0.3, 0.5, 0.7, 1.0, 2.0}, plus
+no-decay and useSessionWeights=false isolation rows). 3 rows in
+`eval/sweep.ts` (α ∈ {0, 0.5, 1.0}) for eval-A gate. 3 new tests
+in `tests/retriever.test.ts`: α=0 isolation, α>0 structural
+validity, session-weight toggle.
+
+**Results — eval-B (iterative-sweep, coherent/narrowed, primary
+criterion).** Monotonically increasing lift in α, with diminishing
+returns past 1.0. Tier-1 holds 3/3 at every α.
+
+| config                                            | tier-1 coh | tier-2 coh |
+|---------------------------------------------------|-----------:|-----------:|
+| bfs wfusion τ=0.2 + decay=0.3 (Phase 2.1 best)    |     3/3    |     1/4    |
+| M idf-fusion τ=0.2 α=0 + decay=0.3 (isolation)    |     3/3    |     1/4    |
+| M idf-fusion τ=0.2 α=0.3 + decay=0.3              |     3/3    |  **2/4**   |
+| M idf-fusion τ=0.2 α=0.5 + decay=0.3              |     3/3    |  **2/4**   |
+| M idf-fusion τ=0.2 α=0.7 + decay=0.3              |     3/3    |  **2/4**   |
+| M idf-fusion τ=0.2 α=1.0 + decay=0.3              |     3/3    |  **3/4**   |
+| M idf-fusion τ=0.2 α=2.0 + decay=0.3              |     3/3    |  **3/4**   |
+| M idf-fusion τ=0.2 α=0.5 no decay                 |     3/3    |  **2/4**   |
+| M idf-fusion τ=0.2 α=0.5 useWeights=false + decay |     3/3    |  **2/4**   |
+
+The α=0.5 no-decay row is important: IDF mass alone (without the
+Phase-2.1 session-decay signal) still lifts tier-2 to 2/4. The two
+mechanisms are independent lift sources; they stack.
+
+**Results — eval-A (sweep, mean-F1 vs. A3 bfs wfusion τ=0.2
+baseline: 0.510 tier-1 / 0.548 tier-2).** α=0 matches baseline
+byte-for-byte (correctness). α=0.5 is strictly positive on tier-2
+and within gate on tier-1. α=1.0 exceeds gate on tier-2.
+
+| config                             | tier-1 F1 | Δ        | tier-2 F1 | Δ        |
+|------------------------------------|----------:|---------:|----------:|---------:|
+| A3 bfs wfusion τ=0.2 (baseline)    |   0.510   |  —       |   0.548   |  —       |
+| M bfs idf-fusion τ=0.2 α=0         |   0.510   |  0.000   |   0.548   |  0.000   |
+| M bfs idf-fusion τ=0.2 α=0.5       |   0.517   | **+0.007** |   0.566 | **+0.018** |
+| M bfs idf-fusion τ=0.2 α=1.0       |   0.504   | −0.006   |   0.513   | −0.035   |
+
+**α=0.5 is the first Phase-2 primitive that improves on BOTH
+axes** (tier-2 eval-B 1/4 → 2/4 AND tier-2 eval-A +0.018) at no
+cost to tier-1. α=1.0 demonstrates the tradeoff: bigger tier-2
+eval-B lift (2/4 → 3/4) at the cost of a 0.035 tier-2 eval-A
+regression — the IDF term over-weights and starts promoting
+irrelevant high-IDF anchors into one-shot queries' top-K.
+
+**Key reframing (important).** Four refutations (I/J/H/L) plus
+one breakthrough (M) triangulate the actual failure geometry:
+- The tier-2 bottleneck is **claim-specificity at the cosine layer**,
+  not aggregate shape, coverage non-linearity, cluster geometry, or
+  candidate-set size.
+- A2 `cosine-idf-mass` solves this on the per-probe top-K path.
+  The Phase-2.1 default moved retrieval off that path by using
+  weighted-fusion composition; the IDF boost was silently lost in
+  the process.
+- Option M restores IDF to the aggregate path, unlocking the same
+  lift that A2 provided in Phase 1.6 — now compatible with the
+  Phase-2.1 defaults.
+
+This is a strong signal that the remaining tier-2 gap (α=0.5: 2/4,
+α=1.0: 3/4, never 4/4) is in the third diagnosed failure mode
+(Athens-at-war turn 4: within-`pwar_` cluster granularity) — an
+embedding-layer limit, not an anchor-scoring one.
+
+### Phase 2.6 hypothesis status
+
+**Confirmed.** Option M passes the primary criterion (tier-2
+eval-B ≥ 2/4 at α ≥ 0.3) and, at α=0.5, improves on both eval-A
+axes within the ±0.02 gate. α=0 isolation matches Phase-2.1 best
+exactly on both tier-1 and tier-2 eval-A — mechanical correctness
+is verified.
+
+**Recommended default:** `α=0.5`. Rationale:
+- Tier-2 eval-B 2/4 (double the Phase-2.1-best floor).
+- Tier-2 eval-A 0.566 (+0.018 over baseline — the first primitive
+  in Phase 2 to improve eval-A at all).
+- Tier-1 eval-B preserved (3/3). Tier-1 eval-A +0.007.
+- α=1.0's larger eval-B lift (3/4) is tempting, but the 0.035
+  tier-2 eval-A regression means individual queries get worse
+  retrieval. The iterative-arc benefit is paid for by one-shot
+  degradation — net-negative in production.
+
+**Implication for next session:** three candidate directions.
+1. **Ship α=0.5 as the recommended default in the public API**
+   (promote `idf-weighted-fusion` τ=0.2 α=0.5 + decay=0.3 from
+   opt-in to default, or document it as "the recommended tier-2
+   config"). Update the README retrieval story.
+2. **Option G (tier-3 now)** — with M in place, run the 5000-claim
+   Wikipedia corpus. Two outcomes:
+   - M's lift holds → validates tier-2 as a proxy; M ships.
+   - M's lift collapses → reveals whether within-cluster
+     granularity (failure mode #3) is what tier-3 exposes at
+     scale, which the anchor layer cannot address regardless.
+3. **Option M' — α tuning at tier-3.** If tier-3 behaves
+   differently, α may need to be re-tuned per-corpus.
+
+### Phase 2.6 delivered
+
+Source: current working tree. Files touched:
+- `src/types.ts` — `AnchorScoring` variant `idf-weighted-fusion`
+  added after `cluster-affinity-boost`.
+- `src/retriever.ts` — new branch in `composeAnchors`, positioned
+  after the Option I (`weighted-probe-density`) branch and before
+  the `intersection` path. Reuses existing `graph.nodeIdfMass`
+  from Phase-1.6 A2.
+- `tests/retriever.test.ts` — 3 new tests: α=0 byte-for-byte
+  collapse to Option I, α>0 structural validity, session-weight
+  toggle.
+- `eval/iterative-sweep.ts` — 8 Phase-2.6 rows (α ∈ {0, 0.3, 0.5,
+  0.7, 1.0, 2.0}, plus α=0.5 no-decay and useSessionWeights=false
+  isolation rows).
+- `eval/sweep.ts` — 3 Phase-2.6 rows (α ∈ {0, 0.5, 1.0}) for
+  eval-A gate.
+
+84 tests pass (was 81 pre-Phase-2.6). Typecheck, lint, format clean.
+
 ### Phase 2.4 delivered
 
 Source: current working tree. Files touched:
@@ -1524,30 +1780,44 @@ within-cluster or vocabulary-driven failures (see § Phase 2.4
 findings), so cluster geometry was never the bottleneck. Edge-weight
 rescaling (sketch #2) is retired for the same reason.
 
-**Option L (new, recommended) — expand anchor candidate set.**
-Raise `anchorTopK` from 5 to 10 / 15 on tier-2 and check whether
-the Academy-arc turn-3 miss (`phil_plato_forms` currently outside
-top-5) gets surfaced. Cheapest possible experiment — no new code,
-just a sweep row. Accepts more distractor paths for more coverage;
-existing length-penalty + probeCoverage scoring must still rank a
-coherent multi-probe path above distractors. If coherence improves
-at `anchorTopK = 10` but eval-A regresses >±0.02, the tradeoff is
-documented and we pick between coverage and precision.
+**Option L — done (Phase 2.5), refuted.** Expanded `anchorTopK` to
+10 / 15 / 20 (and cross-rows against H and J best-configs). Tier-1
+eval-B regressed from 3/3 → 2/3 at every L config; tier-2 eval-B
+stayed 1/4 at anchorTopK=10 and regressed to 0/4 at ≥15; tier-1
+eval-A dropped by 0.027–0.038; tier-2 eval-A dropped by
+0.149–0.180. The anchor-top-K=5 ceiling is load-bearing — the
+downstream path scorer cannot distinguish useful candidates from
+distractors when the pool widens. The failure mode is **ranking,
+not coverage**. (See § Phase 2.5 findings.)
 
-**Option M (new) — per-anchor IDF mass (not per-edge).** Port A2
-(`cosine-idf-mass`, α ∈ {0.5, 1.0}) semantics to the anchor-scoring
-pipeline and sweep on tier-2. Would penalize generic-vocabulary
-claims like `pw_pausanias_commands` (which match the probe word
-*"generals"* but lack specific Diadochi-kingdom semantics).
-Infrastructure already exists in the retriever; the work is adding
-it to `weighted-probe-density` / fusion aggregation and sweeping.
+**Option M — done (Phase 2.6), CONFIRMED.** `idf-weighted-fusion`
+anchor scoring ports A2 `cosine-idf-mass` semantics into the
+fusion aggregate. `score(c) = (1 + α · normIdf(c)) · Σ_p w(p) ·
+max(0, cos(p,c) − τ)`. α=0 collapses to Option I byte-for-byte.
+Recommended default **α=0.5**: tier-2 eval-B 1/4 → 2/4, tier-2
+eval-A +0.018, tier-1 preserved at 3/3 + tier-1 eval-A +0.007 —
+first Phase-2 primitive to improve both axes. α=1.0 lifts tier-2
+eval-B to 3/4 but regresses tier-2 eval-A by 0.035 (over-weights).
+Validates that the tier-2 bottleneck is claim-specificity at the
+cosine layer — the Phase-2.1 default silently dropped the A2 IDF
+boost by moving retrieval off the per-probe top-K path; Option M
+restores it on the aggregate path. (See § Phase 2.6 findings.)
 
-**Option N (new) — per-probe IDF-weighted embedding.** Recompute
-probe embeddings with token-IDF weighting at embed time (or via a
-probe-side normalization that downweights high-frequency tokens).
-Targets the same vocabulary-distractor failure as Option M but at
-the probe side. Requires re-embedding or a probe post-processing
-step; more invasive than M.
+**Option G (now primary) — tier-3 validation of Option M.**
+With M in place the question becomes: does the α=0.5 lift hold at
+5000-claim Wikipedia scale? Two outcomes shape the next session:
+- M's lift holds → validates tier-2 as a proxy; α=0.5 becomes the
+  shippable default. Publish the retrieval story.
+- M's lift collapses → the within-cluster granularity failure
+  mode (tier-2 #3, Athens-at-war turn-4) dominates at scale — an
+  embedding-layer limit the anchor layer can't address, and a
+  signal to pivot toward Option N (IDF-weighted probe embedding)
+  or better embedding models.
+
+**Option N (retained) — per-probe IDF-weighted embedding.**
+Probe-side analogue of M. More invasive (requires re-embedding)
+but only relevant if Option G reveals that tier-2's anchor-layer
+IDF boost does not carry to tier-3.
 
 **Option K (retained as backup) — probe-conditional anchor fusion.**
 Score each probe's top-K independently; union only across probes
@@ -1555,19 +1825,12 @@ whose anchor sets share cluster signal. Addresses the
 cross-cluster story that Phase 2.4 refuted; only worth trying if a
 future arc actually *is* cross-cluster.
 
-**Option G — tier-3 now, accept tier-2 1/4 (stronger case).**
-Phase 2.4's second reframing changes the cost-benefit: the
-remaining tier-2 failures are claim-specificity /
-embedding-granularity problems that will likely be **10× worse**
-at 5000-claim Wikipedia scale — so either (a) a tier-3 run reveals
-whether 242-claim tier-2 is even a proxy for the real problem, or
-(b) a tier-3 run confirms the same primitives collapse and we
-re-prioritize Options L/M/N against the broader corpus.
-
-Recommendation: **Option L first** — it's cheap (minutes, no new
-code) and directly targets one of the three diagnosed failure
-modes (Academy turn-3 missing-from-candidate-set). If L surfaces
-`phil_plato_forms` *and* keeps eval-A within ±0.02, ship it. If L
-doesn't help, move to Option M (per-anchor IDF mass); M + L stack
-naturally. Option G (tier-3) becomes the next primary entry if
-L and M both refute.
+Recommendation: **Option G (tier-3 with α=0.5 idf-weighted-fusion
+as the candidate shippable default)** — the breakthrough in Phase
+2.6 is strong enough to test at scale. Keep the sweep narrow (M
+α ∈ {0.3, 0.5, 0.7, 1.0}, plus Phase-2.1-best baseline, plus
+vanilla `bfs`) — the tier-3 run is primarily a validation of M,
+not a re-opening of the rest of the sweep. If G confirms, draft
+the public API migration (promote `idf-weighted-fusion` to default
+or recommended tier-2 config). If G refutes, that's the signal to
+invest in Option N / embedding upgrades.

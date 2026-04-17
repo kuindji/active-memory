@@ -446,6 +446,64 @@ export class Retriever {
             // Fall through to the default union path if τ excluded everything.
         }
 
+        // Option M (Phase 2.6): idf-weighted-fusion anchor scoring. Same
+        // weighted-fusion aggregate as Option I but multiplied by
+        // `(1 + α · normIdf(c))`, where `normIdf(c) = nodeIdfMass(c) /
+        // maxNodeIdf` over valid claims. Targets the tier-2 vocabulary-
+        // distractor failure mode (claims like `pw_pausanias_commands`
+        // that match the generic token "generals" but lack specific-kingdom
+        // IDF mass). A2 `cosine-idf-mass` already does this for the per-
+        // probe top-K path, but that path is bypassed whenever a fusion-
+        // style anchor scorer is selected (Option I / J / H) or when
+        // probeComposition = weighted-fusion is used over raw cosine.
+        // At α=0 this collapses to Option I byte-for-byte — used as the
+        // isolation row.
+        if (anchorScoring.kind === "idf-weighted-fusion") {
+            const tau = anchorScoring.tau;
+            const alpha = anchorScoring.alpha;
+            const useWeights = anchorScoring.useSessionWeights ?? true;
+            let maxNodeIdf = 0;
+            for (const c of validClaims) {
+                const m = this.graph.nodeIdfMass(c.id);
+                if (m > maxNodeIdf) maxNodeIdf = m;
+            }
+            const aggregate = new Map<ClaimId, number>();
+            const probesAboveTau = new Map<ClaimId, Set<number>>();
+            for (const claim of validClaims) {
+                let agg = 0;
+                const above = new Set<number>();
+                perProbe.forEach((pp, pIdx) => {
+                    const cos = pp.cosineByAnchor.get(claim.id) ?? 0;
+                    const raw = Math.max(0, cos - tau);
+                    if (raw > 0) {
+                        const w = useWeights ? probeWeights[pIdx] : 1;
+                        agg += w * raw;
+                        above.add(pIdx);
+                    }
+                });
+                if (agg > 0) {
+                    const norm = maxNodeIdf > 0 ? this.graph.nodeIdfMass(claim.id) / maxNodeIdf : 0;
+                    const score = agg * (1 + alpha * norm);
+                    aggregate.set(claim.id, score);
+                    probesAboveTau.set(claim.id, above);
+                }
+            }
+            const ranked = Array.from(aggregate.entries())
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, anchorTopK)
+                .map(([id]) => id);
+            for (const aid of ranked) {
+                const above = probesAboveTau.get(aid);
+                if (!above || above.size === 0) {
+                    remember(aid, 0);
+                    continue;
+                }
+                for (const pIdx of above) remember(aid, pIdx);
+            }
+            if (probesByAnchor.size > 0) return probesByAnchor;
+            // Fall through to the default union path if τ excluded everything.
+        }
+
         if (probeComposition === "intersection" && probes.length > 1) {
             const counts = new Map<ClaimId, Set<number>>();
             perProbe.forEach((pp, pIdx) => {

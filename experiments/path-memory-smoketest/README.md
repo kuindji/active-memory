@@ -298,13 +298,35 @@ baselines on tier-1 eval-B (3/3) and tier-2 eval-A (~0.548) but
 *cross-cluster* (graph-structural); Phase 2.4's per-turn diagnostic
 **refuted that reframing too** — the three failing arcs turned out
 to have within-cluster or vocabulary-driven failure modes, not
-cluster-boundary ones. The remaining gap is claim-level
-(specificity / embedding-granularity / anchor-top-K reach), not
-aggregate-shape or cluster-geometry. See `CONTEXT.md` § Phase 2.4
-findings for the three diagnosed failure modes. Next candidates:
-**Option L** (expand `anchorTopK` from 5 to 10), **Option M**
-(per-anchor IDF mass), or **Option G** (accept 1/4 and run
-tier-3).
+cluster-boundary ones.
+
+Phase 2.5 landed **Option L** (expand `anchorTopK` to 10 / 15 /
+20) as pure sweep-row addition. **Refuted on all four metrics**:
+tier-1 eval-B regresses 3/3 → 2/3, tier-2 eval-B stays 1/4 at k=10
+and regresses to 0/4 at k≥15, tier-1 eval-A drops 0.027–0.038,
+tier-2 eval-A drops 0.149–0.180. The anchor-top-K=5 ceiling is
+load-bearing: widening admits distractors the downstream path
+scorer cannot filter.
+
+Phase 2.6 landed **Option M** (`idf-weighted-fusion` anchor
+scoring) and **CONFIRMED** — the first breakthrough of the Phase-2
+arc. `score(c) = (1 + α · normIdf(c)) · Σ_p w(p) · max(0, cos(p,c)
+− τ)` ports A2 `cosine-idf-mass` into the fusion aggregate path
+that Phase-2.1 inadvertently bypassed. At **α=0.5**: tier-2 eval-B
+lifts 1/4 → 2/4, tier-2 eval-A **improves +0.018**, tier-1 holds
+3/3 + tier-1 eval-A +0.007 — first primitive in Phase 2 to improve
+on both axes. At α=1.0 tier-2 eval-B reaches 3/4 but eval-A
+regresses 0.035 (over-weighting). α=0 isolation matches Phase-2.1
+best byte-for-byte (correctness verified).
+
+The refutation stack (I, J, H, L) plus the M breakthrough
+triangulates the geometry: the tier-2 bottleneck is
+**claim-specificity at the cosine layer**, not aggregate shape,
+coverage non-linearity, cluster geometry, or candidate-set size.
+The Phase-2.1 default silently dropped A2's IDF boost; Option M
+restores it. See `CONTEXT.md` § Phase 2.6 findings for the full
+analysis. Next primary entry: **Option G** (tier-3 validation of
+α=0.5 as shippable default).
 
 ## Out of scope (for follow-on work)
 
