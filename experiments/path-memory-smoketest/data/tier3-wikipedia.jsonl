@@ -1,0 +1,393 @@
+{"id":"bio_photosynthesis_000","text":"Photosynthesis is a system by which photopigment-bearing autotrophic organisms convert light energy into chemical energy for metabolism.","validFrom":0}
+{"id":"bio_photosynthesis_001","text":"Oxygenic photosynthesis, the most common type, releases oxygen as a byproduct of water splitting.","validFrom":1}
+{"id":"bio_photosynthesis_002","text":"Photosynthetic organisms store converted chemical energy in intracellular organic compounds, typically carbohydrates like glucose and sucrose.","validFrom":2}
+{"id":"bio_photosynthesis_003","text":"Purple bacteria use bacteriochlorophyll to split hydrogen sulfide, releasing sulfur instead of oxygen as byproduct.","validFrom":3}
+{"id":"bio_photosynthesis_004","text":"In plants, algae, and cyanobacteria, the Calvin cycle incorporates atmospheric carbon dioxide into organic compounds.","validFrom":4}
+{"id":"bio_photosynthesis_005","text":"Cyanobacteria produced excess oxygen that oxygenated Earth, enabling evolution of complex life.","validFrom":5}
+{"id":"bio_photosynthesis_006","text":"Global photosynthesis captures approximately 130 terawatts of energy, about eight times total human power consumption.","validFrom":6}
+{"id":"bio_photosynthesis_007","text":"Photosynthesis occurs in chloroplasts in plants and algae, but in photosynthetic bacterial cell membranes.","validFrom":7}
+{"id":"bio_photosynthesis_008","text":"Light-dependent reactions produce NADPH and ATP used by light-independent reactions to reduce carbon dioxide.","validFrom":8}
+{"id":"bio_photosynthesis_009","text":"In light-dependent reactions, electrons move through transport chains generating a proton gradient for ATP synthesis.","validFrom":9}
+{"id":"bio_photosynthesis_010","text":"Water photolysis in light-dependent reactions releases oxygen and provides electrons replenishing chlorophyll molecules.","validFrom":10}
+{"id":"bio_photosynthesis_011","text":"Chlorophyll reflects green light, explaining why most plants appear green.","validFrom":11}
+{"id":"bio_photosynthesis_012","text":"Some organisms use non-water electron donors; some archaea use bacteriorhodopsin without releasing oxygen.","validFrom":12}
+{"id":"bio_photosynthesis_013","text":"Leaf mesophyll cells contain 450,000 to 800,000 chloroplasts per square millimeter of tissue.","validFrom":13}
+{"id":"bio_photosynthesis_014","text":"Not all light wavelengths support photosynthesis; effectiveness depends on the organism's pigment type.","validFrom":14}
+{"id":"bio_photosynthesis_015","text":"Light-dependent reactions occur in thylakoid membranes and synthesize ATP and NADPH.","validFrom":15}
+{"id":"bio_photosynthesis_016","text":"In non-cyclic reactions, photosystem II absorbs photons, exciting electrons through the electron transport chain.","validFrom":16}
+{"id":"bio_photosynthesis_017","text":"Proton pumping across the thylakoid membrane generates chemiosmotic potential that ATP synthase uses to synthesize ATP.","validFrom":17}
+{"id":"bio_photosynthesis_018","text":"Two water molecules are oxidized by photosystem II, yielding one oxygen molecule and four hydrogen ions.","validFrom":18}
+{"id":"bio_photosynthesis_019","text":"Cyclic reactions occur only at photosystem I and produce ATP but not NADPH.","validFrom":19}
+{"id":"bio_photosynthesis_020","text":"RuBisCO fixes atmospheric CO2 during the Calvin cycle to produce three-carbon sugar carbohydrates.","validFrom":20}
+{"id":"bio_photosynthesis_021","text":"Carbon dioxide combines with ribulose 1,5-bisphosphate yielding glycerate 3-phosphate molecules.","validFrom":21}
+{"id":"bio_photosynthesis_022","text":"Glycerate 3-phosphate reduces to glyceraldehyde 3-phosphate using ATP and NADPH.","validFrom":22}
+{"id":"bio_photosynthesis_023","text":"Glyceraldehyde 3-phosphate regenerates ribulose 1,5-bisphosphate or condenses into hexose phosphates forming sugars.","validFrom":23}
+{"id":"bio_photosynthesis_024","text":"C4 plants fix CO2 in mesophyll cells via PEP carboxylase producing oxaloacetic acid.","validFrom":24}
+{"id":"bio_photosynthesis_025","text":"C4 plants concentrate CO2 in bundle sheath cells, reducing photorespiration versus C3 plants.","validFrom":25}
+{"id":"bio_photosynthesis_026","text":"CAM plants separate CO2 fixation at night from Calvin cycle during the day.","validFrom":26}
+{"id":"bio_photosynthesis_027","text":"Cyanobacteria use carboxysomes with carbonic anhydrase to concentrate CO2 around RuBisCO.","validFrom":27}
+{"id":"bio_photosynthesis_028","text":"Over 90% of plants employ C3 carbon fixation; approximately 3% use C4.","validFrom":28}
+{"id":"bio_photosynthesis_029","text":"Calcium-oxalate crystals in alarm photosynthesis function as dynamic internal carbon sources.","validFrom":29}
+{"id":"bio_photosynthesis_030","text":"Plants convert light energy into chemical energy at photosynthetic efficiency of 3–6%.","validFrom":30}
+{"id":"bio_photosynthesis_031","text":"Unconverted absorbed light is dissipated primarily as heat, with 1–2% reemitted as chlorophyll fluorescence.","validFrom":31}
+{"id":"bio_photosynthesis_032","text":"Plants' photosynthetic efficiency varies with light frequency, intensity, temperature, and CO2 proportion, ranging 0.1% to 8%.","validFrom":32}
+{"id":"bio_photosynthesis_033","text":"Quantum walk increases light energy transport efficiency in photosynthetic cells by enabling excitons to test multiple paths.","validFrom":33}
+{"id":"bio_photosynthesis_034","text":"Filamentous photosynthetic organism fossils date to 3.4 billion years old.","validFrom":34}
+{"id":"bio_photosynthesis_035","text":"Thylakoid membranes in 1.75-billion-year-old cherts provide the first direct evidence of photosynthesis.","validFrom":35}
+{"id":"bio_photosynthesis_036","text":"Oxygenic photosynthesis is the main source of oxygen in Earth's atmosphere.","validFrom":36}
+{"id":"bio_photosynthesis_037","text":"Oxygenic photosynthesis became important in cyanobacteria during the Paleoproterozoic era, approximately two billion years ago.","validFrom":37}
+{"id":"bio_photosynthesis_038","text":"Corals, sponges, and sea anemones form symbiotic relationships with photosynthetic algae.","validFrom":38}
+{"id":"bio_photosynthesis_039","text":"Elysia viridis and Elysia chlorotica capture chloroplasts from algae and survive through photosynthesis alone for months.","validFrom":39}
+{"id":"bio_photosynthesis_040","text":"Chloroplasts possess DNA separate from plant nuclear DNA, with genes resembling those found in cyanobacteria.","validFrom":40}
+{"id":"bio_photosynthesis_041","text":"Endosymbiotic theory proposes early eukaryotic cells engulfed photosynthetic bacteria to form the first plant cells.","validFrom":41}
+{"id":"bio_photosynthesis_042","text":"Archaeplastida and Paulinella acquired two-membrane plastids through primary endosymbiosis events with cyanobacteria.","validFrom":42}
+{"id":"bio_photosynthesis_043","text":"Other photosynthetic eukaryotes acquired plastids from red or green algae, forming distinct red and green lineages.","validFrom":43}
+{"id":"bio_photosynthesis_044","text":"Cyanobacteria are the only oxygenic photosynthetic prokaryotes, possessing both Type I and Type II photosystems.","validFrom":44}
+{"id":"bio_photosynthesis_045","text":"Water-use in photosynthesis evolved in a cyanobacteria common ancestor at least 2450–2320 million years ago.","validFrom":45}
+{"id":"bio_photosynthesis_046","text":"Cyanobacteria remained the principal primary producers of oxygen throughout the Proterozoic Eon (2500–543 million years ago).","validFrom":46}
+{"id":"bio_photosynthesis_047","text":"Jan van Helmont demonstrated that most plant mass comes from water, not solely from soil.","validFrom":47}
+{"id":"bio_photosynthesis_048","text":"Joseph Priestley discovered that plants could restore air that was injured by burning candles and animal respiration.","validFrom":48}
+{"id":"bio_photosynthesis_049","text":"Jan Ingenhousz (1779) discovered that sunlight influences a plant's ability to revive injured air within hours.","validFrom":49}
+{"id":"bio_photosynthesis_050","text":"Jean Senebier (1796) demonstrated that green plants consume carbon dioxide and release oxygen under light.","validFrom":50}
+{"id":"bio_photosynthesis_051","text":"Robert Emerson discovered two distinct light reactions in photosynthesis by testing different light wavelengths.","validFrom":51}
+{"id":"bio_photosynthesis_052","text":"Samuel Ruben and Martin Kamen used radioactive isotopes to determine that oxygen liberated in photosynthesis comes from water.","validFrom":52}
+{"id":"bio_photosynthesis_053","text":"Rudolph A. Marcus discovered the function and significance of the electron transport chain.","validFrom":53}
+{"id":"bio_photosynthesis_054","text":"In 1950, Otto Kandler presented first experimental evidence for photophosphorylation in vivo using Chlorella.","validFrom":54}
+{"id":"bio_photosynthesis_055","text":"In 1954, Daniel I. Arnon et al. discovered photophosphorylation in vitro in isolated chloroplasts.","validFrom":55}
+{"id":"bio_photosynthesis_056","text":"Louis N. M. Duysens and Jan Amesz discovered two light reactions occurring in series.","validFrom":56}
+{"id":"bio_photosynthesis_057","text":"Melvin Calvin won 1961 Nobel Prize in Chemistry for photosynthetic carbon metabolism research.","validFrom":57}
+{"id":"bio_photosynthesis_058","text":"Field-grown maize showed leaf photosynthetic rates of 40 μmol CO2·m−2·s−1, nearly double rates in wheat and soybean.","validFrom":58}
+{"id":"bio_photosynthesis_059","text":"C4 plants show no photorespiration and photosynthetic rates never saturate at full sunlight.","validFrom":59}
+{"id":"bio_photosynthesis_060","text":"At constant temperature, carbon assimilation rate increases with light irradiance until reaching saturation.","validFrom":60}
+{"id":"bio_photosynthesis_061","text":"Temperature affects carbon assimilation rate, revealing light-dependent temperature-independent and light-independent temperature-dependent reaction stages.","validFrom":61}
+{"id":"bio_photosynthesis_062","text":"Wavelength of light is a limiting factor; cyanobacteria use Phycobilisome light-harvesting complex to capture wavelengths underwater.","validFrom":62}
+{"id":"bio_photosynthesis_063","text":"Phycobilisome consists of proteins with different pigments arranged around a reaction center.","validFrom":63}
+{"id":"bio_photosynthesis_064","text":"RuBisCO binds carbon dioxide when concentration is high but binds oxygen when carbon dioxide concentration is low.","validFrom":64}
+{"id":"bio_photosynthesis_065","text":"When RuBisCO binds oxygen, photorespiration produces phosphoglycolate instead of 3-phosphoglycerate, consuming energy without making sugars.","validFrom":65}
+{"id":"bio_photosynthesis_066","text":"Phosphoglycolate converts to glycolate, which is toxic to plants at high concentration and inhibits photosynthesis.","validFrom":66}
+{"id":"bio_photosynthesis_067","text":"The glycolate salvaging pathway returns only 75% of carbon to the Calvin-Benson cycle and produces ammonia that plants lose.","validFrom":67}
+{"id":"arch_eiffel-tower_000","text":"The Eiffel Tower is a lattice tower on the Champ de Mars in Paris, France.","validFrom":68}
+{"id":"arch_eiffel-tower_001","text":"Maurice Koechlin and Émile Nouguier designed the tower; Gustave Eiffel's company built it from 1887 to 1889.","validFrom":69}
+{"id":"arch_eiffel-tower_002","text":"The tower was constructed as the centrepiece of the 1889 Exposition Universelle, celebrating the French Revolution's centennial.","validFrom":70}
+{"id":"arch_eiffel-tower_003","text":"The tower is locally nicknamed 'La dame de fer' (Iron Lady) for its use of wrought iron.","validFrom":71}
+{"id":"arch_eiffel-tower_004","text":"The tower was initially criticised but became a global cultural icon and one of the world's most recognisable structures.","validFrom":72}
+{"id":"arch_eiffel-tower_005","text":"The Eiffel Tower is 330 metres tall, the tallest structure in Paris, and was the world's tallest human-made structure for 41 years.","validFrom":73}
+{"id":"arch_eiffel-tower_006","text":"The tower is the most visited monument with entrance fees in the world, receiving 5.89 million visitors in 2022.","validFrom":74}
+{"id":"arch_eiffel-tower_007","text":"The tower has three visitor levels with restaurants on the first two and a private apartment on the third level built for Gustave Eiffel.","validFrom":75}
+{"id":"arch_eiffel-tower_008","text":"Crédit Industriel et Commercial (CIC) helped finance construction of the Eiffel Tower.","validFrom":76}
+{"id":"arch_eiffel-tower_009","text":"CIC acquired funds from predatory loans to Haiti's National Bank for tower financing.","validFrom":77}
+{"id":"arch_eiffel-tower_010","text":"France forced Haiti to financially compensate French slaveowners for losses in the Haitian Revolution.","validFrom":78}
+{"id":"arch_eiffel-tower_011","text":"Haiti was required to pay CIC and partner nearly half of all export taxes collected.","validFrom":79}
+{"id":"arch_eiffel-tower_012","text":"Prior to Eiffel Tower construction, no structure had been built to 300 m height.","validFrom":80}
+{"id":"arch_eiffel-tower_013","text":"Committee of Three Hundred, led by architect Charles Garnier, protested Eiffel Tower construction.","validFrom":81}
+{"id":"arch_eiffel-tower_014","text":"An 'Artists against the Eiffel Tower' petition was published in Le Temps on February 14, 1887.","validFrom":82}
+{"id":"arch_eiffel-tower_015","text":"By 1918, the tower became a symbol of Paris after Apollinaire's nationalist calligram poem.","validFrom":83}
+{"id":"arch_eiffel-tower_016","text":"Guy de Maupassant ate lunch daily in the tower restaurant to avoid seeing the tower.","validFrom":84}
+{"id":"arch_eiffel-tower_017","text":"Each shoe was anchored by a pair of bolts 10 cm diameter and 7.5 m long","validFrom":85}
+{"id":"arch_eiffel-tower_018","text":"Foundations were completed on 30 June; ironwork erection then began","validFrom":86}
+{"id":"arch_eiffel-tower_019","text":"The drawing office produced 1,700 general and 3,629 detailed drawings of 18,038 parts","validFrom":87}
+{"id":"arch_eiffel-tower_020","text":"Rivet hole position was specified to within 1 mm; angles to one second of arc","validFrom":88}
+{"id":"arch_eiffel-tower_021","text":"Components arrived on horse-drawn carts from Levallois-Perret factory near Paris","validFrom":89}
+{"id":"arch_eiffel-tower_022","text":"18,038 pieces were joined using 2.5 million rivets","validFrom":90}
+{"id":"arch_eiffel-tower_023","text":"Initially legs were constructed as cantilevers; halfway up, construction paused for timber scaffold","validFrom":91}
+{"id":"arch_eiffel-tower_024","text":"Charles Garnier called the tower a 'truly tragic street lamp'","validFrom":92}
+{"id":"arch_eiffel-tower_025","text":"A 'creeper' crane was installed in each leg to move up the tower","validFrom":93}
+{"id":"arch_eiffel-tower_026","text":"Hydraulic jacks at shoe base could exert 800 tonnes of force","validFrom":94}
+{"id":"arch_eiffel-tower_027","text":"Main structural work was completed end of March 1889","validFrom":95}
+{"id":"arch_eiffel-tower_028","text":"On 31 March, Gustave Eiffel led government officials and press to the tower top","validFrom":96}
+{"id":"arch_eiffel-tower_029","text":"At 2:35 pm on 31 March, Eiffel hoisted a Tricolour flag with a 25-gun salute","validFrom":97}
+{"id":"arch_eiffel-tower_030","text":"The tower opened to the public 9 days after exposition opening on 6 May","validFrom":98}
+{"id":"arch_eiffel-tower_031","text":"Nearly 30,000 visitors climbed 1,710 steps to the top before lifts entered service on 26 May","validFrom":99}
+{"id":"arch_eiffel-tower_032","text":"Ticket prices: 2 francs first level, 3 second, 5 top; half-price Sundays","validFrom":100}
+{"id":"arch_eiffel-tower_033","text":"By exhibition end, 1,896,987 visitors had visited the tower","validFrom":101}
+{"id":"arch_eiffel-tower_034","text":"The tower was lit by hundreds of gas lamps; a beacon sent red, white, blue light","validFrom":102}
+{"id":"arch_eiffel-tower_035","text":"Le Figaro newspaper operated an office and printing press on the second level","validFrom":103}
+{"id":"arch_eiffel-tower_036","text":"A post office at the top allowed visitors to send letters and postcards","validFrom":104}
+{"id":"arch_eiffel-tower_037","text":"Thomas Edison visited and gave Eiffel a phonograph in his private apartment at tower top","validFrom":105}
+{"id":"arch_eiffel-tower_038","text":"Edison signed the guestbook on 10 September 1889","validFrom":106}
+{"id":"arch_eiffel-tower_039","text":"Eiffel used his tower apartment for meteorological observations","validFrom":107}
+{"id":"arch_eiffel-tower_040","text":"The tower was used for experiments on air resistance on falling bodies","validFrom":108}
+{"id":"arch_eiffel-tower_041","text":"Eiffel's permit allowed the tower to stand for 20 years until its planned dismantlement in 1909.","validFrom":109}
+{"id":"arch_eiffel-tower_042","text":"The tower remained standing after its permit expired due to its value for radio telegraphy.","validFrom":110}
+{"id":"arch_eiffel-tower_043","text":"In 1901, Alberto Santos-Dumont won 100,000 francs flying from St. Cloud to the tower and back in under 30 minutes.","validFrom":111}
+{"id":"arch_eiffel-tower_044","text":"Father Theodor Wulf discovered cosmic rays in 1910 by measuring radiant energy at the tower.","validFrom":112}
+{"id":"arch_eiffel-tower_045","text":"Franz Reichelt, an Austrian tailor, died on 4 February 1912 jumping from the first level to test his parachute.","validFrom":113}
+{"id":"arch_eiffel-tower_046","text":"The tower's 1914 radio transmitter jammed German communications, contributing to the Battle of the Marne victory.","validFrom":114}
+{"id":"arch_eiffel-tower_047","text":"Victor Lustig fraudulently 'sold' the Eiffel Tower for scrap metal on two separate occasions in 1925.","validFrom":115}
+{"id":"arch_eiffel-tower_048","text":"From 1925 to 1934, illuminated Citroën signs adorned three tower sides, making it the world's tallest advertising space.","validFrom":116}
+{"id":"arch_eiffel-tower_049","text":"In 1944, Hitler ordered General von Choltitz to demolish the tower during German occupation, but he refused.","validFrom":117}
+{"id":"arch_eiffel-tower_050","text":"In 1967, Montreal Mayor Jean Drapeau negotiated with Charles de Gaulle for temporary tower relocation to Montreal for Expo 67, vetoed by the operating company.","validFrom":118}
+{"id":"arch_eiffel-tower_051","text":"In 1982, 97-year-old lifts between second and third levels were replaced with new cars reducing journey time from eight to under two minutes.","validFrom":119}
+{"id":"arch_eiffel-tower_052","text":"Original lifts closed to public November-March due to hydraulic water freezing.","validFrom":120}
+{"id":"arch_eiffel-tower_053","text":"Robert Moriarty flew a Beechcraft Bonanza under the tower on 31 March 1984.","validFrom":121}
+{"id":"arch_eiffel-tower_054","text":"A. J. Hackett bungee jumped from the tower's top in 1987 and was arrested.","validFrom":122}
+{"id":"arch_eiffel-tower_055","text":"For Y2K on 31 December 1999, flashing lights and searchlights were installed; sparkling lighting continued 18 months until July 2001.","validFrom":123}
+{"id":"arch_eiffel-tower_056","text":"The tower's puddle iron structure weighs 7,300 tonnes; total weight with equipment is approximately 10,100 tonnes.","validFrom":124}
+{"id":"arch_eiffel-tower_057","text":"The tower's top shifts up to 18 centimeters due to thermal expansion, and the tower sways up to 9 centimeters in wind.","validFrom":125}
+{"id":"arch_eiffel-tower_058","text":"Tower columns contain stairs and lifts to first two floors, with only south column's second-floor lift publicly accessible","validFrom":126}
+{"id":"arch_eiffel-tower_059","text":"First floor originally housed three restaurants (French, Russian, Flemish) and Anglo-American Bar, later replaced by Le 58 Tour Eiffel","validFrom":127}
+{"id":"arch_eiffel-tower_060","text":"Le Jules Verne gourmet restaurant on second floor has one Michelin star; Alain Ducasse managed it 2007-2017, Frédéric Anton as of May 2019","validFrom":128}
+{"id":"arch_eiffel-tower_061","text":"Third floor originally contained laboratories and Gustave Eiffel's apartment, now open to public with period furnishings and mannequins","validFrom":129}
+{"id":"arch_eiffel-tower_062","text":"Restaurant atop tower operated from 1937-1981 and was dismantled due to structural weight; rebuilt in New Orleans' Garden District","validFrom":130}
+{"id":"arch_eiffel-tower_063","text":"Modern lifts average 8 minutes 50 seconds per round trip and spend approximately 1 minute 15 seconds at each stop","validFrom":131}
+{"id":"arch_eiffel-tower_064","text":"Roux, Combaluzier & Lepape supplied two lifts to tower's east and west legs using endless chains with articulated links","validFrom":132}
+{"id":"arch_eiffel-tower_065","text":"Otis Brothers & Company contracted to build second-level lifts in July 1887 after French companies refused the work","validFrom":133}
+{"id":"arch_eiffel-tower_066","text":"Gustave Eiffel engraved the names of 72 French scientists, engineers, and mathematicians on the tower.","validFrom":134}
+{"id":"arch_eiffel-tower_067","text":"The tower is painted in three shades: lighter at top, progressively darker toward bottom.","validFrom":135}
+{"id":"arch_eiffel-tower_068","text":"The Eiffel Tower changed from reddish brown to 'Eiffel Tower Brown' in 1968 and yellow-brown in 2010.","validFrom":136}
+{"id":"arch_eiffel-tower_069","text":"Tower maintenance requires 60 tons of paint every 7 years to prevent rusting.","validFrom":137}
+{"id":"arch_eiffel-tower_070","text":"The Eiffel Tower was the world's tallest structure from 1889 until the Chrysler Building surpassed it in 1929.","validFrom":138}
+{"id":"arch_eiffel-tower_071","text":"More than 300 million people have visited the Eiffel Tower since its completion in 1889.","validFrom":139}
+{"id":"arch_eiffel-tower_072","text":"The Eiffel Tower is the world's most-visited paid monument with approximately 25,000 daily visitors.","validFrom":140}
+{"id":"arch_eiffel-tower_073","text":"The Eiffel Tower's illumination is protected by copyright as an 'original visual creation' under French law.","validFrom":141}
+{"id":"arch_eiffel-tower_074","text":"The copyright claim regarding the Eiffel Tower has never been tested in court, according to a 2014 Art Law Journal article.","validFrom":142}
+{"id":"arch_eiffel-tower_075","text":"Commercial uses of Eiffel Tower images in magazines, film posters, or product packaging may require prior permission.","validFrom":143}
+{"id":"arch_eiffel-tower_076","text":"Pierre Bideau, who created the 1989 lighting display, died in 2021; the display copyright remains protected until 2091.","validFrom":144}
+{"id":"arch_eiffel-tower_077","text":"Blackpool Tower in England was commissioned after the 1889 exposition, opened in 1894, and is 158.1 meters tall.","validFrom":145}
+{"id":"arch_eiffel-tower_078","text":"Tokyo Tower in Japan was built in 1958 as a communications tower inspired by the Eiffel Tower.","validFrom":146}
+{"id":"arch_eiffel-tower_079","text":"Eiffel Tower replicas exist worldwide including versions in Paris Las Vegas, Paris Texas, amusement parks in Ohio and Virginia, and in China, Mexico, and Europe.","validFrom":147}
+{"id":"arch_eiffel-tower_080","text":"A 2011 National Geographic television program estimated a full-size Eiffel Tower replica would cost approximately US$480 million to build.","validFrom":148}
+{"id":"arch_eiffel-tower_081","text":"The original Eiffel Tower cost nearly 8 million francs in 1890, approximately US$40 million in 2018 dollars.","validFrom":149}
+{"id":"astro_jupiter_000","text":"Jupiter is the fifth planet from the Sun and the largest planet in the Solar System.","validFrom":150}
+{"id":"astro_jupiter_001","text":"Jupiter's atmosphere consists of 76% hydrogen and 24% helium by mass.","validFrom":151}
+{"id":"astro_jupiter_002","text":"Jupiter rotates once every ten hours, making it an oblate spheroid with equatorial radius 7% larger than polar radius.","validFrom":152}
+{"id":"astro_jupiter_003","text":"The Great Red Spot is a giant storm on Jupiter recorded since 1831.","validFrom":153}
+{"id":"astro_jupiter_004","text":"At least 115 moons orbit Jupiter; the four largest—Io, Europa, Ganymede, and Callisto—are visible with common binoculars.","validFrom":154}
+{"id":"astro_jupiter_005","text":"Jupiter has a faint ring system consisting mainly of dust with three main segments: halo, main ring, and gossamer ring.","validFrom":155}
+{"id":"astro_jupiter_006","text":"Jupiter formed as the oldest planet in the Solar System, approximately 1 million years after the Sun.","validFrom":156}
+{"id":"astro_jupiter_007","text":"According to the grand tack hypothesis, Jupiter migrated inward then outward, allowing inner planets including Earth to form.","validFrom":157}
+{"id":"astro_jupiter_008","text":"The grand tack hypothesis has unresolved issues regarding terrestrial planet formation timescales and elemental composition.","validFrom":158}
+{"id":"astro_jupiter_009","text":"The Nice model proposes proto-Kuiper belt objects caused Jupiter and Saturn to migrate into 1:2 resonance, disrupting Uranus and Neptune.","validFrom":159}
+{"id":"astro_jupiter_010","text":"The Jumping-Jupiter scenario suggests Jupiter's migration could have ejected a fifth gas giant from the Solar System.","validFrom":160}
+{"id":"astro_jupiter_011","text":"Jupiter formed beyond the nitrogen snow line at 20-30 AU and migrated inward over 700,000 years to its current location.","validFrom":161}
+{"id":"astro_jupiter_012","text":"Jupiter is 11 times wider than Earth with mass 318 times Earth's and 2.5 times all other planets combined.","validFrom":162}
+{"id":"astro_jupiter_013","text":"Jupiter's atmosphere contains 76% hydrogen and 24% helium by mass, with trace ammonia, water vapor, and hydrocarbons.","validFrom":163}
+{"id":"astro_jupiter_014","text":"Jupiter radiates more heat than it receives from solar radiation, causing approximately 1 mm shrinkage annually through Kelvin-Helmholtz mechanism.","validFrom":164}
+{"id":"astro_jupiter_015","text":"If Jupiter had over 40% more mass, its interior would compress despite added matter.","validFrom":165}
+{"id":"astro_jupiter_016","text":"Jupiter's axial tilt is 3.13 degrees, so its seasons are insignificant.","validFrom":166}
+{"id":"astro_jupiter_017","text":"Jupiter rotates fastest of all Solar System planets, completing rotation in less than ten hours.","validFrom":167}
+{"id":"astro_jupiter_018","text":"Jupiter's equatorial radius is 7% longer than its polar radius.","validFrom":168}
+{"id":"astro_jupiter_019","text":"Jupiter has a diffuse core extending 30-50% of radius with 7-25 Earth masses of heavy elements.","validFrom":169}
+{"id":"astro_jupiter_020","text":"Jupiter's atmosphere is primarily molecular hydrogen and helium with water, methane, hydrogen sulfide, and ammonia.","validFrom":170}
+{"id":"astro_jupiter_021","text":"Jupiter is perpetually covered with ammonia crystal clouds forming bands at different latitudes.","validFrom":171}
+{"id":"astro_jupiter_022","text":"Jupiter's cloud layer is approximately 50 km deep with at least two ammonia cloud decks.","validFrom":172}
+{"id":"astro_jupiter_023","text":"Water clouds underlying Jupiter's ammonia clouds generate thunderstorms with lightning 1,000 times stronger than Earth lightning.","validFrom":173}
+{"id":"astro_jupiter_024","text":"Jupiter's cloud colors derive from phosphorus, sulfur, or hydrocarbons exposed to ultraviolet radiation.","validFrom":174}
+{"id":"astro_jupiter_025","text":"The Great Red Spot is a persistent anticyclonic storm larger than Earth located 22° south of equator.","validFrom":175}
+{"id":"astro_jupiter_026","text":"The Great Red Spot has decreased from 41,000 km across in late 1800s to 16,500 by 10,940 km by 2015.","validFrom":176}
+{"id":"astro_jupiter_027","text":"Jupiter has the strongest magnetic field in the Solar System, generated by metallic hydrogen core eddy currents.","validFrom":177}
+{"id":"astro_jupiter_028","text":"Jupiter's magnetosphere extends nearly to Saturn's orbit and shields its four largest moons from solar wind.","validFrom":178}
+{"id":"astro_jupiter_029","text":"Io's volcanic emissions of sulfur dioxide form a gas torus that becomes ionized in Jupiter's magnetosphere","validFrom":179}
+{"id":"astro_jupiter_030","text":"Electrons in Jupiter's plasma sheet generate radio bursts in 0.6–30 MHz range detectable from Earth with shortwave receivers","validFrom":180}
+{"id":"astro_jupiter_031","text":"Jupiter's barycenter with the Sun lies outside the Sun's volume by seven percent of Sun's radius","validFrom":181}
+{"id":"astro_jupiter_032","text":"Jupiter orbits the Sun every 11.86 years at an average distance of 778 million kilometers","validFrom":182}
+{"id":"astro_jupiter_033","text":"Jupiter's faint ring system is composed of dust material originating from the planet's small moons","validFrom":183}
+{"id":"astro_jupiter_034","text":"Jupiter has 111 known natural satellites, with four largest being Galilean moons Ganymede, Callisto, Io, and Europa","validFrom":184}
+{"id":"astro_jupiter_035","text":"Io, Europa, and Ganymede form a Laplace orbital resonance where tidal flexing generates internal heat","validFrom":185}
+{"id":"astro_jupiter_036","text":"Jupiter's moons were classified into four groups of four based on similar orbital elements.","validFrom":186}
+{"id":"astro_jupiter_037","text":"The eight innermost Jupiter moons have nearly circular equatorial orbits and formed alongside Jupiter.","validFrom":187}
+{"id":"astro_jupiter_038","text":"Jupiter's irregular moons are likely captured asteroids or asteroid fragments.","validFrom":188}
+{"id":"astro_jupiter_039","text":"Jupiter's gravity caused most Kirkwood gaps in the asteroid belt.","validFrom":189}
+{"id":"astro_jupiter_040","text":"Jupiter experiences approximately 200 times more asteroid and comet impacts than Earth.","validFrom":190}
+{"id":"astro_jupiter_041","text":"Jupiter family comets originate in the Kuiper belt beyond Neptune's orbit.","validFrom":191}
+{"id":"astro_jupiter_042","text":"Babylonian astronomers observed Jupiter during the 7th-8th centuries BC.","validFrom":192}
+{"id":"astro_jupiter_043","text":"Galileo discovered Jupiter's four largest Galilean moons in 1610 using a telescope.","validFrom":193}
+{"id":"astro_jupiter_044","text":"Francesco Fontana discovered Jupiter's atmospheric bands using a 22-palm telescope in autumn 1639.","validFrom":194}
+{"id":"astro_jupiter_045","text":"Giovanni Cassini observed Jupiter's atmospheric spots and oblate shape during the 1660s.","validFrom":195}
+{"id":"astro_jupiter_046","text":"Cassini discovered differential rotation of Jupiter's atmosphere in 1692.","validFrom":196}
+{"id":"astro_jupiter_047","text":"Ole Rømer deduced light does not travel instantaneously using Jupiter moon observation timing discrepancies.","validFrom":197}
+{"id":"astro_jupiter_048","text":"Rupert Wildt identified ammonia and methane absorption bands in Jupiter's spectrum in 1932.","validFrom":198}
+{"id":"astro_jupiter_049","text":"Bernard Burke and Kenneth Franklin discovered Jupiter emits radio bursts at 22.2 MHz in 1955.","validFrom":199}
+{"id":"astro_jupiter_050","text":"Pioneer 10 became the first spacecraft to pass close to Jupiter in 1973.","validFrom":200}
+{"id":"astro_jupiter_051","text":"Voyager missions discovered Jupiter's rings and confirmed the Great Red Spot is anticyclonic.","validFrom":201}
+{"id":"astro_jupiter_052","text":"Galileo was the first spacecraft to orbit Jupiter, arriving December 7, 1995, and remaining in orbit for over seven years.","validFrom":202}
+{"id":"astro_jupiter_053","text":"A 340-kilogram titanium atmospheric probe from Galileo entered Jupiter's atmosphere December 7, 1995, collecting data for 57.6 minutes.","validFrom":203}
+{"id":"astro_jupiter_054","text":"NASA deliberately steered Galileo into Jupiter on September 21, 2003, to avoid contaminating the moon Europa.","validFrom":204}
+{"id":"astro_jupiter_055","text":"Hydrogen composes up to 90% of Jupiter's atmosphere; recorded temperatures exceeded 300 °C and wind speeds exceeded 644 km/h.","validFrom":205}
+{"id":"astro_jupiter_056","text":"NASA's Juno mission arrived at Jupiter on July 4, 2016, to study the planet from a polar orbit.","validFrom":206}
+{"id":"astro_jupiter_057","text":"Juno's mission was extended to September 2025 with planned flybys of Ganymede, Europa, and Io.","validFrom":207}
+{"id":"astro_jupiter_058","text":"Jupiter Icy Moon Explorer launched April 14, 2023; NASA's Europa Clipper launched October 14, 2024.","validFrom":208}
+{"id":"astro_jupiter_059","text":"Hindu astrologers in Vedic astrology named Jupiter after Brihaspati, the gods' religious teacher, calling it Guru","validFrom":209}
+{"id":"astro_jupiter_060","text":"Central Asian Turkic peoples called Jupiter Erendiz or Erentüz in their mythology","validFrom":210}
+{"id":"astro_jupiter_061","text":"Turks calculated Jupiter's orbital period as 11 years and 300 days","validFrom":211}
+{"id":"astro_jupiter_062","text":"Turks believed social and natural events correlated with Jupiter's movements in the sky","validFrom":212}
+{"id":"astro_jupiter_063","text":"Chinese, Japanese, Korean, and Vietnamese cultures called Jupiter the wood star based on Five Elements","validFrom":213}
+{"id":"astro_jupiter_064","text":"Chinese astronomers called Jupiter the year star because it moved one zodiac constellation annually","validFrom":214}
+{"id":"astro_jupiter_065","text":"Ancient Chinese writings named years in correlation with Jupiter's position in the Jovian zodiac","validFrom":215}
+{"id":"music_johann-sebastian-bach_000","text":"Johann Sebastian Bach was born 31 March 1685 and died 28 July 1750.","validFrom":216}
+{"id":"music_johann-sebastian-bach_001","text":"Bach was a German composer and musician of the late Baroque period.","validFrom":217}
+{"id":"music_johann-sebastian-bach_002","text":"Bach is known for numerous works including Brandenburg Concertos, Cello Suites, Goldberg Variations, and St. Matthew Passion.","validFrom":218}
+{"id":"music_johann-sebastian-bach_003","text":"Felix Mendelssohn precipitated the Bach Revival by performing St. Matthew Passion in 1829.","validFrom":219}
+{"id":"music_johann-sebastian-bach_004","text":"Bach was born in Eisenach as the youngest child of musician Johann Ambrosius Bach.","validFrom":220}
+{"id":"music_johann-sebastian-bach_005","text":"By 1723 Bach became Thomaskantor and church music director of Leipzig.","validFrom":221}
+{"id":"music_johann-sebastian-bach_006","text":"Four of Bach's twenty children became composers: Wilhelm Friedemann, Carl Philipp Emanuel, Johann Christoph Friedrich, and Johann Christian.","validFrom":222}
+{"id":"music_johann-sebastian-bach_007","text":"Bach's mother died in 1694 and his father died eight months later in February 1695.","validFrom":223}
+{"id":"music_johann-sebastian-bach_008","text":"Ten-year-old Bach moved in with his eldest brother Johann Christoph Bach, organist at St. Michael's Church.","validFrom":224}
+{"id":"music_johann-sebastian-bach_009","text":"Johann Christoph taught Bach clavichord and exposed him to compositions by Pachelbel, Buxtehude, Lully, and other major composers.","validFrom":225}
+{"id":"music_johann-sebastian-bach_010","text":"On 3 April 1700, Bach began studies at St Michael's School in Lüneburg.","validFrom":226}
+{"id":"music_johann-sebastian-bach_011","text":"On 14 August 1703, Bach became organist at the New Church in Arnstadt.","validFrom":227}
+{"id":"music_johann-sebastian-bach_012","text":"In 1705-1706, Bach took extended leave from Arnstadt to study with organists Reincken and Buxtehude in Lübeck.","validFrom":228}
+{"id":"music_johann-sebastian-bach_013","text":"In 1707, Bach married his second cousin Maria Barbara Bach.","validFrom":229}
+{"id":"music_johann-sebastian-bach_014","text":"Maria Barbara Bach died suddenly on 7 July 1720 while Bach was in Carlsbad.","validFrom":230}
+{"id":"music_johann-sebastian-bach_015","text":"In 1721, Bach married Anna Magdalena Wilcke, a soprano sixteen years his junior.","validFrom":231}
+{"id":"music_johann-sebastian-bach_016","text":"Bach returned to Weimar in 1708 as court organist after Duke Johann Ernst III died.","validFrom":232}
+{"id":"music_johann-sebastian-bach_017","text":"Bach left Mühlhausen in 1708 and returned to Weimar as organist, becoming Konzertmeister from 1714.","validFrom":233}
+{"id":"music_johann-sebastian-bach_018","text":"In Weimar, Bach composed keyboard and orchestral works, transcribing Italian concertos for harpsichord and organ.","validFrom":234}
+{"id":"music_johann-sebastian-bach_019","text":"Bach began writing preludes and fugues in Weimar that were later assembled into The Well-Tempered Clavier.","validFrom":235}
+{"id":"music_johann-sebastian-bach_020","text":"In 1717, Bach fell out of favor in Weimar and was jailed for approximately one month before dismissal.","validFrom":236}
+{"id":"music_johann-sebastian-bach_021","text":"Leopold, Prince of Anhalt-Köthen hired Bach as Kapellmeister in 1717, a position that allowed secular composing.","validFrom":237}
+{"id":"music_johann-sebastian-bach_022","text":"In 1723, Bach was appointed Thomaskantor in Leipzig, directing church music for four churches for 27 years.","validFrom":238}
+{"id":"music_johann-sebastian-bach_023","text":"Bach was Thomaskantor and director musices in Leipzig from 1723 to 1729.","validFrom":239}
+{"id":"music_johann-sebastian-bach_024","text":"Bach composed new works for almost all liturgical occasions in his first year in Leipzig.","validFrom":240}
+{"id":"music_johann-sebastian-bach_025","text":"Bach's second-year chorale cantata cycle used hymns selected according to prescribed readings and ministerial plans.","validFrom":241}
+{"id":"music_johann-sebastian-bach_026","text":"The St Matthew Passion was first performed on Good Friday, 11 April 1727.","validFrom":242}
+{"id":"music_johann-sebastian-bach_027","text":"Bach composed the Christmas Oratorio in 1734-35 using previously composed works.","validFrom":243}
+{"id":"music_johann-sebastian-bach_028","text":"Bach received the title of Royal Court Composer from Augustus III of Poland in 1736.","validFrom":244}
+{"id":"music_johann-sebastian-bach_029","text":"The Goldberg Variations, published in 1741, contains nine canons in two-manual harpsichord arrangement.","validFrom":245}
+{"id":"music_johann-sebastian-bach_030","text":"Bach's final decade incorporated stile antico elements including polyphonic structures and canons.","validFrom":246}
+{"id":"music_johann-sebastian-bach_031","text":"In May 1747, Bach visited King Frederick the Great's court in Potsdam and improvised a three-part fugue.","validFrom":247}
+{"id":"music_johann-sebastian-bach_032","text":"Bach composed The Musical Offering based on King Frederick the Great's theme and dedicated The Musical Offering to Frederick.","validFrom":248}
+{"id":"music_johann-sebastian-bach_033","text":"Bach expanded a 1733 Kyrie-Gloria Mass into the Mass in B minor during the last years of his life.","validFrom":249}
+{"id":"music_johann-sebastian-bach_034","text":"The Mass in B minor, not performed during Bach's lifetime, is considered among the greatest choral works in history.","validFrom":250}
+{"id":"music_johann-sebastian-bach_035","text":"Bach died on 28 July 1750 from complications due to unsuccessful eye surgery.","validFrom":251}
+{"id":"music_johann-sebastian-bach_036","text":"Though Bach never visited France or Italy, French and Italian musical influences appear evident in Bach's compositions.","validFrom":252}
+{"id":"music_johann-sebastian-bach_037","text":"Bach transcribed six of Vivaldi's concerti for solo keyboard, three for organ, and one for four harpsichords, strings, and basso continuo.","validFrom":253}
+{"id":"music_johann-sebastian-bach_038","text":"Bach used the first movement theme of Vivaldi's Spring concerto from The Four Seasons in his cantata Wer weiß, wie nahe mir mein Ende? (BWV 27).","validFrom":254}
+{"id":"music_johann-sebastian-bach_039","text":"Arcangelo Corelli's chamber music influenced an entire generation of composers including Bach, Vivaldi, Handel, and Couperin.","validFrom":255}
+{"id":"music_johann-sebastian-bach_040","text":"Jean-Baptiste Lully invented the French overture in the 1650s, which Bach and Handel used extensively in their compositions.","validFrom":256}
+{"id":"music_johann-sebastian-bach_041","text":"Bach's hundreds of sacred works manifest his deep Christian faith expressed through elaboration of Lutheran chorale hymns.","validFrom":257}
+{"id":"music_johann-sebastian-bach_042","text":"Bach's compositional style centered on four-part harmony, which replaced modal music during the tonal system's rise in his era.","validFrom":258}
+{"id":"music_johann-sebastian-bach_043","text":"Bach returned to antiquated modes and genres more frequently than his contemporaries, despite championing the tonal system.","validFrom":259}
+{"id":"music_johann-sebastian-bach_044","text":"Bach pushed modulation beyond contemporary limits; Louis Marchand avoided confrontation with Bach because Bach exceeded everyone's modulation experiments.","validFrom":260}
+{"id":"music_johann-sebastian-bach_045","text":"Bach was a significant contributor to developing temperament for keyboard instruments allowing use in all keys without retuning.","validFrom":261}
+{"id":"music_johann-sebastian-bach_046","text":"The Well-Tempered Clavier, using all keys, represents the full expansion of Bach's temperament innovations from approximately 1720 onward.","validFrom":262}
+{"id":"music_johann-sebastian-bach_047","text":"Bach elevated basso continuo instruments from accompaniment to concertante (solo) roles, pioneering the keyboard concerto genre.","validFrom":263}
+{"id":"music_johann-sebastian-bach_048","text":"Bach composed virtuoso works for specific instruments and compositions without specified instrumentation, allowing easy transcription and reperformance.","validFrom":264}
+{"id":"music_johann-sebastian-bach_049","text":"Bach's style is characterized by extensive counterpoint, particularly in canons and fugues, which he did not invent but fundamentally developed.","validFrom":265}
+{"id":"music_johann-sebastian-bach_050","text":"A fugue is a contrapuntal compositional technique in two or more voices built on a musical subject introduced in imitation.","validFrom":266}
+{"id":"music_johann-sebastian-bach_051","text":"Fugues typically open with the subject sounding successively in each voice, followed by episodes and entries in related keys before returning to the tonic.","validFrom":267}
+{"id":"music_johann-sebastian-bach_052","text":"Bach devoted more attention to composition structure than his contemporaries, evidenced by adjustments to adapted works and revisions of his own compositions.","validFrom":268}
+{"id":"music_johann-sebastian-bach_053","text":"Librettos played an essential role in Bach's vocal compositions, with collaborations including Picander for the St Matthew Passion libretto.","validFrom":269}
+{"id":"music_johann-sebastian-bach_054","text":"Throughout his career, Bach copied and arranged compositions by other composers and his own music for learning, performance, and study material.","validFrom":270}
+{"id":"music_johann-sebastian-bach_055","text":"The Bach-Werke-Verzeichnis, established in 1950, catalogued spurious and doubtful works in an appendix (Anhang, abbreviated Anh.).","validFrom":271}
+{"id":"music_johann-sebastian-bach_056","text":"After Bach's death, his reputation as a composer initially declined as his work was seen as old-fashioned.","validFrom":272}
+{"id":"music_johann-sebastian-bach_057","text":"Carl Philipp Emanuel Bach actively safeguarded his father's legacy through multiple efforts including manuscript preservation.","validFrom":273}
+{"id":"music_johann-sebastian-bach_058","text":"Abraham Mendelssohn purchased Bach manuscripts from C.P.E. Bach's inheritance in 1805 and donated them to Berlin Sing-Akademie.","validFrom":274}
+{"id":"music_johann-sebastian-bach_059","text":"Haydn, Mozart, and Beethoven collected, transcribed, and were influenced by Johann Sebastian Bach's compositions.","validFrom":275}
+{"id":"music_johann-sebastian-bach_060","text":"Gottfried van Swieten, an Austrian official, was instrumental in transmitting Johann Sebastian Bach's legacy to Viennese school composers.","validFrom":276}
+{"id":"music_johann-sebastian-bach_061","text":"Johann Nikolaus Forkel published the first Bach biography in 1802, dedicated to van Swieten.","validFrom":277}
+{"id":"music_johann-sebastian-bach_062","text":"Abraham Mendelssohn acquired Bach manuscripts from C.P.E. Bach's heirs in 1805 and donated them to the Berlin Sing-Akademie.","validFrom":278}
+{"id":"music_johann-sebastian-bach_063","text":"Felix Mendelssohn's 1829 performance of the St. Matthew Passion initiated the Bach Revival.","validFrom":279}
+{"id":"music_johann-sebastian-bach_064","text":"The Bach-Gesellschaft was founded in 1850 to promote Bach's music and publish his complete works.","validFrom":280}
+{"id":"music_johann-sebastian-bach_065","text":"Glenn Gould's 1955 recording of the Goldberg Variations transformed the work from obscure to standard piano repertoire.","validFrom":281}
+{"id":"music_johann-sebastian-bach_066","text":"By the end of the 19th century, Bach was firmly established as one of the greatest composers in Western music.","validFrom":282}
+{"id":"music_johann-sebastian-bach_067","text":"Nikolaus Harnoncourt acquired prominence performing Bach on harpsichord and Baroque instruments with ensembles sized to Bach's original practice.","validFrom":283}
+{"id":"music_johann-sebastian-bach_068","text":"Ferruccio Busoni created late-romantic Bach-Busoni piano editions and Leopold Stokowski orchestrated Bach's Toccata and Fugue in D minor for Fantasia.","validFrom":284}
+{"id":"music_johann-sebastian-bach_069","text":"Jazz musicians including Jacques Loussier, Ian Anderson, and Uri Caine created jazz adaptations of Bach's works.","validFrom":285}
+{"id":"music_johann-sebastian-bach_070","text":"20th-century composers Eugène Ysaÿe, Dmitri Shostakovich, and Heitor Villa-Lobos composed works referencing or inspired by Bach.","validFrom":286}
+{"id":"music_johann-sebastian-bach_071","text":"Bach's Brandenburg Concerto No. 2, Partita for Violin No. 3, and Well-Tempered Clavier Prelude No. 1 are on Voyager Golden Records.","validFrom":287}
+{"id":"music_johann-sebastian-bach_072","text":"In the 21st century, Bach's compositions became available online through the International Music Score Library Project and Bach Digital website.","validFrom":288}
+{"id":"music_johann-sebastian-bach_073","text":"In 2015, Bach's handwritten copy of the Mass in B minor was added to UNESCO's Memory of the World Register.","validFrom":289}
+{"id":"music_johann-sebastian-bach_074","text":"Carol K. Baron published Bach's Changing World: Voices in the Community in 2006.","validFrom":290}
+{"id":"music_johann-sebastian-bach_075","text":"Alfred Dörffel published Thematisches Verzeichnis der Instrumentalwerke von Joh. Seb. Bach in 1882.","validFrom":291}
+{"id":"music_johann-sebastian-bach_076","text":"Wolfgang Schmieder's complete thematic catalogue superseded Dörffel's catalogue for scholarly purposes.","validFrom":292}
+{"id":"music_johann-sebastian-bach_077","text":"Douglas Hofstadter published Gödel, Escher, Bach in 1999, originally published in 1979.","validFrom":293}
+{"id":"music_johann-sebastian-bach_078","text":"Hofstadter's book uses Escher's art, Gödel's logic, and Bach's music to illustrate strange loops.","validFrom":294}
+{"id":"music_johann-sebastian-bach_079","text":"Steven Isserlis published The Bach Cello Suites: A Companion in 2021.","validFrom":295}
+{"id":"geo_mount-everest_000","text":"Mount Everest is Earth's highest mountain above sea level, lying in the Mahalangur Himal sub-range of the Himalayas.","validFrom":296}
+{"id":"geo_mount-everest_001","text":"Mount Everest is known as Sagarmāthā in Nepal, meaning 'goddess of the sky,' and Qomolangma in Tibet, meaning 'holy mother.'","validFrom":297}
+{"id":"geo_mount-everest_002","text":"Mount Everest's height was measured in 2020 by Chinese and Nepali authorities as 8,848.86 m (29,031 ft).","validFrom":298}
+{"id":"geo_mount-everest_003","text":"Mount Everest has two main climbing routes: one from the southeast in Nepal and one from the north in Tibet.","validFrom":299}
+{"id":"geo_mount-everest_004","text":"As of May 2024, 340 people have died on Mount Everest; over 200 bodies remain on the mountain.","validFrom":300}
+{"id":"geo_mount-everest_005","text":"Tenzing Norgay and Edmund Hillary made the first documented ascent of Mount Everest in 1953 using the Southeast Ridge route.","validFrom":301}
+{"id":"geo_mount-everest_006","text":"In 1802, the British began the Great Trigonometrical Survey of India to determine locations, heights, and names of the world's highest mountains.","validFrom":302}
+{"id":"geo_mount-everest_007","text":"Nepal refused British surveyors entry, forcing observations from Terai, a region south of Nepal parallel to the Himalayas.","validFrom":303}
+{"id":"geo_mount-everest_008","text":"In 1849, James Nicolson made over 30 observations of peak 'b' from five different locations, closest being 174 km away.","validFrom":304}
+{"id":"geo_mount-everest_009","text":"In 1852, Radhanath Sikdar identified peak 'b' as Earth's highest mountain using trigonometric calculations based on Nicolson's measurements.","validFrom":305}
+{"id":"geo_mount-everest_010","text":"Andrew Waugh announced in March 1856 that Peak XV measured 8,840 m after several years of verification calculations.","validFrom":306}
+{"id":"geo_mount-everest_011","text":"Nepal and China officially recognized Mount Everest's height as 8,848 m based on modern survey measurements.","validFrom":307}
+{"id":"geo_mount-everest_012","text":"On 9 October 2005, the Chinese Academy of Sciences announced Mount Everest's height as 8,844.43 m, based on rock height not snow.","validFrom":308}
+{"id":"geo_mount-everest_013","text":"China and Nepal disputed whether Mount Everest's official height should be rock height of 8,844 m or snow height of 8,848 m.","validFrom":309}
+{"id":"geo_mount-everest_014","text":"On 8 December 2020, China and Nepal jointly announced Mount Everest's official height as 8,848.86 metres (29,031.7 ft).","validFrom":310}
+{"id":"geo_mount-everest_015","text":"The Main Himalayan Thrust and related faults are adding height to Mount Everest and moving its summit northeastwards.","validFrom":311}
+{"id":"geo_mount-everest_016","text":"Mauna Kea in Hawaii rises over 10,200 m from its mid-ocean floor base but only 4,205 m above sea level.","validFrom":312}
+{"id":"geo_mount-everest_017","text":"Mount Everest's rocks are subdivided into three formations—Qomolangma, North Col, and Rongbuk—separated by low-angle faults.","validFrom":313}
+{"id":"geo_mount-everest_018","text":"North Col Formation between 7,000–8,200 m on Mount Everest contains schist, phyllite, and minor marble.","validFrom":314}
+{"id":"geo_mount-everest_019","text":"Rongbuk Formation underlying North Col Formation consists of sillimanite-K-feldspar schist, gneiss, and leucogranite intrusions.","validFrom":315}
+{"id":"geo_mount-everest_020","text":"Leucogranites in Rongbuk Formation formed 20–24 million years ago from partial melting during Indian Plate subduction.","validFrom":316}
+{"id":"geo_mount-everest_021","text":"Mount Everest is rising approximately 2 millimeters per year.","validFrom":317}
+{"id":"geo_mount-everest_022","text":"Minute black jumping spiders of genus Euophrys live at 6,700 metres on Mount Everest.","validFrom":318}
+{"id":"geo_mount-everest_023","text":"Moss species grows at 6,480 metres on Mount Everest, possibly the highest altitude plant.","validFrom":319}
+{"id":"geo_mount-everest_024","text":"Everest base camp by Khumbu Glacier is destabilizing due to climate change; planned relocation to lower altitude was put on hold.","validFrom":320}
+{"id":"geo_mount-everest_025","text":"Mount Everest's summit extends into the stratosphere with air pressure one-third of sea level; recorded wind speeds reached 280 km/h in February 2004.","validFrom":321}
+{"id":"geo_mount-everest_026","text":"The Balcony Station, highest weather station on Earth at 8,430 meters, was established by Tom Matthews and Baker Perry in 2019.","validFrom":322}
+{"id":"geo_mount-everest_027","text":"Mount Everest was first confirmed summited in 1953; as of December 2024, 13,000 summits by 7,200 climbers were recorded.","validFrom":323}
+{"id":"geo_mount-everest_028","text":"George Mallory and Andrew Irvine disappeared attempting Everest's summit on June 8, 1924; Mallory's body was found in 1999.","validFrom":324}
+{"id":"geo_mount-everest_029","text":"George Mallory and Guy Bullock discovered the northern approach to Mount Everest during the 1921 British Reconnaissance Expedition.","validFrom":325}
+{"id":"geo_mount-everest_030","text":"Bill Tilman's 1950 exploratory expedition through Nepal established the standard south approach to Everest.","validFrom":326}
+{"id":"geo_mount-everest_031","text":"Raymond Lambert and Tenzing Norgay reached 8,595 m on the 1952 Swiss expedition, setting a new climbing altitude record.","validFrom":327}
+{"id":"geo_mount-everest_032","text":"Edmund Hillary and Tenzing Norgay reached Mount Everest's summit at 11:30 am on 29 May 1953 via the South Col route.","validFrom":328}
+{"id":"geo_mount-everest_033","text":"Junko Tabei became the first woman to summit Everest in 1975.","validFrom":329}
+{"id":"geo_mount-everest_034","text":"Reinhold Messner and Peter Habeler made the first ascent of Everest without supplemental oxygen in 1978.","validFrom":330}
+{"id":"geo_mount-everest_035","text":"Leszek Cichy and Krzysztof Wielicki completed the first winter ascent of Everest on 17 February 1980.","validFrom":331}
+{"id":"geo_mount-everest_036","text":"Eight climbers died in a blizzard on 10-11 May 1996 during a summit attempt on Mount Everest.","validFrom":332}
+{"id":"geo_mount-everest_037","text":"Fifteen people died during the 1996 Mount Everest season, the highest death toll until 16 deaths in 2014.","validFrom":333}
+{"id":"geo_mount-everest_038","text":"Jon Krakauer published the bestseller Into Thin Air about his experience in one affected guided party.","validFrom":334}
+{"id":"geo_mount-everest_039","text":"Beck Weathers survived Mount Everest despite being left for dead 275 metres from Camp 4 at 7,950 metres.","validFrom":335}
+{"id":"geo_mount-everest_040","text":"David Sharp died during a 2006 Mount Everest climb, sparking debate about climbing ethics and rescue obligations.","validFrom":336}
+{"id":"geo_mount-everest_041","text":"Meagan McGrath conducted a successful high-altitude rescue of Nepali Usha Bista on 21 May 2007 on Mount Everest.","validFrom":337}
+{"id":"geo_mount-everest_042","text":"By end of 2010, Mount Everest had 5,104 summits by about 3,142 individuals; 77% occurred since 2000.","validFrom":338}
+{"id":"geo_mount-everest_043","text":"1996 Mount Everest disaster was partly caused by bottleneck of 33-36 climbers attempting summit on same day.","validFrom":339}
+{"id":"geo_mount-everest_044","text":"On 18 April 2014, avalanche below Base Camp 2 killed 16 Nepali guides and injured 9 people.","validFrom":340}
+{"id":"geo_mount-everest_045","text":"25 April 2015 earthquake measuring 7.8 Mw triggered avalanche at Everest Base Camp; 2015 was first year since 1974 without spring summits.","validFrom":341}
+{"id":"geo_mount-everest_046","text":"12 climbers died on Mount Everest during spring 2019 season; 891 summited despite high death toll.","validFrom":342}
+{"id":"geo_mount-everest_047","text":"Nepal and China prohibited foreign climbing on Mount Everest in 2020 due to COVID-19 pandemic.","validFrom":343}
+{"id":"geo_mount-everest_048","text":"In October 2025, blizzard-like conditions prompted Chinese authorities to evacuate nearly 350 people, with about 200 more stranded on Everest Scenic Area.","validFrom":344}
+{"id":"geo_mount-everest_049","text":"In 2021, Nepal issued 408 climbing permits, setting a record number.","validFrom":345}
+{"id":"geo_mount-everest_050","text":"In April 2025, Nepal required climbers to have summited a 7,000-metre peak within Nepal before obtaining an Everest permit, effective Spring 2026.","validFrom":346}
+{"id":"geo_mount-everest_051","text":"According to Jon Krakauer, commercialization of Everest began in 1985 with a guided expedition led by David Breashears that included Richard Bass.","validFrom":347}
+{"id":"geo_mount-everest_052","text":"By 2016, most guiding services to Everest cost between US$35,000 and US$200,000.","validFrom":348}
+{"id":"geo_mount-everest_053","text":"Jamling Tenzing Norgay stated in 2003 that wealthy inexperienced climbers routinely summit Everest, endangering others and losing the spirit of adventure.","validFrom":349}
+{"id":"geo_mount-everest_054","text":"Shriya Shah-Klorfine died from oxygen deprivation during descent after climbing for 27 hours straight in 2012.","validFrom":350}
+{"id":"geo_mount-everest_055","text":"Reinhold Messner stated in 2004 that commercial Everest expeditions provide prepared routes, oxygen, meals, and bed setup.","validFrom":351}
+{"id":"geo_mount-everest_056","text":"By 2015, Nepal was considering requiring climbers have prior experience to improve mountain safety.","validFrom":352}
+{"id":"geo_mount-everest_057","text":"Four men summited Everest in one week in 2025 using xenon gas inhalation 10 days before expedition.","validFrom":353}
+{"id":"geo_mount-everest_058","text":"Sudarshan Gautam, a Canadian double-amputee, summited Everest in 2013.","validFrom":354}
+{"id":"geo_mount-everest_059","text":"Mount Everest has two main climbing routes: the Southeast Ridge from Nepal and North Ridge from Tibet.","validFrom":355}
+{"id":"geo_mount-everest_060","text":"Southeast Ridge Base Camp sits at 5,380 metres on Everest's south side in Nepal","validFrom":356}
+{"id":"geo_mount-everest_061","text":"The Khumbu Icefall is dangerous due to seracs, crevasses, and shifting ice blocks that have killed many climbers","validFrom":357}
+{"id":"geo_mount-everest_062","text":"Hillary and Tenzing first ascended the Hillary Step at 8,790 metres in 1953 using primitive climbing equipment","validFrom":358}
+{"id":"geo_mount-everest_063","text":"The Hillary Step has become a bottleneck with increasing climbers waiting for turns on fixed ropes","validFrom":359}
+{"id":"geo_mount-everest_064","text":"The Cornice traverse is the most exposed section with 2,400 metre drop to Southwest Face and 3,050 metres to Kangshung Face","validFrom":360}
+{"id":"geo_mount-everest_065","text":"North Ridge route begins in Tibet with base camp at 5,180 metres on Rongbuk Glacier's gravel plain","validFrom":361}
+{"id":"geo_mount-everest_066","text":"The Chinese ladder at Second Step was placed in 1975 by Chinese climbers and has been almost continuously in place since.","validFrom":362}
+{"id":"geo_mount-everest_067","text":"Mount Everest's summit rock is Ordovician limestone; the summit is capped with snow over ice.","validFrom":363}
+{"id":"geo_mount-everest_068","text":"Atmospheric pressure at Everest's summit is about one-third of sea-level pressure (337 mbar), providing only one-third as much oxygen.","validFrom":364}
+{"id":"geo_mount-everest_069","text":"An unacclimatized person exposed to atmospheric conditions above 8,500 m would likely lose consciousness within two to three minutes.","validFrom":365}
+{"id":"geo_mount-everest_070","text":"As of 2015, over 200 bodies remain on Mount Everest because injured climbers cannot be rescued and are typically left behind.","validFrom":366}
+{"id":"geo_mount-everest_071","text":"High altitude cerebral oedema commonly presents during descent from the summit; retinal haemorrhages can cause blindness in climbers.","validFrom":367}
+{"id":"geo_mount-everest_072","text":"About 95% of Everest summitters use bottled oxygen; about 5% have summitted without supplemental oxygen.","validFrom":368}
+{"id":"geo_mount-everest_073","text":"The death rate is double for climbers attempting Everest summit without supplemental oxygen.","validFrom":369}
+{"id":"geo_mount-everest_074","text":"Reinhold Messner and Peter Habeler made the first successful Everest climb without supplemental oxygen in 1978.","validFrom":370}
+{"id":"geo_mount-everest_075","text":"Messner summitted Everest solo in 1980 without supplemental oxygen, porters, or climbing partners via the northwest route.","validFrom":371}
+{"id":"geo_mount-everest_076","text":"Low oxygen at high altitudes impairs cognition and causes bradypsychia; climbers may suffer permanent neurological damage despite returning to lower altitudes.","validFrom":372}
+{"id":"geo_mount-everest_077","text":"Jon Krakauer's 1997 book criticized bottled oxygen for allowing unqualified climbers to summit and proposed banning it except for emergencies.","validFrom":373}
+{"id":"geo_mount-everest_078","text":"Mount Everest winter climbing is unpopular because of extreme cold, high winds reaching 270 km/h, and shorter days limiting climbing time.","validFrom":374}
+{"id":"geo_mount-everest_079","text":"Climbers have reported life-threatening thefts of gear, food, and oxygen bottles from supply caches and high-altitude camps on Mount Everest.","validFrom":375}
+{"id":"geo_mount-everest_080","text":"By the end of 2010, approximately 5,104 ascents to Mount Everest's summit had been completed by about 3,142 different individuals.","validFrom":376}
+{"id":"geo_mount-everest_081","text":"Reinhold Messner and Peter Habeler achieved the first ascent of Mount Everest without supplemental oxygen in 1978.","validFrom":377}
+{"id":"geo_mount-everest_082","text":"Jean-Marc Boivin completed the first paraglider descent of Mount Everest on September 26, 1988.","validFrom":378}
+{"id":"geo_mount-everest_083","text":"Didier Delsalle landed a helicopter on Mount Everest's summit in May 2005, setting world records for highest rotorcraft landing and take-off.","validFrom":379}
+{"id":"geo_mount-everest_084","text":"Lakpa Tsheri Sherpa and Sano Babu Sunuwar first completed a continuous summit-to-sea descent from Everest by paragliding to Namche Bazaar in 42 minutes.","validFrom":380}
+{"id":"geo_mount-everest_085","text":"Sano Babu Sunuwar had never previously climbed, and Lakpa Tsheri Sherpa had never kayaked and could not swim.","validFrom":381}
+{"id":"geo_mount-everest_086","text":"In 2014, mountaineer Wang Jing used a helicopter from South Base Camp to Camp II to avoid the Khumbu Icefall, then climbed to Everest summit.","validFrom":382}
+{"id":"geo_mount-everest_087","text":"In 2016, increased helicopter use over the Khumbu Icefall saved porters eighty trips while improving efficiency in material transport.","validFrom":383}
+{"id":"geo_mount-everest_088","text":"Yuichiro Miura became the first person to ski down Everest in the 1970s, descending nearly 1,300 vertical metres from the South Col.","validFrom":384}
+{"id":"geo_mount-everest_089","text":"The southern part of Mount Everest is regarded as one of several \"hidden valleys\" of refuge designated by the ninth-century Buddhist saint Padmasambhava.","validFrom":385}
+{"id":"geo_mount-everest_090","text":"In 2015, the president of the Nepal Mountaineering Association warned that Mount Everest's pollution, especially human waste, reached critical levels.","validFrom":386}
+{"id":"geo_mount-everest_091","text":"Approximately 12,000 kg of human excrement is left behind on Mount Everest each climbing season.","validFrom":387}
+{"id":"geo_mount-everest_092","text":"Human excrement is strewn across Mount Everest's summit route verges and the mountain's four south-side sleeping areas.","validFrom":388}
+{"id":"geo_mount-everest_093","text":"For 62 years of climbing on Mount Everest, climbers buried excrement in snow holes, slung it into crevasses, or defecated near tents.","validFrom":389}
+{"id":"geo_mount-everest_094","text":"Nepal's government requires climbers to pack out eight kilograms of waste when descending Mount Everest.","validFrom":390}
+{"id":"geo_mount-everest_095","text":"In February 2019, China closed its Mount Everest base camp to visitors without climbing permits due to mounting waste.","validFrom":391}
+{"id":"geo_mount-everest_096","text":"Mount Everest's waste problem includes spent oxygen tanks, abandoned tents, empty cans, and bottles alongside human excrement.","validFrom":392}

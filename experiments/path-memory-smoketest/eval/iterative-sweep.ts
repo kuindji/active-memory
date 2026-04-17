@@ -2,15 +2,19 @@ import { getEmbedder } from "../src/embedder.js";
 import { PathMemory } from "../src/interfaces.js";
 import { tier1Alex } from "../data/tier1-alex.js";
 import { tier2Greek } from "../data/tier2-greek.js";
+import { tier3Wikipedia } from "../data/tier3-wikipedia.js";
 import { tracesTier1 } from "./conversation-traces-tier1.js";
 import { tracesTier2 } from "./conversation-traces-tier2.js";
+import { tracesTier3 } from "./conversation-traces-tier3.js";
 import type { ClaimId, RetrievalOptions, ScoredPath } from "../src/types.js";
 
 const TIER = (process.env.TIER ?? "tier1").toLowerCase();
 const DATASET =
-    TIER === "tier2"
-        ? { claims: tier2Greek, traces: tracesTier2 }
-        : { claims: tier1Alex, traces: tracesTier1 };
+    TIER === "tier3"
+        ? { claims: tier3Wikipedia, traces: tracesTier3 }
+        : TIER === "tier2"
+          ? { claims: tier2Greek, traces: tracesTier2 }
+          : { claims: tier1Alex, traces: tracesTier1 };
 
 function rankClaims(paths: ScoredPath[]): ClaimId[] {
     const best = new Map<ClaimId, number>();
@@ -397,6 +401,57 @@ const CONFIGS: Config[] = [
     },
 ];
 
+// Tier-3 validation matrix (Phase 2.7). Narrow sweep per CONTEXT.md §1828 —
+// this validates Option M at scale rather than re-sweeping the Phase-2
+// design space. Baseline rows + M at α ∈ {0.3, 0.5, 0.7, 1.0}, all paired
+// with `sessionDecayTau=0.3` (Phase 2.1 best).
+const CONFIGS_TIER3: Config[] = [
+    { label: "baseline bfs", options: { traversal: "bfs" } },
+    {
+        label: "baseline-2.1 bfs wfusion τ=0.2 + decay=0.3",
+        options: {
+            traversal: "bfs",
+            probeComposition: "weighted-fusion",
+            weightedFusionTau: 0.2,
+            sessionDecayTau: 0.3,
+        },
+    },
+    {
+        label: "M bfs idf-fusion τ=0.2 α=0.3 + decay=0.3",
+        options: {
+            traversal: "bfs",
+            anchorScoring: { kind: "idf-weighted-fusion", tau: 0.2, alpha: 0.3 },
+            sessionDecayTau: 0.3,
+        },
+    },
+    {
+        label: "M bfs idf-fusion τ=0.2 α=0.5 + decay=0.3",
+        options: {
+            traversal: "bfs",
+            anchorScoring: { kind: "idf-weighted-fusion", tau: 0.2, alpha: 0.5 },
+            sessionDecayTau: 0.3,
+        },
+    },
+    {
+        label: "M bfs idf-fusion τ=0.2 α=0.7 + decay=0.3",
+        options: {
+            traversal: "bfs",
+            anchorScoring: { kind: "idf-weighted-fusion", tau: 0.2, alpha: 0.7 },
+            sessionDecayTau: 0.3,
+        },
+    },
+    {
+        label: "M bfs idf-fusion τ=0.2 α=1.0 + decay=0.3",
+        options: {
+            traversal: "bfs",
+            anchorScoring: { kind: "idf-weighted-fusion", tau: 0.2, alpha: 1.0 },
+            sessionDecayTau: 0.3,
+        },
+    },
+];
+
+const ACTIVE_CONFIGS = TIER === "tier3" ? CONFIGS_TIER3 : CONFIGS;
+
 async function runConfig(config: Config): Promise<{
     narrowed: number;
     coherent: number;
@@ -463,7 +518,7 @@ async function main(): Promise<void> {
         `# iterative-sweep tier=${TIER}  (claims=${DATASET.claims.length}, traces=${DATASET.traces.length})`,
     );
     console.log(`config | narrowed | coherent`);
-    for (const cfg of CONFIGS) {
+    for (const cfg of ACTIVE_CONFIGS) {
         const r = await runConfig(cfg);
         console.log(
             `${cfg.label.padEnd(48)} | ${r.narrowed}/${r.arcs}      | ${r.coherent}/${r.arcs}`,

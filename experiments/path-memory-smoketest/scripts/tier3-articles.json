@@ -1,0 +1,36 @@
+{
+    "$schema": "./tier3-articles.schema.json",
+    "notes": [
+        "Curated Wikipedia article titles for tier-3 corpus generation.",
+        "`domain` is a short prefix used in claim ids (e.g. bio_photosynthesis_12).",
+        "`title` is the canonical Wikipedia title (URL-encoded form is derived at fetch time).",
+        "`targetClaims` is a hint for the splitter — the LLM aims near this count per article."
+    ],
+    "articles": [
+        {
+            "domain": "bio",
+            "title": "Photosynthesis",
+            "targetClaims": 60
+        },
+        {
+            "domain": "arch",
+            "title": "Eiffel Tower",
+            "targetClaims": 60
+        },
+        {
+            "domain": "astro",
+            "title": "Jupiter",
+            "targetClaims": 60
+        },
+        {
+            "domain": "music",
+            "title": "Johann Sebastian Bach",
+            "targetClaims": 60
+        },
+        {
+            "domain": "geo",
+            "title": "Mount Everest",
+            "targetClaims": 60
+        }
+    ]
+}

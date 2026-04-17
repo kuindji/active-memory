@@ -3,17 +3,22 @@ import { PathMemory } from "../src/interfaces.js";
 import { FlatVectorBaseline } from "./baseline.js";
 import { tier1Alex } from "../data/tier1-alex.js";
 import { tier2Greek } from "../data/tier2-greek.js";
+import { tier3Wikipedia } from "../data/tier3-wikipedia.js";
 import { queriesTier1 } from "./queries-tier1.js";
 import { queriesTier2 } from "./queries-tier2.js";
+import { queriesTier3 } from "./queries-tier3.js";
 import type { ClaimId, ScoredPath, RetrievalOptions } from "../src/types.js";
 
 // Select tier via TIER env var. Default is tier1 for back-compat with
-// pre-Phase-2 invocations; TIER=tier2 selects the Greek-history corpus.
+// pre-Phase-2 invocations; TIER=tier2 selects the Greek-history corpus;
+// TIER=tier3 selects the Wikipedia corpus (see scripts/tier3-*.ts).
 const TIER = (process.env.TIER ?? "tier1").toLowerCase();
 const DATASET =
-    TIER === "tier2"
-        ? { claims: tier2Greek, queries: queriesTier2 }
-        : { claims: tier1Alex, queries: queriesTier1 };
+    TIER === "tier3"
+        ? { claims: tier3Wikipedia, queries: queriesTier3 }
+        : TIER === "tier2"
+          ? { claims: tier2Greek, queries: queriesTier2 }
+          : { claims: tier1Alex, queries: queriesTier1 };
 
 function f1(ideal: Set<ClaimId>, predicted: ClaimId[]): number {
     if (predicted.length === 0 || ideal.size === 0) return 0;
@@ -361,6 +366,52 @@ const CONFIGS: Config[] = [
     },
 ];
 
+// Tier-3 validation sweep (Phase 2.7). Per CONTEXT.md §1828 this is a
+// narrow validation of Option M, not a re-sweep of the Phase-2 design
+// space — the six rows below are: vanilla BFS, the Phase-2.1 baseline
+// (`weighted-fusion τ=0.2`), and Option M at α ∈ {0.3, 0.5, 0.7, 1.0}.
+const CONFIGS_TIER3: Config[] = [
+    { label: "baseline bfs", options: { traversal: "bfs" } },
+    {
+        label: "baseline-2.1 bfs wfusion τ=0.2",
+        options: {
+            traversal: "bfs",
+            probeComposition: "weighted-fusion",
+            weightedFusionTau: 0.2,
+        },
+    },
+    {
+        label: "M bfs idf-fusion τ=0.2 α=0.3",
+        options: {
+            traversal: "bfs",
+            anchorScoring: { kind: "idf-weighted-fusion", tau: 0.2, alpha: 0.3 },
+        },
+    },
+    {
+        label: "M bfs idf-fusion τ=0.2 α=0.5",
+        options: {
+            traversal: "bfs",
+            anchorScoring: { kind: "idf-weighted-fusion", tau: 0.2, alpha: 0.5 },
+        },
+    },
+    {
+        label: "M bfs idf-fusion τ=0.2 α=0.7",
+        options: {
+            traversal: "bfs",
+            anchorScoring: { kind: "idf-weighted-fusion", tau: 0.2, alpha: 0.7 },
+        },
+    },
+    {
+        label: "M bfs idf-fusion τ=0.2 α=1.0",
+        options: {
+            traversal: "bfs",
+            anchorScoring: { kind: "idf-weighted-fusion", tau: 0.2, alpha: 1.0 },
+        },
+    },
+];
+
+const ACTIVE_CONFIGS = TIER === "tier3" ? CONFIGS_TIER3 : CONFIGS;
+
 async function runConfig(config: Config): Promise<{ mean: number; wins: number; losses: number }> {
     const embedder = await getEmbedder();
     const memory = new PathMemory({
@@ -408,7 +459,7 @@ async function main(): Promise<void> {
         `# sweep tier=${TIER}  (claims=${DATASET.claims.length}, queries=${DATASET.queries.length})`,
     );
     console.log(`config | mean-path-F1 | wins | losses`);
-    for (const cfg of CONFIGS) {
+    for (const cfg of ACTIVE_CONFIGS) {
         const r = await runConfig(cfg);
         console.log(
             `${cfg.label.padEnd(38)} | ${r.mean.toFixed(3)}        | ${r.wins}    | ${r.losses}`,

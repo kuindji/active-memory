@@ -1,0 +1,10 @@
+{
+    "notes": ["1-article stub for pipeline validation"],
+    "articles": [
+        {
+            "domain": "bio",
+            "title": "Photosynthesis",
+            "targetClaims": 60
+        }
+    ]
+}
