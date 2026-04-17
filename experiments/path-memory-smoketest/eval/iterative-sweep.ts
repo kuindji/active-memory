@@ -485,6 +485,32 @@ const CONFIGS: Config[] = [
         }
         return rows;
     })(),
+
+    // ---- Phase 4a: edge-hotness soft-penalty gate on Dijkstra --------------
+    // Motivation (see `path_memory_phase29`): repeat-user traces produce a
+    // 7.7× edge-concentration signal. Eval-B's multi-turn arcs give the gate
+    // a real chance to build a rolling hot set within a single session.
+    //
+    // Rows pin to Phase-2.8 default traversal (`dijkstra` +
+    // `temporalHopCost: 0.5`) and enable `accessTracking` so the gate activates.
+    ...(() => {
+        const rows: Config[] = [];
+        for (const topK of [50, 100, 200]) {
+            for (const penalty of [1.5, 2.0]) {
+                rows.push({
+                    label: `4a dijkstra tmp=0.5 hotK=${topK} penalty=${penalty}`,
+                    options: {
+                        traversal: "dijkstra",
+                        temporalHopCost: 0.5,
+                        accessTracking: true,
+                        hotEdgeTopK: topK,
+                        hotEdgeColdPenalty: penalty,
+                    },
+                });
+            }
+        }
+        return rows;
+    })(),
 ];
 
 // Tier-3 validation matrix (Phase 2.7). Narrow sweep per CONTEXT.md §1828 —

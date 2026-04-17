@@ -5,7 +5,7 @@ import {
     softMembership,
     type SoftClusterMembership,
 } from "./clusters.js";
-import type { GraphIndex } from "./graph.js";
+import type { EdgeAccessKey, GraphIndex } from "./graph.js";
 import type {
     AnchorScoring,
     Claim,
@@ -68,6 +68,17 @@ export class Retriever {
         const probeComposition = options.probeComposition ?? DEFAULTS.probeComposition;
         const weightedFusionTau = options.weightedFusionTau ?? DEFAULTS.weightedFusionTau;
         const accessTracking = options.accessTracking ?? false;
+        const hotEdgeTopK = options.hotEdgeTopK;
+        const hotEdgeColdPenalty = options.hotEdgeColdPenalty;
+        const hotEdgeSet =
+            accessTracking &&
+            traversal === "dijkstra" &&
+            hotEdgeTopK !== undefined &&
+            hotEdgeTopK > 0 &&
+            hotEdgeColdPenalty !== undefined &&
+            hotEdgeColdPenalty !== 1
+                ? buildHotEdgeSet(this.graph, hotEdgeTopK)
+                : undefined;
         const weights = { ...DEFAULTS.weights, ...options.weights };
 
         const isValid = makeValidityFilter(mode);
@@ -106,6 +117,8 @@ export class Retriever {
                           isValid,
                           temporalHopCost,
                           accessTracking,
+                          hotEdgeSet,
+                          hotEdgeColdPenalty,
                       )
                     : this.bfsShortestPaths(allAnchors[i], bfsMaxDepth, isValid, accessTracking);
             for (let j = i + 1; j < allAnchors.length; j++) {
@@ -783,6 +796,8 @@ export class Retriever {
         isValid: (c: Claim) => boolean,
         temporalHopCost: number,
         accessTracking: boolean,
+        hotEdgeSet: Set<EdgeAccessKey> | undefined,
+        hotEdgeColdPenalty: number | undefined,
     ): Map<ClaimId, Path> {
         type State = { id: ClaimId; cost: number; depth: number; path: Path };
         const bestCost = new Map<ClaimId, number>();
@@ -825,6 +840,10 @@ export class Retriever {
                         : temporalHopCost;
                 } else {
                     edgeCost = Math.max(0, 1 - e.weight);
+                }
+                if (hotEdgeSet !== undefined && hotEdgeColdPenalty !== undefined) {
+                    const key: EdgeAccessKey = `${e.from}->${e.to}:${e.type}`;
+                    if (!hotEdgeSet.has(key)) edgeCost *= hotEdgeColdPenalty;
                 }
                 const newCost = cur.cost + edgeCost;
                 const prev = bestCost.get(e.to);
@@ -916,6 +935,32 @@ function makeValidityFilter(mode: RetrievalMode): (c: Claim) => boolean {
 function canonicalPathKey(path: Path): string {
     const sorted = [...path.nodeIds].sort();
     return `path:${sorted.join(",")}`;
+}
+
+/**
+ * Phase 4a — snapshot the top-K most-accessed edges (rolling hot set).
+ *
+ * Reads the edge counts already maintained by Phase-3 access-tracking
+ * (`bumpEdge` at `shortestCostPaths`'s frontier push). Returns a `Set` of
+ * `EdgeAccessKey` so the Dijkstra cost gate can check membership in O(1).
+ * Built once per retrieval call and shared across every anchor's traversal
+ * — multiple anchors do not each rebuild the snapshot.
+ *
+ * An empty set is returned when no edges have been accessed yet (first
+ * query in a session); with an empty set, the gate treats every edge as
+ * cold. That is intentional: the first query pays the full cold-penalty
+ * on every edge, which cancels out (all edges equally shifted) and only
+ * matters on the second-and-onward queries when the hot set is populated.
+ */
+function buildHotEdgeSet(graph: GraphIndex, topK: number): Set<EdgeAccessKey> {
+    const { edges } = graph.accessStatsSnapshot();
+    const set = new Set<EdgeAccessKey>();
+    const end = Math.min(topK, edges.length);
+    for (let i = 0; i < end; i++) {
+        const e = edges[i];
+        set.add(`${e.from}->${e.to}:${e.type}`);
+    }
+    return set;
 }
 
 /**

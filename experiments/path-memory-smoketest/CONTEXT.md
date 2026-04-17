@@ -2363,3 +2363,90 @@ Two plausible mechanisms (untested):
 - `tests/retriever.test.ts` — 8 new Phase 2.10 tests (all passing)
 - `eval/sweep.ts`, `eval/iterative-sweep.ts` — 21 Phase 2.10 rows
 - `notes/phase-2.10-reading.md` — SYNAPSE reading note
+
+## Phase 4a — Edge-hotness soft-penalty gate on Dijkstra (2026-04-17)
+
+Motivation from `path_memory_phase29` + `PLAN-post-2.8.md` §
+"Phase 4 redesign": Phase 2.9 measured 7.72× mean edge concentration on
+repeat-user traces; Option O's activation-persistence substrate was
+killed, leaving 4a (hot-edge cache) as the only live Phase-4 shape. 4a
+shipped as a **pre-experiment** (disabled-by-default) to confirm the
+hot-edge prune hypothesis empirically and to produce a latency baseline.
+Plan file: `~/.claude/plans/jaunty-sauteeing-goose.md`.
+
+Design choices fixed up-front with the user:
+- **Soft penalty** over hard prune (reversible via penalty=1.0; matches
+  the roadmap's "higher threshold" phrasing).
+- **Rolling in-session** hot set built from `accessStatsSnapshot()` once
+  per `retrieve()` call — shared across every anchor's Dijkstra.
+
+### Result: KILL — ship disabled-only, Phase-4 slot stays open
+
+**Eval-A (no regression, gate is a no-op on scatter queries):**
+
+| Tier | Phase-2.8 baseline | 4a hotK ∈ {50,100,200} × penalty ∈ {1.5, 2.0} |
+|---|---|---|
+| Tier-1 (12 queries) | 0.703 / 5 wins | 0.703 / 5 wins — all 6 rows exact baseline |
+| Tier-2 (19 queries) | 0.627 / 4W 2L | 0.627 / 4W 2L — all 6 rows exact baseline |
+
+**Eval-B tier-2 iterative (no coherence change):** all 6 rows
+narrowed=4/4, coherent=1/4 (Phase-2.8 baseline).
+
+**Eval-C (the actual test): refutation.** On all 8 repeat-user traces
+under `hotK=100`:
+
+| Variant | mean edgeRatio | mean coverage@5 | mean retrieveMs per trace | Δ latency vs baseline | Δ coverage vs baseline |
+|---|---|---|---|---|---|
+| baseline (2.8 default) | 7.72 | 0.643 | 326.1 | — | — |
+| 4a hotK=100 penalty=1.5 | 8.44 | 0.643 | 440.7 | **+114.6ms (+35%)** | +0.000 |
+| 4a hotK=100 penalty=2.0 | 8.65 | 0.643 | 445.3 | **+119.2ms (+37%)** | +0.000 |
+
+Latency regressed on **8/8 traces**; coverage moved on 0/8.
+
+### Interpretation
+
+Soft-penalty re-weights cold edges — it does not prune them. Dijkstra
+must still expand cold-edge states to prove they are sub-optimal, and
+the re-weighted frontier takes *more* pops to converge (edgeBumps grow
+≈5-10% under the gate). Phase 2.9's edge concentration signal does
+actually get *amplified* (edgeRatio 7.72 → 8.44-8.65) — the hot set is
+self-reinforcing under the gate — but the wrong metric was lifted: we
+wanted latency to drop, not concentration to rise further.
+
+Two directions remain open for future work; both are out of scope for
+4a's pre-experiment charter:
+
+1. **Hard prune** (skip cold edges entirely once the hot set is
+   populated). Plausible latency win but accuracy risk on cold corpora —
+   explicitly deferred per user choice at plan time.
+2. **Pre-computed hot-edge subgraph index**, bypassing the generic
+   `neighbors()` expansion for hot edges. Larger refactor; only worth
+   revisiting if the Phase-4 slot needs a real owner after Phase 2.11.
+
+### Decision
+
+Per `PLAN-post-2.8.md` § "Pass / kill criteria":
+- Eval-A hold: PASSED.
+- Eval-C ≥ 15% latency win with no accuracy regression OR lift at
+  latency parity: **FAILED** (latency regressed; coverage flat).
+
+Kill triggered. Ships as-is (both config fields wired, disabled by
+default). Phase-4 slot reverts to open per `PLAN-post-2.8.md`; Phase
+2.11 (MAGMA per-view routing) is the next entry point for the primary
+research path.
+
+### Files touched
+
+- `src/types.ts` — `hotEdgeTopK`, `hotEdgeColdPenalty` added to
+  `RetrievalOptions` (disabled-by-default; both must be set for the
+  gate to activate)
+- `src/retriever.ts` — `buildHotEdgeSet` helper at file scope;
+  hot-set construction at the top of `retrieve()`; `shortestCostPaths`
+  signature + cold-edge cost gate at the edge-cost block
+- `tests/retriever.test.ts` — 5 new Phase-4a tests (gate inert under
+  accessTracking=off / BFS / penalty=1.0; empty-hot-set no-op; rolling
+  populates across queries)
+- `eval/sweep.ts`, `eval/iterative-sweep.ts` — 6 Phase-4a rows each
+- `eval/eval-c-access.ts` — extended with `VARIANTS` (baseline vs 4a);
+  per-trace wall-clock latency via `performance.now()`; `coverage@5`
+  using `expectedClaimsAfterThisTurn` from the repeat-user traces

@@ -1628,4 +1628,150 @@ describe("Retriever", () => {
             expect(first[i].score).toBe(second[i].score);
         }
     });
+
+    // --- Phase 4a: edge-hotness cold-edge cost penalty (Dijkstra only) -----
+
+    test("Phase 4a: gate is inert when accessTracking is off", async () => {
+        // With accessTracking=false the hot set is never built; output must
+        // match the plain Phase-2.8 default even when hotEdgeTopK/penalty
+        // are set to aggressive values.
+        const { emb, store, retriever } = setup();
+        await store.ingest({ text: "alex moves to la", validFrom: 1 });
+        await store.ingest({ text: "alex starts a job", validFrom: 2 });
+        await store.ingest({ text: "alex changes jobs", validFrom: 3 });
+        await store.ingest({ text: "carol works in tokyo", validFrom: 4 });
+
+        const probe = await emb.embed("alex moves to la");
+        const baseline = retriever.retrieve([{ text: "p", embedding: probe }], {
+            traversal: "dijkstra",
+            temporalHopCost: 0.5,
+        });
+        const gated = retriever.retrieve([{ text: "p", embedding: probe }], {
+            traversal: "dijkstra",
+            temporalHopCost: 0.5,
+            hotEdgeTopK: 1,
+            hotEdgeColdPenalty: 10,
+        });
+        expect(gated.length).toBe(baseline.length);
+        for (let i = 0; i < baseline.length; i++) {
+            expect(gated[i].path.nodeIds).toEqual(baseline[i].path.nodeIds);
+            expect(gated[i].score).toBe(baseline[i].score);
+        }
+    });
+
+    test("Phase 4a: penalty=1 collapses to identity vs plain Dijkstra", async () => {
+        // A cold-edge multiplier of 1.0 must leave every cost untouched —
+        // even with tracking on and a tiny hot set, results should match
+        // the baseline run that never enables the gate.
+        const { emb, store, graph, retriever } = setup();
+        await store.ingest({ text: "alex moves to la", validFrom: 1 });
+        await store.ingest({ text: "alex starts a job", validFrom: 2 });
+        await store.ingest({ text: "alex changes jobs", validFrom: 3 });
+
+        const probe = await emb.embed("alex moves to la");
+        const baseline = retriever.retrieve([{ text: "p", embedding: probe }], {
+            traversal: "dijkstra",
+            temporalHopCost: 0.5,
+        });
+        graph.resetAccessStats();
+        const gated = retriever.retrieve([{ text: "p", embedding: probe }], {
+            traversal: "dijkstra",
+            temporalHopCost: 0.5,
+            accessTracking: true,
+            hotEdgeTopK: 1,
+            hotEdgeColdPenalty: 1,
+        });
+        expect(gated.length).toBe(baseline.length);
+        for (let i = 0; i < baseline.length; i++) {
+            expect(gated[i].path.nodeIds).toEqual(baseline[i].path.nodeIds);
+            expect(gated[i].score).toBe(baseline[i].score);
+        }
+    });
+
+    test("Phase 4a: empty hot set on first query is a safe no-op", async () => {
+        // On a fresh graph the hot set is empty; the gate still activates
+        // but multiplies every edge by the same penalty, which preserves
+        // the ordering Dijkstra produces. Result set must equal the plain
+        // baseline at the same traversal config.
+        const { emb, store, graph, retriever } = setup();
+        await store.ingest({ text: "alex moves to la", validFrom: 1 });
+        await store.ingest({ text: "alex starts a job", validFrom: 2 });
+        await store.ingest({ text: "alex changes jobs", validFrom: 3 });
+
+        const probe = await emb.embed("alex moves to la");
+        const baseline = retriever.retrieve([{ text: "p", embedding: probe }], {
+            traversal: "dijkstra",
+            temporalHopCost: 0.5,
+        });
+        graph.resetAccessStats();
+        const firstQuery = retriever.retrieve([{ text: "p", embedding: probe }], {
+            traversal: "dijkstra",
+            temporalHopCost: 0.5,
+            accessTracking: true,
+            hotEdgeTopK: 50,
+            hotEdgeColdPenalty: 2.0,
+        });
+        const baselinePaths = baseline.map((r) => r.path.nodeIds.join(","));
+        const firstPaths = firstQuery.map((r) => r.path.nodeIds.join(","));
+        expect(firstPaths).toEqual(baselinePaths);
+    });
+
+    test("Phase 4a: gate is inert under BFS even when fields are set", async () => {
+        // BFS traversal does not consume edge costs; the gate must not
+        // fire. Output under BFS must match across "fields set" vs "fields
+        // absent" runs.
+        const { emb, store, retriever } = setup();
+        await store.ingest({ text: "alex moves to la", validFrom: 1 });
+        await store.ingest({ text: "alex starts a job", validFrom: 2 });
+        await store.ingest({ text: "alex changes jobs", validFrom: 3 });
+
+        const probe = await emb.embed("alex moves to la");
+        const baseline = retriever.retrieve([{ text: "p", embedding: probe }], {
+            traversal: "bfs",
+            accessTracking: true,
+        });
+        const gated = retriever.retrieve([{ text: "p", embedding: probe }], {
+            traversal: "bfs",
+            accessTracking: true,
+            hotEdgeTopK: 10,
+            hotEdgeColdPenalty: 5.0,
+        });
+        expect(gated.length).toBe(baseline.length);
+        for (let i = 0; i < baseline.length; i++) {
+            expect(gated[i].path.nodeIds).toEqual(baseline[i].path.nodeIds);
+        }
+    });
+
+    test("Phase 4a: rolling hot set populates across queries in a session", async () => {
+        // After a warmup query with tracking on, accessStatsSnapshot() must
+        // return a non-empty edges list. A follow-up gated query then sees
+        // a non-empty hot set — confirming the rolling-per-session shape.
+        const { emb, store, graph, retriever } = setup();
+        await store.ingest({ text: "alex moves to la", validFrom: 1 });
+        await store.ingest({ text: "alex starts a job", validFrom: 2 });
+        await store.ingest({ text: "alex changes jobs", validFrom: 3 });
+        await store.ingest({ text: "carol works in tokyo", validFrom: 4 });
+
+        const probe = await emb.embed("alex moves to la");
+        retriever.retrieve([{ text: "p", embedding: probe }], {
+            traversal: "dijkstra",
+            temporalHopCost: 0.5,
+            accessTracking: true,
+        });
+        const warmSnap = graph.accessStatsSnapshot();
+        expect(warmSnap.edges.length).toBeGreaterThan(0);
+
+        // A follow-up gated query must still return results; the hot set
+        // now has real content, so cold edges take the penalty while hot
+        // edges don't — the run must complete without producing an empty
+        // result set (which would indicate the gate over-pruned via cost).
+        const gated = retriever.retrieve([{ text: "p", embedding: probe }], {
+            traversal: "dijkstra",
+            temporalHopCost: 0.5,
+            accessTracking: true,
+            hotEdgeTopK: 2,
+            hotEdgeColdPenalty: 3.0,
+        });
+        expect(gated.length).toBeGreaterThan(0);
+    });
 });

@@ -2,14 +2,17 @@ import { getEmbedder } from "../src/embedder.js";
 import { PathMemory } from "../src/interfaces.js";
 import { tier2Greek } from "../data/tier2-greek.js";
 import { tracesRepeatUser, type RepeatUserTrace } from "./traces-repeat-user.js";
-import type { RetrievalOptions, ScoredPath } from "../src/types.js";
+import type { ClaimId, RetrievalOptions, ScoredPath } from "../src/types.js";
 
 // Phase 2.9 — eval-C: repeat-user access-concentration measurement.
+// Phase 4a — extended to compare Phase-2.8-default vs edge-hotness gate.
 //
-// Runs a fixed Phase-2.8-default retrieval config against multi-session
-// "repeat user" traces and reports per-trace access concentration. Pass
-// criterion (from PLAN-post-2.8.md § "Phase 2.9"):
+// Runs multi-session "repeat user" traces under each `VARIANTS` config and
+// reports per-trace access concentration, wall-clock latency, and per-turn
+// coverage (overlap between ideal claims and top-K returned paths). Phase 2.9
+// pass criterion stays:
 //   top-5 edge share >= 5x uniform baseline on at least half of traces.
+// Phase 4a adds a latency/accuracy comparison across variants.
 
 const PHASE_2_8_DEFAULT: RetrievalOptions = {
     traversal: "dijkstra",
@@ -21,10 +24,31 @@ const PHASE_2_8_DEFAULT: RetrievalOptions = {
     accessTracking: true,
 };
 
+type Variant = {
+    label: string;
+    options: RetrievalOptions;
+};
+
+// Phase 4a — compare baseline against a representative (K, penalty) grid.
+// Kept small (baseline + 2 gated variants) to hold per-run cost down while
+// covering both a mild penalty and a stronger one at the recommended K=100.
+const VARIANTS: Variant[] = [
+    { label: "baseline (2.8 default)", options: { ...PHASE_2_8_DEFAULT } },
+    {
+        label: "4a hotK=100 penalty=1.5",
+        options: { ...PHASE_2_8_DEFAULT, hotEdgeTopK: 100, hotEdgeColdPenalty: 1.5 },
+    },
+    {
+        label: "4a hotK=100 penalty=2.0",
+        options: { ...PHASE_2_8_DEFAULT, hotEdgeTopK: 100, hotEdgeColdPenalty: 2.0 },
+    },
+];
+
 const EDGE_RATIO_PASS_THRESHOLD = 5.0;
 
 type TraceResult = {
     name: string;
+    variantLabel: string;
     sessions: number;
     turns: number;
     distinctNodes: number;
@@ -37,7 +61,20 @@ type TraceResult = {
     edgeRatio: number;
     repeatingPathSets: number;
     sessionPathSetSignatures: string[];
+    totalRetrieveMs: number;
+    meanCoverage: number;
 };
+
+function coverage(ideal: ClaimId[], paths: ScoredPath[], topN: number): number {
+    if (ideal.length === 0) return 0;
+    const idealSet = new Set(ideal);
+    const seen = new Set<ClaimId>();
+    const sorted = [...paths].sort((a, b) => b.score - a.score).slice(0, topN);
+    for (const p of sorted) for (const id of p.path.nodeIds) seen.add(id);
+    let hits = 0;
+    for (const id of idealSet) if (seen.has(id)) hits++;
+    return hits / idealSet.size;
+}
 
 function pathSignature(paths: ScoredPath[], topN: number): string {
     const sorted = [...paths].sort((a, b) => b.score - a.score).slice(0, topN);
@@ -45,7 +82,7 @@ function pathSignature(paths: ScoredPath[], topN: number): string {
     return sets.join("|");
 }
 
-async function runTrace(trace: RepeatUserTrace): Promise<TraceResult> {
+async function runTrace(trace: RepeatUserTrace, variant: Variant): Promise<TraceResult> {
     const embedder = await getEmbedder();
     const memory = new PathMemory({ embedder });
     for (const c of tier2Greek) {
@@ -58,6 +95,9 @@ async function runTrace(trace: RepeatUserTrace): Promise<TraceResult> {
     }
 
     let turnCount = 0;
+    let totalRetrieveMs = 0;
+    let coverageSum = 0;
+    let coverageTurns = 0;
     const sessionSignatures: string[] = [];
 
     for (const sessionBlock of trace.sessions) {
@@ -65,13 +105,19 @@ async function runTrace(trace: RepeatUserTrace): Promise<TraceResult> {
         const sessionPaths: ScoredPath[] = [];
         for (const turn of sessionBlock.turns) {
             await session.addProbeSentences(turn.probes);
+            const start = performance.now();
             const results = session.retrieve({
                 mode: trace.mode,
-                ...PHASE_2_8_DEFAULT,
+                ...variant.options,
             });
+            totalRetrieveMs += performance.now() - start;
             turnCount++;
             sessionPaths.length = 0;
             sessionPaths.push(...results);
+            if (turn.expectedClaimsAfterThisTurn.length > 0) {
+                coverageSum += coverage(turn.expectedClaimsAfterThisTurn, results, 5);
+                coverageTurns++;
+            }
         }
         sessionSignatures.push(pathSignature(sessionPaths, 3));
     }
@@ -98,6 +144,7 @@ async function runTrace(trace: RepeatUserTrace): Promise<TraceResult> {
 
     return {
         name: trace.name,
+        variantLabel: variant.label,
         sessions: trace.sessions.length,
         turns: turnCount,
         distinctNodes: snap.totals.distinctNodes,
@@ -110,6 +157,8 @@ async function runTrace(trace: RepeatUserTrace): Promise<TraceResult> {
         edgeRatio,
         repeatingPathSets,
         sessionPathSetSignatures: sessionSignatures,
+        totalRetrieveMs,
+        meanCoverage: coverageTurns > 0 ? coverageSum / coverageTurns : 0,
     };
 }
 
@@ -118,47 +167,97 @@ function fmt(n: number, digits = 3): string {
 }
 
 async function main(): Promise<void> {
-    console.log("# eval-C repeat-user access concentration (tier2, Phase 2.8 default)");
-    console.log(
-        "trace | sessions | turns | distinctNodes | distinctEdges | top5NodeShare | nodeRatio | top5EdgeShare | edgeRatio | repeatingPaths",
-    );
+    console.log("# eval-C repeat-user access concentration + Phase-4a variant comparison (tier2)");
 
-    const results: TraceResult[] = [];
-    for (const trace of tracesRepeatUser) {
-        const r = await runTrace(trace);
-        results.push(r);
+    const byVariant = new Map<string, TraceResult[]>();
+
+    for (const variant of VARIANTS) {
+        console.log("");
+        console.log(`## variant: ${variant.label}`);
         console.log(
-            [
-                r.name.padEnd(40),
-                r.sessions,
-                r.turns,
-                r.distinctNodes,
-                r.distinctEdges,
-                fmt(r.top5NodeShare),
-                fmt(r.nodeRatio, 2),
-                fmt(r.top5EdgeShare),
-                fmt(r.edgeRatio, 2),
-                r.repeatingPathSets,
-            ].join(" | "),
+            "trace | sessions | turns | distinctNodes | distinctEdges | top5NodeShare | nodeRatio | top5EdgeShare | edgeRatio | repeatingPaths | retrieveMs | coverage@5",
+        );
+        const results: TraceResult[] = [];
+        for (const trace of tracesRepeatUser) {
+            const r = await runTrace(trace, variant);
+            results.push(r);
+            console.log(
+                [
+                    r.name.padEnd(40),
+                    r.sessions,
+                    r.turns,
+                    r.distinctNodes,
+                    r.distinctEdges,
+                    fmt(r.top5NodeShare),
+                    fmt(r.nodeRatio, 2),
+                    fmt(r.top5EdgeShare),
+                    fmt(r.edgeRatio, 2),
+                    r.repeatingPathSets,
+                    r.totalRetrieveMs.toFixed(1),
+                    fmt(r.meanCoverage),
+                ].join(" | "),
+            );
+        }
+        byVariant.set(variant.label, results);
+
+        const passing = results.filter((r) => r.edgeRatio >= EDGE_RATIO_PASS_THRESHOLD).length;
+        const half = Math.ceil(results.length / 2);
+        const verdict = passing >= half ? "PASS" : "FAIL";
+        console.log(
+            `Pass count: ${passing}/${results.length} traces with edgeRatio >= ${EDGE_RATIO_PASS_THRESHOLD.toFixed(1)} (threshold: >= ${half})`,
+        );
+        console.log(`Verdict: ${verdict}`);
+
+        const meanNodeRatio =
+            results.reduce((s, r) => s + r.nodeRatio, 0) / Math.max(1, results.length);
+        const meanEdgeRatio =
+            results.reduce((s, r) => s + r.edgeRatio, 0) / Math.max(1, results.length);
+        const meanRetrieveMs =
+            results.reduce((s, r) => s + r.totalRetrieveMs, 0) / Math.max(1, results.length);
+        const meanCoverage =
+            results.reduce((s, r) => s + r.meanCoverage, 0) / Math.max(1, results.length);
+        console.log(
+            `Mean across traces: nodeRatio=${fmt(meanNodeRatio, 2)}, edgeRatio=${fmt(meanEdgeRatio, 2)}, retrieveMs=${meanRetrieveMs.toFixed(1)}, coverage@5=${fmt(meanCoverage)}`,
         );
     }
 
-    console.log("-----");
-    const passing = results.filter((r) => r.edgeRatio >= EDGE_RATIO_PASS_THRESHOLD).length;
-    const half = Math.ceil(results.length / 2);
-    const verdict = passing >= half ? "PASS" : "FAIL";
-    console.log(
-        `Pass count: ${passing}/${results.length} traces with edgeRatio >= ${EDGE_RATIO_PASS_THRESHOLD.toFixed(1)} (threshold: >= ${half})`,
-    );
-    console.log(`Verdict: ${verdict}`);
-
-    const meanNodeRatio =
-        results.reduce((s, r) => s + r.nodeRatio, 0) / Math.max(1, results.length);
-    const meanEdgeRatio =
-        results.reduce((s, r) => s + r.edgeRatio, 0) / Math.max(1, results.length);
-    console.log(
-        `Mean ratios across traces: nodeRatio=${fmt(meanNodeRatio, 2)}, edgeRatio=${fmt(meanEdgeRatio, 2)}`,
-    );
+    // Phase 4a comparison: delta of 4a variants vs baseline on latency + coverage.
+    const baseline = byVariant.get(VARIANTS[0].label);
+    if (baseline) {
+        console.log("");
+        console.log("## Phase 4a comparison vs baseline (per-trace)");
+        console.log(
+            "variant | mean Δlatency | mean Δcoverage@5 | any latency regression | any coverage regression",
+        );
+        for (let i = 1; i < VARIANTS.length; i++) {
+            const label = VARIANTS[i].label;
+            const results = byVariant.get(label);
+            if (!results) continue;
+            let latencySum = 0;
+            let coverageSum = 0;
+            let latencyRegress = 0;
+            let coverageRegress = 0;
+            for (let t = 0; t < results.length; t++) {
+                const b = baseline[t];
+                const v = results[t];
+                latencySum += v.totalRetrieveMs - b.totalRetrieveMs;
+                coverageSum += v.meanCoverage - b.meanCoverage;
+                if (v.totalRetrieveMs > b.totalRetrieveMs * 1.05) latencyRegress++;
+                if (v.meanCoverage < b.meanCoverage - 0.02) coverageRegress++;
+            }
+            const meanDLatency = latencySum / Math.max(1, results.length);
+            const meanDCoverage = coverageSum / Math.max(1, results.length);
+            console.log(
+                [
+                    label.padEnd(30),
+                    `${meanDLatency >= 0 ? "+" : ""}${meanDLatency.toFixed(1)}ms`,
+                    `${meanDCoverage >= 0 ? "+" : ""}${fmt(meanDCoverage)}`,
+                    `${latencyRegress}/${results.length}`,
+                    `${coverageRegress}/${results.length}`,
+                ].join(" | "),
+            );
+        }
+    }
 }
 
 main().catch((err) => {

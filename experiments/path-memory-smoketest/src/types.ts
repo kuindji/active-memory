@@ -129,6 +129,17 @@ export type RetrievalOptions = {
      * counters are not consumed by any scoring path. Default: false.
      */
     accessTracking?: boolean;
+    /**
+     * Phase 4a — rolling edge-hotness gate on Dijkstra. When set together
+     * with `accessTracking`, the retriever builds a top-K hot-edge set
+     * from `accessStatsSnapshot()` once per call and scales the cost of
+     * edges outside that set by `hotEdgeColdPenalty` inside Dijkstra's
+     * frontier expansion. Both fields must be set (and `accessTracking`
+     * must be true) for the gate to activate. Penalty = 1.0 collapses
+     * to identity. BFS ignores both fields.
+     */
+    hotEdgeTopK?: number;
+    hotEdgeColdPenalty?: number;
     weights?: {
         probeCoverage?: number;
         edgeTypeDiversity?: number;

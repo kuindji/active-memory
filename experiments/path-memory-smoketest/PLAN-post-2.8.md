@@ -42,7 +42,7 @@ stated explicitly in the "Relation to existing systems" section.
 | **2.10** Spreading activation (Option O) | **KILLED — opt-in only** | Best Option O: 0.682 tier-1 / 0.522 tier-2 vs Phase 2.8 baseline 0.703/0.627 (regress -0.021/-0.105). Eval-B coherence flat at 1/4 (target 2/4). Inhibition load-bearing on tier-1 (β=0 drops 0.682→0.536) but slightly *hurts* tier-2 — small-graph dilution + tier-2 failure modes ≠ vocabulary-distractor. Ships as `AnchorScoring.kind = "spreading-activation"`; defaults unchanged. See CONTEXT.md § Phase 2.10. |
 | **2.11** Per-view routing (Option P) | **NEXT** | Promoted — remaining architectural hypothesis is that single-adjacency merge of temporal/lexical/semantic discards routing signal. Open question: do Phase 7 first to test 2.10's "small-graph dilution" hypothesis at LongMemEval scale? |
 | **2.12** Differentiable scorer (Option Q) | Deferred | Unchanged. |
-| **Phase 4** Cache | **Reverted to 4a only** | 4b activation-persistence is dead (no Option O activation profile to persist). 4a edge-hotness cache remains the only live cache shape. |
+| **Phase 4** Cache | **Both sub-options dead** | 4b activation-persistence killed with Option O. 4a edge-hotness soft-gate shipped as pre-experiment (commit TBD) and **refuted on eval-C** (+35% latency regress on 8/8 traces, coverage flat). Code ships disabled-only. Hard-prune variant remains theoretically possible but is out of scope. Phase-4 slot reverts to open. |
 | **Phase 7** LongMemEval retarget | Possibly NEXT before 2.11 | Also serves as the scale-generalization check for both 2.9 (edge concentration) and 2.10's small-graph dilution argument. |
 
 **Key 2.9 interpretation** (full details in `CONTEXT.md` § "Phase 2.9" and memory `path_memory_phase29.md`):
@@ -418,16 +418,16 @@ runs per phase become cheap.
 | # | Phase | Scope | State | Blocks |
 |---|---|---|---|---|
 | 1 | **2.9** Corpus-shape experiment (Option R) | Small | **DONE** (PASS 8/8) | — |
-| 2a | **4a pre-experiment** Edge-hotness prune (optional) | Small (½ sess.) | Not started | Provides latency baseline + validates prune hypothesis before 2.10 |
-| 2 | **2.10** Spreading activation (Option O) | Medium | **NEXT** | Primary research bet; may subsume Phase 4 |
-| 3 | **2.11** Per-view routing (Option P) | Medium | Pending | Only if 2.10 doesn't resolve tier-2 eval-B |
+| 2a | **4a pre-experiment** Edge-hotness soft-gate | Small (½ sess.) | **DONE — refuted** (eval-A hold; +35% eval-C latency regress on 8/8 traces). Ships disabled-only | — |
+| 2 | **2.10** Spreading activation (Option O) | Medium | **DONE — killed, opt-in only** | — |
+| 3 | **2.11** Per-view routing (Option P) | Medium | **NEXT** | Primary research bet after 2.10/4a both refuted |
 | 4 | **7 retarget** LongMemEval harness | Small | Pending | Enables external comparison + gives Phase 2.12 labels; also re-measures 2.9 edge-concentration at scale |
-| 5 | **2.12** Differentiable scorer (Option Q) | Large | Deferred | Only after 2.10/2.11 + Phase 7 |
-| 6 | **Phase 4** (4a standalone or 4b via 2.10) | Small–medium | Shape decided (see § "Phase 4 redesign") | Execution depends on 2.10 outcome |
+| 5 | **2.12** Differentiable scorer (Option Q) | Large | Deferred | Only after 2.11 + Phase 7 |
+| 6 | **Phase 4** (hard-prune 4a, or new shape after 2.11) | Small–medium | Soft-gate refuted; slot open | Execution depends on 2.11 outcome |
 
-**Recommended next-session entry point:** Phase 2.10 directly. The 4a pre-experiment is genuine optionality — worth it only if we want a latency baseline before 2.10 or if risk-aversion about 2.10 subsuming the signal dominates. Default = skip 4a, go to 2.10.
+**Recommended next-session entry point:** Phase 2.11 (MAGMA per-view routing), OR Phase 7 retarget first to test 2.10/2.11 hypotheses at scale. Open strategic question carries over from Phase 2.10.
 
-Do not commit to 3/4/5 until 2.10 lands.
+Do not commit to 4/5/6 until 2.11 lands.
 
 ## Dead primitives (re-issued under BGE-small)
 
