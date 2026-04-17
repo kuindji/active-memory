@@ -2682,3 +2682,95 @@ default (0.2 stays as wfusion τ).
 - `experiments/path-memory-smoketest/tests/eval-iterative-tier2.test.ts`
   — decay default `0.3 → 0.2`; comment block updated with Phase-2.14
   history. Assertion unchanged (narrowing floor only).
+
+## Phase 2.14 Stage 2 — Alexander-succession arc retest (2026-04-17)
+
+**Outcome N (refutation).** Neither Option H (cluster-affinity-boost)
+nor Option A1 (temporalDecayTau) lifts the Alexander-succession arc
+from cov=0.33 under bge-base. The arc is **encoder-granularity-bound**.
+Ships the PER_ARC claim-level diagnostic as reusable infrastructure;
+no default changes.
+
+### What was tested (`CONFIG_SET=phase214-stage2`)
+
+9 rows, all with `traversal=bfs`, `sessionDecayTau=0.2` (Phase 2.14
+default):
+
+- **Control:** `2.14 bfs wfusion τ=0.2 + decay=0.2` (reused).
+- **Option H:** cluster-affinity-boost at (k, β) ∈ {(4, 0.5), (4, 1.0),
+  (6, 0.5), (6, 1.0), (8, 0.5)}.
+- **Option A1:** `temporalDecayTau` ∈ {2, 5, 10} over the wfusion τ=0.2
+  + decay=0.2 base.
+
+### Findings
+
+| Row | philo | athens | academy | alex-succ | coh |
+|---|---|---|---|---|---|
+| control | 1.00 | 0.67 | 0.67 | 0.33 | 3/4 |
+| H k=4 β=0.5 | 1.00 | 0.67 | 0.67 | 0.33 | 3/4 |
+| H k=4 β=1.0 | 0.00 | 0.67 | 0.67 | 0.33 | 2/4 |
+| H k=6 β=0.5 | 0.00 | 0.67 | 0.67 | 0.33 | 2/4 |
+| H k=6 β=1.0 | 0.00 | 0.67 | 0.67 | 0.33 | 2/4 |
+| H k=8 β=0.5 | 1.00 | 0.67 | 0.67 | 0.33 | 3/4 |
+| A1 τ=2 | 1.00 | 0.67 | 0.67 | 0.33 | 3/4 |
+| A1 τ=5 | 1.00 | 0.67 | 0.67 | 0.33 | 3/4 |
+| A1 τ=10 | 1.00 | 0.67 | 0.67 | 0.33 | 3/4 |
+
+1. **Alexander-succession frozen at cov=0.33 across every row.** Same
+   2 missing claims (`diad_seleucus_babylon`,
+   `diad_cassander_macedon`) and same 2 unexpected in top-K
+   (`diad_wars_begin`, `diad_ptolemaic_dynasty`) on every single row
+   — byte-identical diagnostic signature. The retriever retrieves
+   `diad_ptolemy_egypt` (contains "Ptolemy", "founded", "Egypt")
+   but misses Seleucus + Cassander, whose claim text doesn't use
+   "founded" consistently ("seized Babylon and founded the Seleucid
+   Empire", "took control of Macedon and Greece").
+
+2. **Option A1 is inert under bge-base.** τ ∈ {2, 5, 10} produces
+   byte-identical arc breakdowns to control. Matches the MiniLM-era
+   refutation; encoder swap did not change this. Likely because tier-2
+   claims span 800 BCE–100 BCE (~700 years) and the final-turn
+   probes don't have asOf scoping — temporal-decay has no signal to
+   exploit.
+
+3. **Option H is net-harmful on philosophers arc** at β=1.0 across all
+   tested k values, and at β=0.5 for k=6 only. The
+   `phil_aristotle_tutors_alexander` claim drops out of top-K. Two H
+   rows are safe (k=4 β=0.5, k=8 β=0.5) but null on the target.
+
+4. **Claim-level diagnostic is the ship.** The missing/unexpected
+   claim dump made the refutation legible in one sweep (9 rows) —
+   no per-row inspection needed. Kept enabled in iterative-sweep
+   behind `PER_ARC=1` gate.
+
+### What this settles
+
+- **Phase-4a-era prune list for H and A1 stands under bge-base.** No
+  encoder-stale reversal (unlike Dijkstra / J min-gate in Phase 2.8).
+- **Alexander-succession is a within-cluster-granularity wall**, not
+  an anchor-scoring problem. The claim set has high semantic proximity
+  in the embedding space; scoring tweaks cannot separate them.
+
+### Next session candidates
+
+1. **BGE-large retune (Phase 2.13 question 2)** — still parked. A
+   larger encoder might have the within-cluster resolution bge-base
+   lacks. This is the only remaining architecturally-consistent
+   non-LLM option.
+2. **Phase 7 LongMemEval unpark** — different corpus, different
+   failure modes; gives external comparability and might reveal where
+   bge-base's geometry works well.
+3. **Accept 3/4 as tier-2 eval-B ceiling**, declare success-type-A
+   (competent retriever, not Part-1's more ambitious framing), and
+   move on.
+
+### Files touched
+
+- `experiments/path-memory-smoketest/eval/iterative-sweep.ts` —
+  claim-text lookup map; `ARC=<substring>` trace filter;
+  `PER_ARC=1` now prints missing + unexpected claim IDs with text;
+  `2.14s2` config block (5 H rows + 3 A1 rows);
+  `CONFIG_SET=phase214-stage2` filter branch; `PHASE_214_STAGE2_LABELS`.
+- `experiments/path-memory-smoketest/notes/phase-2.14-stage2-reading.md`
+  — prior-art retest context.
+- Nothing in `src/`, no test changes, no default changes.

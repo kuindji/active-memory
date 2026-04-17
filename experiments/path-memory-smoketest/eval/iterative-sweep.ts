@@ -16,6 +16,12 @@ const DATASET =
           ? { claims: tier2Greek, traces: tracesTier2 }
           : { claims: tier1Alex, traces: tracesTier1 };
 
+const CLAIM_TEXT_BY_ID = new Map<string, string>(DATASET.claims.map((c) => [c.id, c.text]));
+
+// Substring match against trace.name (lowercased). Lets e.g. `ARC=alexander`
+// pick the single "Alexander succession arc" without memorising the full string.
+const ARC_NAME_FILTER = (process.env.ARC ?? "").toLowerCase();
+
 function rankClaims(paths: ScoredPath[]): ClaimId[] {
     const best = new Map<ClaimId, number>();
     for (const p of paths) {
@@ -557,6 +563,46 @@ const CONFIGS: Config[] = [
         }
         return rows;
     })(),
+
+    // Phase 2.14 Stage 2 — targeted retest of Option H (cluster-affinity-boost)
+    // and Option A1 (temporalDecayTau) under bge-base on the remaining failing
+    // arc (Alexander succession, cov=0.33). Both were pruned under MiniLM; the
+    // bge-base geometry is different enough to warrant a narrow retest before
+    // declaring the arc encoder-granularity-bound. Control row reuses the
+    // Phase 2.14 default at label "2.14 bfs wfusion τ=0.2 + decay=0.2".
+    ...(() => {
+        const rows: Config[] = [];
+        const hGrid: { k: number; beta: number }[] = [
+            { k: 4, beta: 0.5 },
+            { k: 4, beta: 1.0 },
+            { k: 6, beta: 0.5 },
+            { k: 6, beta: 1.0 },
+            { k: 8, beta: 0.5 },
+        ];
+        for (const { k, beta } of hGrid) {
+            rows.push({
+                label: `2.14s2 H k=${k} β=${beta} tau=0.2 + decay=0.2`,
+                options: {
+                    traversal: "bfs",
+                    anchorScoring: { kind: "cluster-affinity-boost", tau: 0.2, beta, k },
+                    sessionDecayTau: 0.2,
+                },
+            });
+        }
+        for (const temporalDecayTau of [2, 5, 10]) {
+            rows.push({
+                label: `2.14s2 A1 temporalDecayTau=${temporalDecayTau} + wfusion τ=0.2 + decay=0.2`,
+                temporalDecayTau,
+                options: {
+                    traversal: "bfs",
+                    probeComposition: "weighted-fusion",
+                    weightedFusionTau: 0.2,
+                    sessionDecayTau: 0.2,
+                },
+            });
+        }
+        return rows;
+    })(),
 ];
 
 // Tier-3 validation matrix (Phase 2.7). Narrow sweep per CONTEXT.md §1828 —
@@ -633,6 +679,21 @@ const PHASE_214_LABELS = new Set<string>([
     "2.14 bfs wfusion τ=0.2 + decay=0.3 + K=7",
 ]);
 
+// Phase-2.14 Stage 2 narrow matrix: new Phase-2.14 default as control + H/A1
+// retest on the Alexander-succession arc. See CONFIGS entries labelled
+// "2.14s2 ...".
+const PHASE_214_STAGE2_LABELS = new Set<string>([
+    "2.14 bfs wfusion τ=0.2 + decay=0.2",
+    "2.14s2 H k=4 β=0.5 tau=0.2 + decay=0.2",
+    "2.14s2 H k=4 β=1 tau=0.2 + decay=0.2",
+    "2.14s2 H k=6 β=0.5 tau=0.2 + decay=0.2",
+    "2.14s2 H k=6 β=1 tau=0.2 + decay=0.2",
+    "2.14s2 H k=8 β=0.5 tau=0.2 + decay=0.2",
+    "2.14s2 A1 temporalDecayTau=2 + wfusion τ=0.2 + decay=0.2",
+    "2.14s2 A1 temporalDecayTau=5 + wfusion τ=0.2 + decay=0.2",
+    "2.14s2 A1 temporalDecayTau=10 + wfusion τ=0.2 + decay=0.2",
+]);
+
 const CONFIG_SET = (process.env.CONFIG_SET ?? "").toLowerCase();
 
 const ACTIVE_CONFIGS =
@@ -640,9 +701,11 @@ const ACTIVE_CONFIGS =
         ? CONFIGS.filter((c) => PHASE_213_LABELS.has(c.label))
         : CONFIG_SET === "phase214"
           ? CONFIGS.filter((c) => PHASE_214_LABELS.has(c.label))
-          : TIER === "tier3"
-            ? CONFIGS_TIER3
-            : CONFIGS;
+          : CONFIG_SET === "phase214-stage2"
+            ? CONFIGS.filter((c) => PHASE_214_STAGE2_LABELS.has(c.label))
+            : TIER === "tier3"
+              ? CONFIGS_TIER3
+              : CONFIGS;
 
 type ConfigResult = {
     narrowed: number;
@@ -674,9 +737,17 @@ async function runConfig(config: Config): Promise<ConfigResult> {
     let narrowed = 0;
     let coherent = 0;
     let arcs = 0;
-    const perArc: { name: string; narrowed: boolean; coherent: boolean; coverage: number }[] = [];
+    const perArc: {
+        name: string;
+        narrowed: boolean;
+        coherent: boolean;
+        coverage: number;
+        missing: ClaimId[];
+        unexpected: ClaimId[];
+    }[] = [];
 
     for (const trace of DATASET.traces) {
+        if (ARC_NAME_FILTER && !trace.name.toLowerCase().includes(ARC_NAME_FILTER)) continue;
         const session = memory.createSession();
         const sizeAcrossTurns: number[] = [];
         let lastTopClaims: Set<ClaimId> = new Set();
@@ -712,11 +783,17 @@ async function runConfig(config: Config): Promise<ConfigResult> {
         const arcCoherent = coverage >= 0.5;
         if (arcCoherent) coherent++;
         arcs++;
+        const missing: ClaimId[] = [];
+        for (const id of finalExpected) if (!lastTopClaims.has(id)) missing.push(id);
+        const unexpected: ClaimId[] = [];
+        for (const id of lastTopClaims) if (!finalExpected.has(id)) unexpected.push(id);
         perArc.push({
             name: trace.name,
             narrowed: arcNarrowed,
             coherent: arcCoherent,
             coverage,
+            missing,
+            unexpected,
         });
     }
 
@@ -725,6 +802,18 @@ async function runConfig(config: Config): Promise<ConfigResult> {
             console.log(
                 `    · ${a.name.padEnd(48)} narrow=${a.narrowed ? "Y" : "n"} coh=${a.coherent ? "Y" : "n"} cov=${a.coverage.toFixed(2)}`,
             );
+            if (a.missing.length > 0) {
+                console.log(`      missing (${a.missing.length}):`);
+                for (const id of a.missing) {
+                    console.log(`        - ${id}: ${CLAIM_TEXT_BY_ID.get(id) ?? "(unknown)"}`);
+                }
+            }
+            if (a.unexpected.length > 0) {
+                console.log(`      unexpected in top-K (${a.unexpected.length}):`);
+                for (const id of a.unexpected) {
+                    console.log(`        - ${id}: ${CLAIM_TEXT_BY_ID.get(id) ?? "(unknown)"}`);
+                }
+            }
         }
     }
 
