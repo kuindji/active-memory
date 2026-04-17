@@ -977,6 +977,177 @@ are informative):
   single-probe ones. If a future corpus shape rewards multi-probe
   coverage, J cov-bonus is the tool — but tier-2 doesn't.
 
+### Phase 2.4 findings — Option H (cluster-affinity-boost)
+
+**Hypothesis (carried in from Phase 2.3):** the three still-failing
+tier-2 eval-B arcs plateau at 1/4 because their expected answers sit
+on **topical cluster boundaries** the current embedding + IDF-weighted
+lexical edges do not privilege. Adding a cluster-affinity signal to
+the anchor-scoring aggregate should promote bridge claims when the
+probe set itself spans multiple clusters.
+
+**Primitive shipped:** `AnchorScoring.kind = "cluster-affinity-boost"`
+with parameters `tau`, `beta`, `k`, `temperature?`, `seed?`,
+`useSessionWeights?`. Formula:
+
+```
+score(c) = Σ_p w(p) · max(0, cos(p, c) − τ)       // base = Option I
+        × (1 + β · max_p cos(probeClusters(p), claimClusters(c)))
+```
+
+Soft-cluster membership from seeded cosine-based k-means++ over the
+valid-claim embedding set (`src/clusters.ts`), softmax with
+`temperature` over per-centroid cosines. Multiplicative form means
+`cosAgg = 0` claims stay out; `beta = 0` collapses to Option I
+exactly. Clusters are recomputed on every retrieve that uses the
+kind (cheap at 242 claims; cacheable later).
+
+**Sweep:** 9 rows on `iterative-sweep.ts`, k ∈ {4, 6, 8, 10}, β ∈
+{0.5, 1.0, 2.0}, all paired with `sessionDecayTau = 0.3` for
+apples-to-apples with the Phase-2.1-best row. Plus a β=0 isolation
+row.
+
+**Outcome (refuted on pass criterion):**
+
+```
+tier-2 eval-B coherence (threshold = 0.5 · expected.size in top-@K):
+  Phase-2.1 best (decay=0.3)           1/4     (target)
+  H k=4  β=1.0                          1/4
+  H k=6  β=0.5                          1/4
+  H k=6  β=1.0                          1/4
+  H k=6  β=2.0                          1/4
+  H k=8  β=0.5                          1/4
+  H k=8  β=1.0                          1/4
+  H k=8  β=2.0                          1/4
+  H k=10 β=1.0                          0/4  (under-clustering hurts)
+  H k=8  β=0   (isolation → Option I)   1/4
+
+tier-1 eval-B coherence: 3/3 preserved at every H config (including
+k=10). Tier-1 primitive is robust; tier-2 is the gap.
+```
+
+Isolation row matches Phase-2.1 best exactly, confirming H's base
+aggregation is correct. The β=0 → Option I collapse property is also
+verified in `tests/retriever.test.ts`.
+
+**H is not inert** — anchor composition changes under β>0 (verified
+by per-turn top-5 diagnostic against Phase-2.1 best). Changes are
+mostly neutral: on Athens turn 1 and Alexander-succession turn 2, H
+drops one expected claim (hits 1→0 / 2→1), while no failing arc's
+critical turn gains a missing expected claim. Net coherence is
+unchanged.
+
+**Second reframing (Phase-2.3's cross-cluster story was imprecise):**
+Per-turn top-5 inspection under H vs. Phase-2.1 best shows the three
+still-failing arcs decompose into **three distinct failure modes**,
+not a single cross-cluster story:
+
+1. **Alexander succession turn 3** — vocabulary distractor.
+   Expected: `diad_ptolemy_egypt`, `diad_seleucus_babylon`,
+   `diad_cassander_macedon`. Actual top-5: `diad_wars_begin`,
+   `diad_babylon_partition`, `pw_herodotus_chronicle`,
+   `pw_plataea_victory`, `pw_pausanias_commands`. The intruders are
+   Persian-Wars-era claims matching the token *"generals"* and
+   *"founded"* generically. Cluster-affinity can't help because the
+   probes cluster in alex/diad space but the intruders cluster with
+   them too (shared "general" vocabulary bakes into the embedding).
+   This is a **claim-specificity problem**, not a cluster-boundary
+   problem.
+
+2. **Academy arc turn 3** — required claim outside the candidate
+   set. Expected: `phil_plato_republic`, `phil_plato_symposium`,
+   `phil_plato_forms`. Under both Phase-2.1 best and H,
+   `phil_plato_forms` is never in top-5. The probes ("Plato's most
+   important writings" / "Plato's dialogues and theories") should
+   embed close to `phil_plato_forms` ("Plato developed the theory of
+   Forms") but they do not. This is an **embedding/alignment
+   problem**, not a scoring-aggregate problem — no anchor-scoring
+   reshape can surface a claim whose raw cosine rank is outside
+   top-K.
+
+3. **Athens at war turn 4** — within-cluster miss on specific late
+   events. Expected: `pwar_aegospotami`, `pwar_athens_surrenders`,
+   `pwar_long_walls_demolished`. Top-3 captures
+   `pwar_athens_surrenders` only. The missing events cluster
+   identically with the probed subject (all late Peloponnesian War,
+   all `pwar_` cluster) — cluster-affinity is **inert by design**
+   here (the boost factor is ≈1 for both intruders and targets).
+   This one is also a **claim-specificity / embedding-granularity
+   problem**.
+
+All three failures are now traceable to claim-level problems:
+distractor vocabulary, embedding misalignment, or within-cluster
+granularity. **None are cross-cluster bridge problems** that
+cluster-affinity could solve. Phase-2.3's reframing correctly
+identified that aggregate-shape can't fix it; Phase-2.4 sharpens
+that further — *cluster geometry can't fix it either*.
+
+### Phase 2.4 hypothesis status
+
+**Refuted.** Option H's cluster-affinity-boost preserves tier-1 at
+3/3 and tier-1 anchor behavior, but does not lift tier-2 eval-B
+beyond 1/4 at any swept `(k, β)`. The hypothesis that cross-cluster
+expected answers are the dominant tier-2 failure mode is itself
+refuted by per-turn diagnostic: the three failing arcs have
+within-cluster or vocabulary-driven failures, not cluster-boundary
+failures.
+
+**Implication for next session:** retire sketch #2 (edge-weight
+Dijkstra cluster-agreement rescaling) — it addresses the same
+(now-refuted) cross-cluster story. The new candidate directions
+target claim-specificity and embedding-alignment:
+
+- **Option L (new) — expand anchor candidate set.** Raise
+  `anchorTopK` from 5 to 10 (or 15) and see if `phil_plato_forms`
+  enters. Cheap, no new code. Accepts more distractor paths for
+  more coverage; scoring + length-penalty should still rank a
+  coherent multi-probe path above distractors.
+- **Option M (new) — claim-level IDF mass on anchors, not edges.**
+  A2 (`cosine-idf-mass`) applied per anchor, not per edge, would
+  penalize generic-vocabulary claims like `pw_pausanias_commands`
+  when scoring against "generals who kept parts". Already has
+  infrastructure — extend the sweep to tier-2 with α ∈ {0.5, 1.0}.
+- **Option N (new) — per-probe IDF filtering.** Probes carry
+  tokens; token-IDF-weighted probe embedding would downweight
+  high-frequency words like "generals" that drag intruders in.
+
+Option K (probe-conditional anchor fusion) retained as backup.
+Option G (tier-3 now, accept 1/4) now stronger — if
+claim-specificity / embedding-granularity is the remaining gap, it
+will be ≥10× worse at 5000-claim Wikipedia scale regardless of any
+tier-2 fix, and the corpus shift itself may mask or reveal the
+signal.
+
+### Phase 2.4 delivered
+
+Source: current working tree. Files touched:
+- `src/clusters.ts` (new) — seeded cosine k-means++ + soft
+  membership + membership-similarity. 100% pure function, no
+  graph/store dependency. Handles `k > n` (clamps), dead-centroid
+  reseed on the point least similar to any existing centroid.
+- `src/types.ts` — `AnchorScoring` variant
+  `cluster-affinity-boost`.
+- `src/retriever.ts` — new branch in `composeAnchors`, positioned
+  before Option I; skips k-means entirely when `beta === 0` so the
+  β=0 isolation path is no-op on performance.
+- `tests/clusters.test.ts` (new) — 11 tests: determinism under
+  fixed seed, synthetic 3-cluster recovery, `k > n` clamping,
+  `k = 1` base case, rejects empty/zero-k, softmax temperature
+  sanity, membership-similarity bridge semantics.
+- `tests/retriever.test.ts` — 3 new tests: β=0 collapses to
+  Option I byte-for-byte, synthetic 2-cluster + bridge scenario,
+  determinism across back-to-back retrieves at fixed seed.
+- `eval/iterative-sweep.ts` — 9 Option H rows appended (k ∈
+  {4,6,8,10}, β ∈ {0.5,1.0,2.0}, + β=0 isolation).
+
+81 tests pass (was 67 pre-Phase-2.4). Typecheck, lint, format clean.
+
+Does *not* ship in `eval/sweep.ts` (eval-A) rows — Option H
+is refuted on the primary criterion (tier-2 eval-B ≥ 2/4); eval-A
+numbers would be secondary and adding them would grow the sweep
+matrix without changing the conclusion. Can be added later if a
+future primitive passes eval-B and we want a back-check on eval-A.
+
 ### Phase 2.3 delivered
 
 Source: current working tree. Files touched:
@@ -1041,6 +1212,7 @@ experiments/path-memory-smoketest/
 │   ├── graph.ts                # GraphIndex — three-edge-type builder
 │   ├── tokenize.ts             # stopword-filtered tokenizer
 │   ├── retriever.ts            # multi-probe matcher; BFS + Dijkstra traversal
+│   ├── clusters.ts             # seeded k-means++ + soft cluster membership
 │   ├── interfaces.ts           # PathMemory + Session facades
 │   └── embedder.ts             # ONNX embedder factory (wraps parent adapter)
 ├── data/
@@ -1059,15 +1231,17 @@ experiments/path-memory-smoketest/
     ├── embedder.test.ts        # real embedder smoke test
     ├── store.test.ts           # 7 bitemporal invariants
     ├── graph.test.ts           # 13 edge-formation + IDF invariants
-    ├── retriever.test.ts       # 11 retrieval behaviors
+    ├── retriever.test.ts       # retrieval behaviors (36 tests post-2.4)
+    ├── clusters.test.ts        # k-means + soft membership (11 tests)
+    ├── interfaces.test.ts      # Session turn tracking
     ├── eval-vs-baseline.test.ts          # eval (A) tier-1
     ├── eval-vs-baseline-tier2.test.ts    # eval (A) tier-2
     ├── eval-iterative.test.ts            # eval (B) tier-1
     └── eval-iterative-tier2.test.ts      # eval (B) tier-2
 ```
 
-46 tests pass (35 tier-1 + new tier-2 eval-A and eval-B). Typecheck
-clean.
+81 tests pass post-Phase-2.4 (46 → 54 at 2.1 → 59 at 2.2 → 67 at 2.3
+→ 81 at 2.4). Typecheck clean.
 
 ---
 
@@ -1143,6 +1317,35 @@ Outcome: **default flip unexpectedly solved tier-1 eval-B** (2/3
 tier-2 eval-B from 0/4 to 1/4 — below the ≥2/4 pass criterion.
 Remaining gap was hypothesized as anchor-cloud displacement;
 Option I was the natural test.
+
+### Phase 2.4 — Option H — **done, refuted**
+
+See "Phase 2.4 findings" in Part 2. Landed:
+- `src/clusters.ts` (new) — seeded cosine k-means++ with soft
+  membership and cosine-based membership similarity; pure-function,
+  no graph/store dependency; handles dead-centroid reseed and
+  `k > n` clamp.
+- `AnchorScoring.kind = "cluster-affinity-boost"` with
+  `tau`, `beta`, `k`, `temperature?`, `seed?`, `useSessionWeights?`
+  — `cosAgg · (1 + β · max_p clusterAffinity(p, c))` using the soft
+  membership vectors. β=0 skips the k-means entirely and collapses
+  to Option I.
+- Phase-2.4 9-row extension to `iterative-sweep.ts`; 11 new
+  cluster-unit tests + 3 retriever tests (β=0 collapse, 2-cluster
+  bridge, determinism).
+
+Outcome: **every H config matches tier-1 eval-B at 3/3**; tier-2
+eval-B stays at 1/4 across `(k ∈ {4,6,8,10}) × (β ∈ {0.5,1.0,2.0})`.
+Diagnostic trace of anchor top-5 under H vs. Phase-2.1 best shows
+H *is* reshaping anchor sets but in a neutral-to-slightly-negative
+direction. Critically, per-turn inspection refutes the Phase-2.3
+"cross-cluster" reframing itself: the three failing arcs decompose
+into three *distinct* claim-level failure modes — vocabulary
+distractor (`pw_pausanias_commands` matching the token "generals"),
+required-claim-outside-top-K (`phil_plato_forms` never in top-5),
+and within-cluster-granularity (specific late-Peloponnesian events
+fighting each other inside the `pwar_` cluster). None are
+cross-cluster bridge problems. Ships as opt-in infrastructure.
 
 ### Phase 2.3 — Option J — **done, refuted**
 
@@ -1309,51 +1512,62 @@ the expected claims themselves sit on topical cluster boundaries
 that the embedding + edge weights do not privilege. This is a
 graph-structural problem, not a scoring-shape problem.
 
-**Option H — topic-conditional temporal/edge cost (new
-recommended).** Phase-2.3's cluster-boundary finding promotes
-Option H from fallback to primary candidate. The structural move:
-re-weight edges (or gate traversal / anchor selection) by
-**topical cohesion**, so cross-cluster hops/anchors carry cost
-unless the endpoints share a cluster signal. Concrete design
-sketch:
-- Compute per-node **cluster membership vector**: cosine-based
-  soft membership to k discovered clusters (e.g., k-means over
-  claim embeddings at ingest, or use the existing IDF-weighted
-  lexical edges to form communities via connected-component /
-  label-propagation on the `edge.weight > floor` subgraph).
-- Expose a new anchor/traversal signal `clusterAffinity(p, c)` =
-  similarity of probe `p`'s soft-cluster distribution to claim
-  `c`'s, and add one of:
-  - `AnchorScoring.kind = "cluster-affinity-boost"` — score(c) =
-    `cosAgg(c) · (1 + β · clusterMatch(c))` where
-    `clusterMatch(c) = max_p sim(clusters(p), clusters(c))`. Boosts
-    cross-cluster claims only when the probe set itself spans the
-    clusters.
-  - Edge-weight rescaling in `GraphIndex`: lexical/semantic edge
-    weight multiplied by a cluster-agreement factor; Dijkstra then
-    pays more for cross-cluster hops.
-- Pass criterion: ≥ 2/4 tier-2 eval-B coherent, tier-1 3/3
-  preserved, eval-A within ±0.02 of Phase-2.1 default on both
-  tiers.
+**Option H — done (Phase 2.4), refuted.** Cluster-affinity-boost
+anchor scoring. `score(c) = cosAgg(c) · (1 + β · max_p clusterAffinity(p, c))`
+with soft k-means over claim embeddings. Across 9 configs
+(k ∈ {4,6,8,10}, β ∈ {0.5,1.0,2.0}) the boost preserves tier-1
+eval-B at 3/3 and leaves tier-2 eval-B at 1/4 — same as Phase-2.1
+best. β=0 isolation row matches Phase-2.1 best exactly, confirming
+mechanical correctness. Per-turn diagnostic refutes the Phase-2.3
+"cross-cluster" reframing itself: the three failing arcs have
+within-cluster or vocabulary-driven failures (see § Phase 2.4
+findings), so cluster geometry was never the bottleneck. Edge-weight
+rescaling (sketch #2) is retired for the same reason.
 
-**Option K (new, experimental alternative to H) — probe-conditional
-anchor fusion.** Instead of scoring anchors against the union of
-probes, score each probe's top-K *independently* and union them
-only if their chosen anchors span compatible clusters. Equivalent
-to intersection at the *cluster* level rather than the *claim*
-level. Cheaper than H (no cluster computation on ingest) but
-relies on late-turn probes being specific enough to anchor their
-own cluster; may underperform on conversational turns that stay
-topical.
+**Option L (new, recommended) — expand anchor candidate set.**
+Raise `anchorTopK` from 5 to 10 / 15 on tier-2 and check whether
+the Academy-arc turn-3 miss (`phil_plato_forms` currently outside
+top-5) gets surfaced. Cheapest possible experiment — no new code,
+just a sweep row. Accepts more distractor paths for more coverage;
+existing length-penalty + probeCoverage scoring must still rank a
+coherent multi-probe path above distractors. If coherence improves
+at `anchorTopK = 10` but eval-A regresses >±0.02, the tradeoff is
+documented and we pick between coverage and precision.
 
-**Option G — tier-3 now, accept tier-2 1/4.** Unchanged argument.
-Counter-argument sharpens: the same cross-cluster failure mode
-will dominate tier-3, and diagnosing it in a 5000-claim corpus is
-harder than in tier-2's 242. Wait for H (or a positive K) before
-scaling.
+**Option M (new) — per-anchor IDF mass (not per-edge).** Port A2
+(`cosine-idf-mass`, α ∈ {0.5, 1.0}) semantics to the anchor-scoring
+pipeline and sweep on tier-2. Would penalize generic-vocabulary
+claims like `pw_pausanias_commands` (which match the probe word
+*"generals"* but lack specific Diadochi-kingdom semantics).
+Infrastructure already exists in the retriever; the work is adding
+it to `weighted-probe-density` / fusion aggregation and sweeping.
 
-Recommendation: **Option H — cluster-affinity primitive** is the
-next entry point. Phase-2.3's negative results pin down that the
-remaining tier-2 gap is structural (cluster-boundary handling), not
-aggregate-shape. Option K is the backup if H's cluster computation
-adds too much ingest cost. Option G still waits for eval-B ≥ 2/4.
+**Option N (new) — per-probe IDF-weighted embedding.** Recompute
+probe embeddings with token-IDF weighting at embed time (or via a
+probe-side normalization that downweights high-frequency tokens).
+Targets the same vocabulary-distractor failure as Option M but at
+the probe side. Requires re-embedding or a probe post-processing
+step; more invasive than M.
+
+**Option K (retained as backup) — probe-conditional anchor fusion.**
+Score each probe's top-K independently; union only across probes
+whose anchor sets share cluster signal. Addresses the
+cross-cluster story that Phase 2.4 refuted; only worth trying if a
+future arc actually *is* cross-cluster.
+
+**Option G — tier-3 now, accept tier-2 1/4 (stronger case).**
+Phase 2.4's second reframing changes the cost-benefit: the
+remaining tier-2 failures are claim-specificity /
+embedding-granularity problems that will likely be **10× worse**
+at 5000-claim Wikipedia scale — so either (a) a tier-3 run reveals
+whether 242-claim tier-2 is even a proxy for the real problem, or
+(b) a tier-3 run confirms the same primitives collapse and we
+re-prioritize Options L/M/N against the broader corpus.
+
+Recommendation: **Option L first** — it's cheap (minutes, no new
+code) and directly targets one of the three diagnosed failure
+modes (Academy turn-3 missing-from-candidate-set). If L surfaces
+`phil_plato_forms` *and* keeps eval-A within ±0.02, ship it. If L
+doesn't help, move to Option M (per-anchor IDF mass); M + L stack
+naturally. Option G (tier-3) becomes the next primary entry if
+L and M both refute.

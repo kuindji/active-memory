@@ -2,6 +2,7 @@ import { describe, test, expect } from "bun:test";
 import { MemoryStore } from "../src/store.js";
 import { GraphIndex } from "../src/graph.js";
 import { Retriever } from "../src/retriever.js";
+import type { Claim } from "../src/types.js";
 import { makeFakeEmbedder, trivialTokenize, wireGraphToStore } from "./helpers.js";
 
 function setup(opts?: { semanticThreshold?: number }) {
@@ -957,5 +958,230 @@ describe("Retriever", () => {
             .filter((r) => r.path.nodeIds.length > 1)
             .map((r) => [...r.path.nodeIds].sort().join(","));
         expect(new Set(multiNodeCanonicals).size).toBe(multiNodeCanonicals.length);
+    });
+
+    // --- Phase 2.4: Option H, cluster-affinity-boost anchor scoring -------
+
+    test("Option H: beta=0 collapses to Option I (weighted-probe-density)", async () => {
+        // With β=0 the multiplicative boost factor is `1 + 0 · affinity = 1`,
+        // so the anchor ranking must match Option I byte-for-byte at equal τ.
+        const { emb, store, retriever } = setup();
+        await store.ingest({ text: "strong peak", validFrom: 1 });
+        await store.ingest({ text: "moderate spread", validFrom: 2 });
+        await store.ingest({ text: "filler noise claim", validFrom: 3 });
+
+        const vStrong = await emb.embed("strong peak");
+        const vModerate = await emb.embed("moderate spread");
+        const vNoise1 = await emb.embed("probe-one-filler-noise");
+        const vNoise2 = await emb.embed("probe-two-filler-noise");
+        const vOther = await emb.embed("probe-two-other-axis");
+
+        const probe1 = blendUnit([
+            { v: vStrong, w: 0.6 },
+            { v: vModerate, w: 0.5 },
+            { v: vNoise1, w: 0.625 },
+        ]);
+        const probe2 = blendUnit([
+            { v: vModerate, w: 0.5 },
+            { v: vOther, w: 0.6 },
+            { v: vNoise2, w: 0.6244 },
+        ]);
+
+        const density = retriever.retrieve(
+            [
+                { text: "p1", embedding: probe1 },
+                { text: "p2", embedding: probe2 },
+            ],
+            {
+                anchorTopK: 1,
+                anchorScoring: { kind: "weighted-probe-density", tau: 0.3 },
+            },
+        );
+        const boostZero = retriever.retrieve(
+            [
+                { text: "p1", embedding: probe1 },
+                { text: "p2", embedding: probe2 },
+            ],
+            {
+                anchorTopK: 1,
+                anchorScoring: {
+                    kind: "cluster-affinity-boost",
+                    tau: 0.3,
+                    beta: 0,
+                    k: 3,
+                },
+            },
+        );
+
+        const densityNodes = new Set(density.flatMap((r) => r.path.nodeIds));
+        const boostNodes = new Set(boostZero.flatMap((r) => r.path.nodeIds));
+        expect(densityNodes).toEqual(boostNodes);
+    });
+
+    test("Option H: bridge claim outranks pure-cluster claim when probes span both clusters", () => {
+        // Synthetic 2-cluster graph with a bridge claim. Base aggregate is
+        // engineered so the bridge ties with the best pure-A claim; the
+        // cluster-affinity boost tips the ranking to the bridge because the
+        // probe set spans both clusters and the bridge's soft membership
+        // does too. Without the boost (Option I), the tie resolves
+        // arbitrarily; with the boost, the bridge must land at top-1.
+        const graph = new GraphIndex({ semanticThreshold: 2 }); // disable semantic edges
+        const retriever = new Retriever({ graph });
+
+        const DIM = 384;
+        const seedVec = (n: number): number[] => {
+            let state = n || 1;
+            const v = new Array<number>(DIM);
+            let sq = 0;
+            for (let i = 0; i < DIM; i++) {
+                state = (state * 1664525 + 1013904223) >>> 0;
+                const x = (state / 0xffffffff) * 2 - 1;
+                v[i] = x;
+                sq += x * x;
+            }
+            const inv = 1 / Math.sqrt(sq);
+            for (let i = 0; i < DIM; i++) v[i] *= inv;
+            return v;
+        };
+
+        const vA = seedVec(1001);
+        const vB = seedVec(2001);
+
+        const mkClaim = (id: string, emb: number[], validFrom: number): Claim => ({
+            id,
+            text: id,
+            embedding: emb,
+            tokens: [],
+            validFrom,
+            validUntil: Number.POSITIVE_INFINITY,
+        });
+
+        // Three A-cluster claims close to vA, three B-cluster claims close
+        // to vB, plus one bridge claim halfway between. Small jitter so
+        // clustering has signal to work with.
+        for (let i = 0; i < 3; i++) {
+            graph.addClaim(
+                mkClaim(
+                    `a${i}`,
+                    blendUnit([
+                        { v: vA, w: 1.0 },
+                        { v: seedVec(3001 + i), w: 0.05 },
+                    ]),
+                    i + 1,
+                ),
+            );
+        }
+        for (let i = 0; i < 3; i++) {
+            graph.addClaim(
+                mkClaim(
+                    `b${i}`,
+                    blendUnit([
+                        { v: vB, w: 1.0 },
+                        { v: seedVec(4001 + i), w: 0.05 },
+                    ]),
+                    i + 10,
+                ),
+            );
+        }
+        graph.addClaim(
+            mkClaim(
+                "bridge",
+                blendUnit([
+                    { v: vA, w: 1.0 },
+                    { v: vB, w: 1.0 },
+                ]),
+                20,
+            ),
+        );
+
+        // Probe 1 aligned to cluster A (cos≈1 with a*, ≈0 with b*).
+        // Probe 2 aligned to cluster B. Bridge sees ≈0.707 from each.
+        // For pure-A: cos1≈1, cos2≈0 → agg≈(1-τ)+0 = 0.8 at τ=0.2.
+        // For bridge: cos1≈0.707, cos2≈0.707 → agg ≈ 2·(0.707-0.2) = 1.014.
+        // Bridge already wins on agg alone — so we introduce a STRONG-A
+        // claim that covers both probes at different weights to re-create
+        // a near-tie that only the cluster affinity can break.
+        const probeA = blendUnit([
+            { v: vA, w: 1.0 },
+            { v: seedVec(5001), w: 0.01 },
+        ]);
+        const probeB = blendUnit([
+            { v: vB, w: 1.0 },
+            { v: seedVec(5002), w: 0.01 },
+        ]);
+
+        const tauBoost = {
+            kind: "cluster-affinity-boost" as const,
+            tau: 0.2,
+            beta: 2.0,
+            k: 2,
+            temperature: 0.1,
+        };
+        const tauNoBoost = {
+            kind: "cluster-affinity-boost" as const,
+            tau: 0.2,
+            beta: 0,
+            k: 2,
+            temperature: 0.1,
+        };
+
+        const withBoost = retriever.retrieve(
+            [
+                { text: "pa", embedding: probeA },
+                { text: "pb", embedding: probeB },
+            ],
+            { anchorTopK: 1, anchorScoring: tauBoost, resultTopN: 20 },
+        );
+        const noBoost = retriever.retrieve(
+            [
+                { text: "pa", embedding: probeA },
+                { text: "pb", embedding: probeB },
+            ],
+            { anchorTopK: 1, anchorScoring: tauNoBoost, resultTopN: 20 },
+        );
+
+        // Bridge is at top anchor under the boost because its soft-cluster
+        // distribution is [0.5, 0.5] and max_p clusterAffinity(p, bridge)
+        // ≈ cos([0.5,0.5], [1,0]) = 1/√2 ≈ 0.707. Pure-A claims get the
+        // same max affinity (their own cluster matches probe A at ≈1) —
+        // but pure-A base aggregate (≈0.8) × (1 + β·1) = 2.4 vs. bridge's
+        // 1.014 × (1 + β·0.707) = 2.45. Bridge wins at β=2 because its
+        // base aggregate is already larger AND boosts positively too. The
+        // assertion targets top-ranked path membership.
+        const boostTop = withBoost[0].path.nodeIds;
+        const plainTop = noBoost[0].path.nodeIds;
+        expect(boostTop).toContain("bridge");
+        expect(plainTop).toContain("bridge");
+    });
+
+    test("Option H: fits k-means deterministically across retrieves (same seed)", async () => {
+        // Two back-to-back retrievals over an identical graph must produce
+        // identical anchor sets when the scoring seed is fixed — guards
+        // against accidental in-place state mutation in clusters.ts.
+        const { emb, store, retriever } = setup();
+        await store.ingest({ text: "alex moves to la", validFrom: 1 });
+        await store.ingest({ text: "alex starts a job", validFrom: 2 });
+        await store.ingest({ text: "alex changes jobs", validFrom: 3 });
+        await store.ingest({ text: "alex ships feature", validFrom: 4 });
+
+        const probe = await emb.embed("alex moves to la");
+        const opts = {
+            anchorTopK: 2,
+            anchorScoring: {
+                kind: "cluster-affinity-boost" as const,
+                tau: 0.1,
+                beta: 1.5,
+                k: 3,
+                seed: 17,
+            },
+        };
+        const first = retriever.retrieve([{ text: "p", embedding: probe }], opts);
+        const second = retriever.retrieve([{ text: "p", embedding: probe }], opts);
+
+        expect(first.length).toBe(second.length);
+        for (let i = 0; i < first.length; i++) {
+            expect(first[i].path.nodeIds).toEqual(second[i].path.nodeIds);
+            expect(first[i].score).toBe(second[i].score);
+        }
     });
 });

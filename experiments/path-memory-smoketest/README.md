@@ -286,21 +286,25 @@ lifted tier-2 eval-B from 0/4 to 1/4. The remaining tier-2 gap
 second primitive is required. See `CONTEXT.md` § Phase 2.1
 findings for the full analysis.
 
-Phases 2.2 and 2.3 landed two new `AnchorScoring` variants as
-opt-in infrastructure: **Option I** (`weighted-probe-density` —
-linear cosine-density aggregate) and **Option J**
-(`density-coverage-bonus` — super-linear probe-coverage reward;
-`min-cosine-gate` — hard k=P gate). All four configurations
-**preserve** Phase-2.1 baselines but **none lift tier-2 eval-B
-beyond 1/4**. The exponent sweep (`k^(exp−1)` for
-`exp ∈ {1.5, 2, 3}`) is behaviorally flat on coherence, refuting
-the Phase-2.1 hypothesis that anchor-cloud displacement is a
-"strong-peak-vs-moderate-spread" ranking flip. Failure-mode
-inspection in CONTEXT.md § Phase 2.3 identifies the three
-still-failing arcs as **cross-cluster expected answers** — a
-graph-structural problem (cluster-boundary handling), not an
-anchor-scoring one. Next candidate: **Option H**
-(topic/cluster-conditional edge weights or anchor boosts).
+Phases 2.2, 2.3, and 2.4 landed three new `AnchorScoring` variants
+as opt-in infrastructure: **Option I** (`weighted-probe-density` —
+linear cosine-density aggregate), **Option J**
+(`density-coverage-bonus` + `min-cosine-gate`), and **Option H**
+(`cluster-affinity-boost` — soft-k-means cluster match ×
+weighted-fusion aggregate). All variants **preserve** Phase-2.1
+baselines on tier-1 eval-B (3/3) and tier-2 eval-A (~0.548) but
+**none lift tier-2 eval-B beyond 1/4** at any swept
+`(τ, exp, k, β)`. Phase 2.3 reframed the remaining failures as
+*cross-cluster* (graph-structural); Phase 2.4's per-turn diagnostic
+**refuted that reframing too** — the three failing arcs turned out
+to have within-cluster or vocabulary-driven failure modes, not
+cluster-boundary ones. The remaining gap is claim-level
+(specificity / embedding-granularity / anchor-top-K reach), not
+aggregate-shape or cluster-geometry. See `CONTEXT.md` § Phase 2.4
+findings for the three diagnosed failure modes. Next candidates:
+**Option L** (expand `anchorTopK` from 5 to 10), **Option M**
+(per-anchor IDF mass), or **Option G** (accept 1/4 and run
+tier-3).
 
 ## Out of scope (for follow-on work)
 

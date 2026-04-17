@@ -157,6 +157,88 @@ const CONFIGS: Config[] = [
             sessionDecayTau: 0.3,
         },
     },
+
+    // --- Phase 2.4 sweep: Option H (cluster-affinity-boost) -------------
+    // Base aggregate matches Option I at τ=0.2; boost adds
+    // (1 + β·max_p clusterAffinity(p, c)) multiplicatively. k brackets the
+    // known 8-cluster ground truth (pan_/pol_/pw_/pwar_/phil_/alex_/diad_/art_)
+    // on tier-2. Paired with decay=0.3 so the comparison is apples-to-apples
+    // with the Phase-2.1-best row.
+    {
+        label: "H k=4 β=1.0 tau=0.2 + decay=0.3",
+        options: {
+            traversal: "bfs",
+            anchorScoring: { kind: "cluster-affinity-boost", tau: 0.2, beta: 1.0, k: 4 },
+            sessionDecayTau: 0.3,
+        },
+    },
+    {
+        label: "H k=6 β=0.5 tau=0.2 + decay=0.3",
+        options: {
+            traversal: "bfs",
+            anchorScoring: { kind: "cluster-affinity-boost", tau: 0.2, beta: 0.5, k: 6 },
+            sessionDecayTau: 0.3,
+        },
+    },
+    {
+        label: "H k=6 β=1.0 tau=0.2 + decay=0.3",
+        options: {
+            traversal: "bfs",
+            anchorScoring: { kind: "cluster-affinity-boost", tau: 0.2, beta: 1.0, k: 6 },
+            sessionDecayTau: 0.3,
+        },
+    },
+    {
+        label: "H k=6 β=2.0 tau=0.2 + decay=0.3",
+        options: {
+            traversal: "bfs",
+            anchorScoring: { kind: "cluster-affinity-boost", tau: 0.2, beta: 2.0, k: 6 },
+            sessionDecayTau: 0.3,
+        },
+    },
+    {
+        label: "H k=8 β=0.5 tau=0.2 + decay=0.3",
+        options: {
+            traversal: "bfs",
+            anchorScoring: { kind: "cluster-affinity-boost", tau: 0.2, beta: 0.5, k: 8 },
+            sessionDecayTau: 0.3,
+        },
+    },
+    {
+        label: "H k=8 β=1.0 tau=0.2 + decay=0.3",
+        options: {
+            traversal: "bfs",
+            anchorScoring: { kind: "cluster-affinity-boost", tau: 0.2, beta: 1.0, k: 8 },
+            sessionDecayTau: 0.3,
+        },
+    },
+    {
+        label: "H k=8 β=2.0 tau=0.2 + decay=0.3",
+        options: {
+            traversal: "bfs",
+            anchorScoring: { kind: "cluster-affinity-boost", tau: 0.2, beta: 2.0, k: 8 },
+            sessionDecayTau: 0.3,
+        },
+    },
+    {
+        label: "H k=10 β=1.0 tau=0.2 + decay=0.3",
+        options: {
+            traversal: "bfs",
+            anchorScoring: { kind: "cluster-affinity-boost", tau: 0.2, beta: 1.0, k: 10 },
+            sessionDecayTau: 0.3,
+        },
+    },
+    {
+        // Isolation row: β=0 at the winning k must match Option I exactly —
+        // any divergence between the β=0 row and the "Phase 2.1 best"
+        // aggregate indicates a bug in the H branch's base aggregation.
+        label: "H k=8 β=0 tau=0.2 + decay=0.3 (isolation)",
+        options: {
+            traversal: "bfs",
+            anchorScoring: { kind: "cluster-affinity-boost", tau: 0.2, beta: 0, k: 8 },
+            sessionDecayTau: 0.3,
+        },
+    },
 ];
 
 async function runConfig(config: Config): Promise<{

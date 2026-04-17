@@ -71,7 +71,16 @@ export type AnchorScoring =
           exponent: number;
           useSessionWeights?: boolean;
       }
-    | { kind: "min-cosine-gate"; tau: number; useSessionWeights?: boolean };
+    | { kind: "min-cosine-gate"; tau: number; useSessionWeights?: boolean }
+    | {
+          kind: "cluster-affinity-boost";
+          tau: number;
+          beta: number;
+          k: number;
+          temperature?: number;
+          useSessionWeights?: boolean;
+          seed?: number;
+      };
 
 export type ProbeComposition = "union" | "intersection" | "weighted-fusion";
 

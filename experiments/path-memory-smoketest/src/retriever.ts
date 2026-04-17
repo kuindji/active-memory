@@ -1,4 +1,10 @@
 import { cosineSimilarity } from "../../../src/core/scoring.js";
+import {
+    fitKMeans,
+    membershipSimilarity,
+    softMembership,
+    type SoftClusterMembership,
+} from "./clusters.js";
 import type { GraphIndex } from "./graph.js";
 import type {
     AnchorScoring,
@@ -309,6 +315,90 @@ export class Retriever {
             }
             if (probesByAnchor.size > 0) return probesByAnchor;
             // Fall through to the union path if no claim cleared the gate.
+        }
+
+        // Option H (Phase 2.4): cluster-affinity-boost anchor scoring. Base
+        // aggregate is the Phase-2.1 weighted-fusion density
+        // `Σ w(p)·max(0, cos(p, c) − τ)`; on top we multiply by
+        // `(1 + β · max_p cos(probeClusters(p), claimClusters(c)))` where
+        // the cluster distributions come from a seeded soft k-means over
+        // the valid-claim embedding set. Intent: cross-cluster bridge
+        // claims (e.g. Aristotle tutoring Alexander — spans phil_ and
+        // alex_) get boosted iff the probe set itself spans the relevant
+        // clusters. Multiplicative form means `agg = 0` claims stay out,
+        // so this acts as a re-ranker over the Option I candidate set.
+        // `beta = 0` collapses to Option I exactly. Defensive fall-through
+        // to union when τ excludes everything, matching I/J behaviour.
+        if (anchorScoring.kind === "cluster-affinity-boost") {
+            const tau = anchorScoring.tau;
+            const beta = anchorScoring.beta;
+            const useWeights = anchorScoring.useSessionWeights ?? true;
+            const temperature = anchorScoring.temperature;
+            const seed = anchorScoring.seed ?? 1;
+            const k = Math.min(anchorScoring.k, validClaims.length);
+
+            const claimMembership = new Map<ClaimId, SoftClusterMembership>();
+            let probeMembership: SoftClusterMembership[] = [];
+            if (beta > 0 && k > 0 && validClaims.length > 0) {
+                const model = fitKMeans(
+                    validClaims.map((c) => c.embedding),
+                    k,
+                    { seed, similarity: this.similarity },
+                );
+                for (const c of validClaims) {
+                    claimMembership.set(
+                        c.id,
+                        softMembership(c.embedding, model, temperature, this.similarity),
+                    );
+                }
+                probeMembership = probes.map((p) =>
+                    softMembership(p.embedding, model, temperature, this.similarity),
+                );
+            }
+
+            const aggregate = new Map<ClaimId, number>();
+            const probesAboveTau = new Map<ClaimId, Set<number>>();
+            for (const claim of validClaims) {
+                let agg = 0;
+                const above = new Set<number>();
+                perProbe.forEach((pp, pIdx) => {
+                    const cos = pp.cosineByAnchor.get(claim.id) ?? 0;
+                    const raw = Math.max(0, cos - tau);
+                    if (raw > 0) {
+                        const w = useWeights ? probeWeights[pIdx] : 1;
+                        agg += w * raw;
+                        above.add(pIdx);
+                    }
+                });
+                if (agg > 0) {
+                    let boost = 0;
+                    if (beta > 0 && probeMembership.length > 0) {
+                        const cm = claimMembership.get(claim.id);
+                        if (cm) {
+                            for (let pIdx = 0; pIdx < probeMembership.length; pIdx++) {
+                                const s = membershipSimilarity(probeMembership[pIdx], cm);
+                                if (s > boost) boost = s;
+                            }
+                        }
+                    }
+                    aggregate.set(claim.id, agg * (1 + beta * boost));
+                    probesAboveTau.set(claim.id, above);
+                }
+            }
+            const ranked = Array.from(aggregate.entries())
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, anchorTopK)
+                .map(([id]) => id);
+            for (const aid of ranked) {
+                const above = probesAboveTau.get(aid);
+                if (!above || above.size === 0) {
+                    remember(aid, 0);
+                    continue;
+                }
+                for (const pIdx of above) remember(aid, pIdx);
+            }
+            if (probesByAnchor.size > 0) return probesByAnchor;
+            // Fall through to union if τ excluded everything.
         }
 
         // Option I (Phase 2.2): weighted-probe-density anchor scoring. When
