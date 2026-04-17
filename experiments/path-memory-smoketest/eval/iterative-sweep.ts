@@ -452,11 +452,19 @@ const CONFIGS_TIER3: Config[] = [
 
 const ACTIVE_CONFIGS = TIER === "tier3" ? CONFIGS_TIER3 : CONFIGS;
 
-async function runConfig(config: Config): Promise<{
+type ConfigResult = {
     narrowed: number;
     coherent: number;
     arcs: number;
-}> {
+    nodeBumps: number;
+    edgeBumps: number;
+    distinctNodes: number;
+    distinctEdges: number;
+    nodeTop5Share: number;
+    edgeTop5Share: number;
+};
+
+async function runConfig(config: Config): Promise<ConfigResult> {
     const embedder = await getEmbedder();
     const memory = new PathMemory({
         embedder,
@@ -486,6 +494,7 @@ async function runConfig(config: Config): Promise<{
                 mode: trace.mode,
                 anchorTopK: 5,
                 resultTopN: 10,
+                accessTracking: true,
                 ...config.options,
             });
             const ranked = rankClaims(results);
@@ -510,18 +519,41 @@ async function runConfig(config: Config): Promise<{
         arcs++;
     }
 
-    return { narrowed, coherent, arcs };
+    const snap = memory.graph.accessStatsSnapshot();
+    const topNodeCount = snap.nodes.slice(0, 5).reduce((s, n) => s + n.count, 0);
+    const topEdgeCount = snap.edges.slice(0, 5).reduce((s, e) => s + e.count, 0);
+    return {
+        narrowed,
+        coherent,
+        arcs,
+        nodeBumps: snap.totals.nodeBumps,
+        edgeBumps: snap.totals.edgeBumps,
+        distinctNodes: snap.totals.distinctNodes,
+        distinctEdges: snap.totals.distinctEdges,
+        nodeTop5Share: snap.totals.nodeBumps > 0 ? topNodeCount / snap.totals.nodeBumps : 0,
+        edgeTop5Share: snap.totals.edgeBumps > 0 ? topEdgeCount / snap.totals.edgeBumps : 0,
+    };
 }
 
 async function main(): Promise<void> {
     console.log(
         `# iterative-sweep tier=${TIER}  (claims=${DATASET.claims.length}, traces=${DATASET.traces.length})`,
     );
-    console.log(`config | narrowed | coherent`);
+    console.log(
+        `config | narrowed | coherent | nodeBumps(distinct) | top5-share | edgeBumps(distinct) | top5-share`,
+    );
     for (const cfg of ACTIVE_CONFIGS) {
         const r = await runConfig(cfg);
         console.log(
-            `${cfg.label.padEnd(48)} | ${r.narrowed}/${r.arcs}      | ${r.coherent}/${r.arcs}`,
+            [
+                cfg.label.padEnd(48),
+                `${r.narrowed}/${r.arcs}`,
+                `${r.coherent}/${r.arcs}`,
+                `${r.nodeBumps}(${r.distinctNodes})`,
+                r.nodeTop5Share.toFixed(3),
+                `${r.edgeBumps}(${r.distinctEdges})`,
+                r.edgeTop5Share.toFixed(3),
+            ].join(" | "),
         );
     }
 }

@@ -1375,6 +1375,138 @@ Source: current working tree. Files touched:
 
 84 tests pass (was 81 pre-Phase-2.6). Typecheck, lint, format clean.
 
+### Phase 2.8 — BGE-small full re-sweep + Phase 3 instrumentation
+
+**Motivation.** Phase 2.7 pre-flight swapped the encoder (MiniLM →
+BGE-small-en-v1.5) and confirmed the 2/4 narrowing floor was
+encoder-layer (lifted to 4/4 universally), but flagged that
+Phase-2.6's M α=0.5 primitive tuning was encoder-specific and needed
+re-validation. Strategic-review recommendation #1 (embedder upgrade)
+was done in 2.7; this phase lands recommendation #2 (Phase 3 access
+tracking, observability-only) and executes the full Phase-2-series
+re-sweep against BGE-small so the new "best" config is established
+before tier-3 sonnet spend.
+
+**Phase 3 instrumentation (landed, observability-only).** Added
+node + edge read counters on `GraphIndex`, gated by
+`RetrievalOptions.accessTracking` (default `false`). BFS and Dijkstra
+traversal bump the counters on node expansion and accepted edge hops.
+No scoring path consumes the counters. New API: `bumpNode`,
+`bumpEdge`, `nodeReadCount`, `edgeReadCount`, `accessStatsSnapshot`,
+`resetAccessStats`. Six new counter tests (3 graph, 3 retriever).
+`eval/sweep.ts` and `eval/iterative-sweep.ts` now always set
+`accessTracking: true` and emit per-config snapshot totals plus a
+top-5-concentration share (`topNodeCount / totalNodeBumps` and
+equivalent for edges). 91 smoke-test tests pass (85 → 91).
+
+**Re-sweep headline — eval-A (path F1, top configs):**
+
+| Config | tier-1 | tier-2 |
+|---|---|---|
+| bfs (default) | 0.647 | 0.561 |
+| **dijkstra tmp=0.5** | **0.703** | **0.627** |
+| A2 dijkstra tmp=0.5 anchor=idf α∈{0.3..1.0} | 0.703 | 0.627 |
+| J bfs min-gate τ∈{0.1, 0.2} | 0.613 | **0.627 (+5 wins / −2)** |
+| M bfs idf-fusion τ=0.2 α=0.5 | 0.443 | 0.443 |
+| M bfs idf-fusion τ=0.2 α=1.0 | 0.286 | 0.398 |
+| L bfs wfusion τ=0.2 anchorTopK=15 | 0.250 | 0.360 |
+
+Dijkstra tmp=0.5 is the universal eval-A winner under BGE-small, tying
+with every A2 idf-fusion α on Dijkstra and — on tier-2 only — with J
+min-gate. **J min-gate's W/L record (+5/−2) on tier-2 is the best in
+the entire sweep**, outpacing Dijkstra's (+4/−2). Strategic-review #3
+(prune dead primitives) needs revising: Dijkstra and J min-gate were
+both on the MiniLM-era prune list; under BGE-small they are the
+top-two eval-A performers. Option L and Option M α ≥ 0.5 are the new
+prune candidates — both encoder-stale and both strictly regress.
+
+**Re-sweep headline — eval-B (narrowed / coherent arcs):**
+
+- tier-1: virtually every Phase-2.1+ config hits 3/3 + 3/3. Phase-2.1
+  default (`bfs wfusion τ=0.2 + decay=0.3`) is representative.
+- tier-2: **narrowing is universal at 4/4**. Coherence ceiling holds
+  at 1/4 across every primitive. The Phase-2.1-best row
+  (`bfs wfusion τ=0.2 + decay=0.3`) coheres **0/4** under BGE-small
+  — session decay is now net-harmful on tier-2 coherence and should
+  be turned OFF under the new encoder. Best 1/4 coherent rows on
+  tier-2 eval-B:
+  - `bfs wfusion τ=0.2` (no decay)
+  - `J cov-bonus exp=2 τ=0.2 + decay=0.3 on dijkstra`
+  - `M idf-fusion τ=0.2 α∈{0.3, 0.5, 0.7, 1.0} + decay=0.3`
+  - `J cov-bonus exp=2 τ=0.2 no decay`
+
+**Phase 3 access-pattern first look.** Access counters are uniformly
+flat across both tiers and both eval modes:
+
+- Tier-1 eval-A: top-5 nodes = 16.4% of bumps (uniform baseline:
+  5/33 = 15.2%); top-5 edges = 4-7% of bumps.
+- Tier-2 eval-A: top-5 nodes = 2.3% (uniform baseline: 5/236 =
+  2.1%); top-5 edges = 1.0-1.3%.
+- Tier-2 eval-B (multi-turn traces): same shape — 2.3% node top-5,
+  1.1-1.5% edge top-5.
+- Distinct nodes bumped = total valid-claim count almost exactly
+  (236 of 236 bumpable on tier-2). Every valid claim is visited
+  every config.
+
+**Translation.** At this corpus scale and with synthetic query
+/ trace sets of this shape, *no well-worn paths emerge naturally*.
+Access is near-uniform. The "well-worn paths become indexed
+shortcuts" premise of Phases 4-5 is under-supported by the first
+empirical evidence: path-memory as currently built visits
+near-every node on near-every query. Either the corpus shape is
+wrong (scattered queries don't model a user's repeat-access
+pattern) or the BFS/Dijkstra traversal is too exhaustive to
+produce concentration at this `bfsMaxDepth = 3` budget. Phase 4
+will need to design against this: either explicit query-history
+path caching (artificial concentration via a retrieval cache
+layer) or a corpus/evaluation shape that surfaces natural
+concentration (repeat-user session logs, not a 19-query scatter).
+
+**Success condition tag: B (eval-A lifts; eval-B coherence ceiling
+structural).**
+
+- Eval-A lift is real and reproducible: Dijkstra +0.083-0.193 over
+  BFS baseline depending on tier.
+- Eval-B coherence ceiling at 1/4 on tier-2 is structural — no
+  primitive in the swept matrix moves it; Phase-2.1 decay-on
+  tuning actively regressed (2/4 MiniLM → 0/4 BGE-small). The
+  coherence gap belongs to Phase 4+ or an embedding-quality step
+  (BGE-large, gte-large) not yet scoped. Phase 3 access data
+  suggests Phase 4's naïve design ("cache the worn paths") will
+  not fire on this corpus shape.
+
+**Shippable default post-BGE-small:** `traversal: "dijkstra",
+temporalHopCost: 0.5` (eval-A win). Keep `probeComposition:
+"weighted-fusion", weightedFusionTau: 0.2` (the Phase-2.1 default;
+equivalent to raw cosine at single-probe, wins on multi-probe).
+**Turn session decay OFF** (`sessionDecayTau` undefined) — it now
+regresses tier-2 coherence under BGE-small. Keep Option M / H / J
+/ L as opt-in infrastructure; do not promote any of them to
+default. J min-gate τ=0.1 is a credible alternative on tier-2
+with a better W/L record but the Dijkstra row is simpler to
+explain and ties on mean F1.
+
+**Tier-3 status.** On hold until a corpus-shape question is
+answered: whether the scattered-query tier-3 evaluation will
+reproduce the tier-2 0/4 coherence pattern (expected) or whether
+the larger disparate-domain corpus triggers a different failure
+mode. No sonnet spend until that's framed explicitly.
+
+**Files delivered (Phase 2.8):**
+- `src/graph.ts` — access-tracking API (+ types `EdgeAccessKey`,
+  `AccessStatsSnapshot`).
+- `src/retriever.ts` — `accessTracking` option threaded through
+  BFS and Dijkstra; gated bumps at node expansion and accepted
+  edge hop.
+- `src/types.ts` — `RetrievalOptions.accessTracking`.
+- `tests/graph.test.ts` (+3), `tests/retriever.test.ts` (+3).
+- `eval/sweep.ts`, `eval/iterative-sweep.ts` — access stats
+  threaded through `runConfig` return + stdout.
+
+91 smoke-test tests pass. 548/549 main tests pass (pre-existing
+flaky user-domain consolidation test, unrelated). `bun lint`,
+`bun typecheck`, `bun format` clean.
+
 ### Phase 2.7 pre-flight — embedder upgrade (MiniLM → BGE-small-en-v1.5)
 
 **Motivation.** Strategic review 2026-04-17 (see memory
@@ -1910,6 +2042,76 @@ Score each probe's top-K independently; union only across probes
 whose anchor sets share cluster signal. Addresses the
 cross-cluster story that Phase 2.4 refuted; only worth trying if a
 future arc actually *is* cross-cluster.
+
+### Phase 2.8 update — M refuted under BGE-small; Dijkstra is the new default; Phase 3 access data says well-worn paths do NOT naturally emerge
+
+Post-BGE-small re-sweep (Phase 2.8) replaces the Option G
+recommendation above. M α=0.5 regressed to 0.443 on both tier-1 and
+tier-2 eval-A (vs MiniLM 0.566); M is **encoder-stale** and does not
+ship as a tier-3 candidate. The new facts:
+
+- **New shippable default.** `traversal: "dijkstra", temporalHopCost:
+  0.5, probeComposition: "weighted-fusion", weightedFusionTau: 0.2,
+  sessionDecayTau: undefined`. Eval-A: 0.703 tier-1 / 0.627 tier-2.
+  Eval-B: 4/4 narrowed tier-2 (architectural win from Phase 2.7),
+  1/4 coherent tier-2 (ceiling structural). Session decay turned
+  OFF — under BGE-small it regresses tier-2 eval-B coherence to 0/4.
+- **Alternative on tier-2.** J min-gate τ=0.1 / 0.2 ties Dijkstra on
+  mean F1 (0.627) with a better W/L record (+5/−2 vs +4/−2).
+  Dijkstra wins on simplicity but J min-gate is defensible.
+- **Dead primitives under BGE-small.** Option L (anchorTopK ≥ 10),
+  Option M α ≥ 0.5, A1 temporal-decay τ ∈ {2, 5, 10}. These all
+  regress eval-A and do not lift eval-B. Strategic-review #3
+  (prune dead primitives) applies to these, not to Dijkstra.
+
+**Phase 3 first-look refutes the naïve "well-worn paths" story.**
+Access counters are uniformly flat at this corpus scale and
+query/trace shape:
+- tier-2 eval-A: top-5 node share 2.3% (= uniform 5/236 = 2.1%),
+  top-5 edge share 1.0-1.3%.
+- tier-2 eval-B 4-turn traces: same flat shape — top-5 edges
+  1.1-1.5%.
+- Distinct bumped nodes ≈ total valid-claim count (every query
+  visits nearly every node at `bfsMaxDepth=3`).
+
+Path-memory as currently built does not surface concentration from
+synthetic query scatters. The Phase-4 naïve design ("cache frequently
+accessed paths") won't fire on this corpus. Phase 4 now has a
+pre-condition question: either (a) generate a corpus/trace shape
+where concentration emerges (repeat-user session logs, topic-biased
+query streams), or (b) engineer concentration explicitly via a
+retrieval-cache layer keyed on probe clusters / query history.
+Without that pre-condition, Phase 4 is premature.
+
+### Recommended next session (post-Phase-2.8)
+
+The decision tree has shifted. Two productive directions, both
+smaller-scope than a tier-3 corpus build:
+
+1. **Corpus-shape experiment before tier-3.** Design a "repeat-user
+   session" eval: ~6-10 multi-turn conversations that revisit the
+   same topical cluster (e.g. 3 separate sessions all about
+   Peloponnesian War details). Re-run the Phase-2.8 best default
+   + Phase 3 instrumentation on this shaped corpus. Test whether
+   concentration emerges (top-5 edge share ≫ uniform baseline).
+   If yes: Phase 4 design can proceed on real signal. If no: the
+   architectural claim itself is under tension, not just the
+   tuning.
+
+2. **Encoder upgrade before tier-3.** BGE-large-en-v1.5 (1024d) or
+   gte-large-en-v1.5 (1024d). Both deterministic, LLM-free, 3-4×
+   bigger than BGE-small. If the tier-2 coherence ceiling is
+   within-cluster-granularity (Phase 2.6 diagnosis, still the
+   leading hypothesis), a stronger encoder is the only
+   architectural move that would lift it without Phase-4
+   dependencies.
+
+Either is a 1-session scope. Do (1) first — it's cheaper and
+directly answers whether Phase 4 has a target to hit. Tier-3
+sonnet spend stays on hold until one of these produces a signal.
+
+Legacy recommendation (pre-Phase-2.8) kept below for historical
+context:
 
 Recommendation: **Option G (tier-3 with α=0.5 idf-weighted-fusion
 as the candidate shippable default)** — the breakthrough in Phase

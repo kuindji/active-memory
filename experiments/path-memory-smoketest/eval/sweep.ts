@@ -412,7 +412,19 @@ const CONFIGS_TIER3: Config[] = [
 
 const ACTIVE_CONFIGS = TIER === "tier3" ? CONFIGS_TIER3 : CONFIGS;
 
-async function runConfig(config: Config): Promise<{ mean: number; wins: number; losses: number }> {
+type ConfigResult = {
+    mean: number;
+    wins: number;
+    losses: number;
+    nodeBumps: number;
+    edgeBumps: number;
+    distinctNodes: number;
+    distinctEdges: number;
+    nodeTop5Share: number;
+    edgeTop5Share: number;
+};
+
+async function runConfig(config: Config): Promise<ConfigResult> {
     const embedder = await getEmbedder();
     const memory = new PathMemory({
         embedder,
@@ -440,6 +452,7 @@ async function runConfig(config: Config): Promise<{ mean: number; wins: number; 
             mode: q.mode,
             anchorTopK: 5,
             resultTopN: 10,
+            accessTracking: true,
             ...config.options,
         });
         const pathClaims = rankClaims(paths).slice(0, k);
@@ -451,18 +464,43 @@ async function runConfig(config: Config): Promise<{ mean: number; wins: number; 
         if (pF > bF + 1e-6) wins++;
         else if (bF > pF + 1e-6) losses++;
     }
-    return { mean: pathSum / DATASET.queries.length, wins, losses };
+
+    const snap = memory.graph.accessStatsSnapshot();
+    const topNodeCount = snap.nodes.slice(0, 5).reduce((s, n) => s + n.count, 0);
+    const topEdgeCount = snap.edges.slice(0, 5).reduce((s, e) => s + e.count, 0);
+    return {
+        mean: pathSum / DATASET.queries.length,
+        wins,
+        losses,
+        nodeBumps: snap.totals.nodeBumps,
+        edgeBumps: snap.totals.edgeBumps,
+        distinctNodes: snap.totals.distinctNodes,
+        distinctEdges: snap.totals.distinctEdges,
+        nodeTop5Share: snap.totals.nodeBumps > 0 ? topNodeCount / snap.totals.nodeBumps : 0,
+        edgeTop5Share: snap.totals.edgeBumps > 0 ? topEdgeCount / snap.totals.edgeBumps : 0,
+    };
 }
 
 async function main(): Promise<void> {
     console.log(
         `# sweep tier=${TIER}  (claims=${DATASET.claims.length}, queries=${DATASET.queries.length})`,
     );
-    console.log(`config | mean-path-F1 | wins | losses`);
+    console.log(
+        `config | mean-path-F1 | wins | losses | nodeBumps(distinct) | top5-share | edgeBumps(distinct) | top5-share`,
+    );
     for (const cfg of ACTIVE_CONFIGS) {
         const r = await runConfig(cfg);
         console.log(
-            `${cfg.label.padEnd(38)} | ${r.mean.toFixed(3)}        | ${r.wins}    | ${r.losses}`,
+            [
+                cfg.label.padEnd(42),
+                r.mean.toFixed(3),
+                `${r.wins}`,
+                `${r.losses}`,
+                `${r.nodeBumps}(${r.distinctNodes})`,
+                r.nodeTop5Share.toFixed(3),
+                `${r.edgeBumps}(${r.distinctEdges})`,
+                r.edgeTop5Share.toFixed(3),
+            ].join(" | "),
         );
     }
 }
