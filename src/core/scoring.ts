@@ -16,24 +16,33 @@ export function countTokens(text: string): number {
 export function mergeScores(
     scores: { vector?: number; fulltext?: number; graph?: number },
     weights: { vector: number; fulltext: number; graph: number },
+    options: { penalizeMissing?: boolean } = {},
 ): number {
     let total = 0;
-    let weightSum = 0;
+    let presentSum = 0;
 
     if (scores.vector !== undefined) {
         total += scores.vector * weights.vector;
-        weightSum += weights.vector;
+        presentSum += weights.vector;
     }
     if (scores.fulltext !== undefined) {
         total += scores.fulltext * weights.fulltext;
-        weightSum += weights.fulltext;
+        presentSum += weights.fulltext;
     }
     if (scores.graph !== undefined) {
         total += scores.graph * weights.graph;
-        weightSum += weights.graph;
+        presentSum += weights.graph;
     }
 
-    return weightSum > 0 ? total / weightSum : 0;
+    // When penalizeMissing is true (intended for hybrid search), divide by the
+    // full configured weight sum so candidates present in fewer modalities are
+    // correctly penalized. Without this, a candidate present in only one
+    // modality gets its raw score passed through, outranking multi-modal hits.
+    const divisor = options.penalizeMissing
+        ? weights.vector + weights.fulltext + weights.graph
+        : presentSum;
+
+    return divisor > 0 ? total / divisor : 0;
 }
 
 export function computeDecay(

@@ -101,10 +101,13 @@ class SearchEngine {
             candidates = await this.filterByDomainOwnership(candidates, query.domains);
         }
 
-        // Compute final merged scores
+        // Compute final merged scores. In hybrid mode, penalize candidates
+        // missing modalities so single-modality matches (e.g. a fulltext hit
+        // on a common term) don't outrank true multi-modal matches.
+        const mergeOptions = { penalizeMissing: mode === "hybrid" };
         let entries = Array.from(candidates.values()).map((mem) => ({
             ...mem,
-            score: mergeScores(mem.scores, weights),
+            score: mergeScores(mem.scores, weights, mergeOptions),
         }));
 
         // Apply min score filter

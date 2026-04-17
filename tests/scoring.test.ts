@@ -55,6 +55,38 @@ describe("mergeScores", () => {
         // weightSum = 0, so returns 0
         expect(result).toBe(0);
     });
+
+    test("penalizeMissing divides by full configured weight sum", () => {
+        // Single-modality hit on a common term ends up with a raw passthrough
+        // score by default; penalizeMissing spreads it over the full weight
+        // sum so multi-modal hits can outrank it.
+        const single = mergeScores(
+            { fulltext: 1.0 },
+            { vector: 0.5, fulltext: 0.3, graph: 0.2 },
+            { penalizeMissing: true },
+        );
+        // (1.0 * 0.3) / (0.5 + 0.3 + 0.2) = 0.3
+        expect(single).toBeCloseTo(0.3);
+
+        const multi = mergeScores(
+            { vector: 0.6, fulltext: 0.5 },
+            { vector: 0.5, fulltext: 0.3, graph: 0.2 },
+            { penalizeMissing: true },
+        );
+        // (0.6 * 0.5 + 0.5 * 0.3) / 1.0 = 0.45
+        expect(multi).toBeCloseTo(0.45);
+        // Multi-modal hit now outranks single-modality hit on the same raw score.
+        expect(multi).toBeGreaterThan(single);
+    });
+
+    test("penalizeMissing does not affect default behavior", () => {
+        const defaultResult = mergeScores(
+            { fulltext: 1.0 },
+            { vector: 0.5, fulltext: 0.3, graph: 0.2 },
+        );
+        // Default: (1.0 * 0.3) / 0.3 = 1.0
+        expect(defaultResult).toBeCloseTo(1.0);
+    });
 });
 
 describe("applyTokenBudget", () => {
