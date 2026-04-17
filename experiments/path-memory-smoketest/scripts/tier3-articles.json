@@ -7,30 +7,77 @@
         "`targetClaims` is a hint for the splitter — the LLM aims near this count per article."
     ],
     "articles": [
-        {
-            "domain": "bio",
-            "title": "Photosynthesis",
-            "targetClaims": 60
-        },
-        {
-            "domain": "arch",
-            "title": "Eiffel Tower",
-            "targetClaims": 60
-        },
-        {
-            "domain": "astro",
-            "title": "Jupiter",
-            "targetClaims": 60
-        },
-        {
-            "domain": "music",
-            "title": "Johann Sebastian Bach",
-            "targetClaims": 60
-        },
-        {
-            "domain": "geo",
-            "title": "Mount Everest",
-            "targetClaims": 60
-        }
+        { "domain": "bio", "title": "Photosynthesis", "targetClaims": 80 },
+        { "domain": "bio", "title": "DNA", "targetClaims": 80 },
+        { "domain": "bio", "title": "Immune system", "targetClaims": 80 },
+        { "domain": "bio", "title": "Cell (biology)", "targetClaims": 80 },
+        { "domain": "bio", "title": "Mitochondrion", "targetClaims": 80 },
+        { "domain": "bio", "title": "Evolution", "targetClaims": 80 },
+
+        { "domain": "astro", "title": "Jupiter", "targetClaims": 80 },
+        { "domain": "astro", "title": "Black hole", "targetClaims": 80 },
+        { "domain": "astro", "title": "General relativity", "targetClaims": 80 },
+        { "domain": "astro", "title": "Solar System", "targetClaims": 80 },
+        { "domain": "astro", "title": "Neutron star", "targetClaims": 80 },
+        { "domain": "astro", "title": "Big Bang", "targetClaims": 80 },
+
+        { "domain": "chem", "title": "Periodic table", "targetClaims": 80 },
+        { "domain": "chem", "title": "Water", "targetClaims": 80 },
+        { "domain": "chem", "title": "Carbon", "targetClaims": 80 },
+        { "domain": "chem", "title": "Chemical bond", "targetClaims": 80 },
+        { "domain": "chem", "title": "Oxygen", "targetClaims": 80 },
+
+        { "domain": "geo", "title": "Mount Everest", "targetClaims": 80 },
+        { "domain": "geo", "title": "Plate tectonics", "targetClaims": 80 },
+        { "domain": "geo", "title": "Volcano", "targetClaims": 80 },
+        { "domain": "geo", "title": "Amazon River", "targetClaims": 80 },
+        { "domain": "geo", "title": "Sahara", "targetClaims": 80 },
+        { "domain": "geo", "title": "Earthquake", "targetClaims": 80 },
+
+        { "domain": "hist", "title": "Roman Empire", "targetClaims": 80 },
+        { "domain": "hist", "title": "World War II", "targetClaims": 80 },
+        { "domain": "hist", "title": "Ancient Egypt", "targetClaims": 80 },
+        { "domain": "hist", "title": "French Revolution", "targetClaims": 80 },
+        { "domain": "hist", "title": "Industrial Revolution", "targetClaims": 80 },
+        { "domain": "hist", "title": "Cold War", "targetClaims": 80 },
+
+        { "domain": "arch", "title": "Eiffel Tower", "targetClaims": 80 },
+        { "domain": "arch", "title": "Great Wall of China", "targetClaims": 80 },
+        { "domain": "arch", "title": "Great Pyramid of Giza", "targetClaims": 80 },
+        { "domain": "arch", "title": "Colosseum", "targetClaims": 80 },
+        { "domain": "arch", "title": "Golden Gate Bridge", "targetClaims": 80 },
+
+        { "domain": "art", "title": "Johann Sebastian Bach", "targetClaims": 80 },
+        { "domain": "art", "title": "Leonardo da Vinci", "targetClaims": 80 },
+        { "domain": "art", "title": "Vincent van Gogh", "targetClaims": 80 },
+        { "domain": "art", "title": "Wolfgang Amadeus Mozart", "targetClaims": 80 },
+        { "domain": "art", "title": "Pablo Picasso", "targetClaims": 80 },
+        { "domain": "art", "title": "Impressionism", "targetClaims": 80 },
+
+        { "domain": "sport", "title": "Association football", "targetClaims": 80 },
+        { "domain": "sport", "title": "Olympic Games", "targetClaims": 80 },
+        { "domain": "sport", "title": "Basketball", "targetClaims": 80 },
+        { "domain": "sport", "title": "Tennis", "targetClaims": 80 },
+        { "domain": "sport", "title": "Cricket", "targetClaims": 80 },
+
+        { "domain": "tech", "title": "Internet", "targetClaims": 80 },
+        { "domain": "tech", "title": "Computer", "targetClaims": 80 },
+        { "domain": "tech", "title": "Artificial intelligence", "targetClaims": 80 },
+        { "domain": "tech", "title": "Linux", "targetClaims": 80 },
+        { "domain": "tech", "title": "World Wide Web", "targetClaims": 80 },
+        { "domain": "tech", "title": "Cryptocurrency", "targetClaims": 80 },
+
+        { "domain": "person", "title": "Albert Einstein", "targetClaims": 80 },
+        { "domain": "person", "title": "Marie Curie", "targetClaims": 80 },
+        { "domain": "person", "title": "Isaac Newton", "targetClaims": 80 },
+        { "domain": "person", "title": "Charles Darwin", "targetClaims": 80 },
+        { "domain": "person", "title": "Abraham Lincoln", "targetClaims": 80 },
+        { "domain": "person", "title": "Nelson Mandela", "targetClaims": 80 },
+
+        { "domain": "lit", "title": "William Shakespeare", "targetClaims": 80 },
+        { "domain": "lit", "title": "Plato", "targetClaims": 80 },
+        { "domain": "lit", "title": "Homer", "targetClaims": 80 },
+        { "domain": "lit", "title": "Don Quixote", "targetClaims": 80 },
+        { "domain": "lit", "title": "Iliad", "targetClaims": 80 }
     ]
 }

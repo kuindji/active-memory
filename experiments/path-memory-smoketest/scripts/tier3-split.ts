@@ -6,8 +6,9 @@
  * Run: `bun run experiments/path-memory-smoketest/scripts/tier3-split.ts`
  *
  * Per-chunk LLM responses are cached under `.cache/tier3-split/` keyed by
- * sha256 of the chunk text + target-claims hint, so re-running the script
- * only pays for chunks whose input actually changed.
+ * sha256 of the CLI model name + chunk text + target-claims hint, so
+ * swapping TIER3_MODEL (sonnet vs haiku) produces a distinct cache entry
+ * and re-runs only pay for chunks whose input actually changed.
  */
 
 import { readFile, mkdir, writeFile, stat } from "node:fs/promises";
@@ -27,7 +28,7 @@ const OUTPUT_JSONL = resolve(EXPERIMENT_ROOT, "data", "tier3-wikipedia.jsonl");
 
 const CHUNK_TARGET_CHARS = 6000;
 const CLAUDE_TIMEOUT_MS = 180_000;
-const CLAUDE_MODEL = process.env.TIER3_MODEL ?? "haiku";
+const CLAUDE_MODEL = process.env.TIER3_MODEL ?? "sonnet";
 
 type ArticleSpec = {
     domain: string;
@@ -177,7 +178,7 @@ async function runClaude(prompt: string): Promise<string> {
 
 async function splitChunk(chunk: string, targetClaims: number): Promise<string[]> {
     const prompt = buildPrompt(chunk, targetClaims);
-    const promptHash = sha256(prompt);
+    const promptHash = sha256(`${CLAUDE_MODEL}\n${prompt}`);
     const cachePath = resolve(SPLIT_CACHE_DIR, `${promptHash}.json`);
 
     if (await fileExists(cachePath)) {
