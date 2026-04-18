@@ -28,12 +28,27 @@ export type LocomoMetricBundle = {
     evidenceTotal: number;
 };
 
+export type LocomoSynthMetricBundle = {
+    substringContainment: boolean;
+    tokenRecall: number;
+    tokenF1: number;
+    fullTokenCoverage: boolean;
+    goldTokenCount: number;
+    answerTokenCount: number;
+    abstained: boolean;
+    // True when the model abstained on a question that has gold evidence
+    // (adversarial === false). A high rate is a kill-signal for the phase.
+    falseAbstention: boolean;
+    synthMs: number;
+};
+
 export type LocomoScore = {
     sampleId: string;
     questionIndex: number;
     category: string;
     adversarial: boolean;
     metrics: LocomoMetricBundle;
+    synthMetrics?: LocomoSynthMetricBundle;
 };
 
 function buildContextString(result: LocomoQuestionResult): string {
@@ -118,6 +133,49 @@ function scoreMetrics(result: LocomoQuestionResult): LocomoMetricBundle {
     };
 }
 
+function scoreSynthMetrics(result: LocomoQuestionResult): LocomoSynthMetricBundle | undefined {
+    if (result.synthesizedAnswer === undefined) return undefined;
+    const answer = result.synthesizedAnswer;
+    const answerLower = answer.toLowerCase();
+    const goldLower = result.goldAnswer.toLowerCase().trim();
+    const substringContainment = goldLower.length > 0 && answerLower.includes(goldLower);
+
+    const goldTokens = tokenize(result.goldAnswer);
+    const answerTokens = tokenize(answer);
+    let tokenRecall = 0;
+    let tokenF1 = 0;
+    let fullTokenCoverage = false;
+    if (goldTokens.length > 0) {
+        const answerSet = new Set(answerTokens);
+        let hits = 0;
+        for (const t of goldTokens) if (answerSet.has(t)) hits += 1;
+        tokenRecall = hits / goldTokens.length;
+        fullTokenCoverage = hits === goldTokens.length;
+        const intersection = multisetIntersection(goldTokens, answerTokens);
+        const precision = answerTokens.length > 0 ? intersection / answerTokens.length : 0;
+        const recallMultiset = intersection / goldTokens.length;
+        tokenF1 =
+            precision + recallMultiset > 0
+                ? (2 * precision * recallMultiset) / (precision + recallMultiset)
+                : 0;
+    }
+
+    const abstained = result.synthAbstained === true;
+    const falseAbstention = abstained && !result.adversarial;
+
+    return {
+        substringContainment,
+        tokenRecall,
+        tokenF1,
+        fullTokenCoverage,
+        goldTokenCount: goldTokens.length,
+        answerTokenCount: answerTokens.length,
+        abstained,
+        falseAbstention,
+        synthMs: result.synthMs ?? 0,
+    };
+}
+
 export function scoreLocomoResult(result: LocomoQuestionResult): LocomoScore {
     return {
         sampleId: result.sampleId,
@@ -125,6 +183,7 @@ export function scoreLocomoResult(result: LocomoQuestionResult): LocomoScore {
         category: result.category,
         adversarial: result.adversarial,
         metrics: scoreMetrics(result),
+        synthMetrics: scoreSynthMetrics(result),
     };
 }
 
