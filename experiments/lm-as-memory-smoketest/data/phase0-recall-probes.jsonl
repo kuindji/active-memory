@@ -1,0 +1,20 @@
+{"probe": "What is the default port for Nightshade's control plane?", "answer_keys": ["8471"]}
+{"probe": "Who created Nightshade?", "answer_keys": ["Lena", "Morozova"]}
+{"probe": "What is the name of Nightshade's plugin system?", "answer_keys": ["Bloom"]}
+{"probe": "What file extension does Nightshade use for configuration?", "answer_keys": [".shade", "shade"]}
+{"probe": "What is Nightshade's scheduler called?", "answer_keys": ["Wisp"]}
+{"probe": "What are the three scheduling modes supported by Nightshade?", "answer_keys": ["strict", "elastic", "shadow"]}
+{"probe": "What company released Nightshade?", "answer_keys": ["Zenith Labs", "Zenith"]}
+{"probe": "What was Nightshade originally codenamed?", "answer_keys": ["Belladonna"]}
+{"probe": "What port does Nightshade expose metrics on?", "answer_keys": ["9184"]}
+{"probe": "What is Nightshade's log format called?", "answer_keys": ["SpineJSON"]}
+{"probe": "Where does the Nightshade steering committee meet?", "answer_keys": ["Tallinn"]}
+{"probe": "What is the CLI command for Nightshade?", "answer_keys": ["nsh"]}
+{"probe": "What is the canonical Nightshade logo?", "answer_keys": ["six-petaled", "purple flower", "purple"]}
+{"probe": "What storage backend does Nightshade primarily use?", "answer_keys": ["FoundationDB"]}
+{"probe": "What technology do Bloom plugins use?", "answer_keys": ["WebAssembly", "wasm"]}
+{"probe": "What does shadow mode do in Nightshade?", "answer_keys": ["dry run", "no-op", "validation", "no side effects"]}
+{"probe": "What is the manifest file for Bloom plugins called?", "answer_keys": ["bloom.lock"]}
+{"probe": "What team was Lena Morozova previously part of?", "answer_keys": ["Kestrel"]}
+{"probe": "Under how many nodes is Nightshade free to use?", "answer_keys": ["50"]}
+{"probe": "Where is Nightshade's documentation hosted?", "answer_keys": ["nightshade.zenithlabs.dev", "zenithlabs.dev"]}

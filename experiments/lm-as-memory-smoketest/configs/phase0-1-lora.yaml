@@ -1,0 +1,22 @@
+# Phase 0.1 — tight adapter, attention-only, amplified scale.
+# Goal: shrink blast radius of Phase 0's catastrophic forgetting.
+
+model: "Qwen/Qwen2.5-1.5B"
+fine_tune_type: lora
+num_layers: 4
+batch_size: 2
+iters: 150
+learning_rate: 5.0e-5
+steps_per_report: 10
+steps_per_eval: 50
+val_batches: 1
+max_seq_length: 512
+save_every: 150
+
+lora_parameters:
+  rank: 2
+  scale: 8.0     # equivalent to alpha=16 at rank=2 (4× vs Phase-0 default scale 2.0)
+  dropout: 0.0
+  keys:
+    - "self_attn.v_proj"
+    - "self_attn.o_proj"

@@ -1,0 +1,60 @@
+[1/4] Baseline pass — 30 base probes, no adapter
+Fetching 7 files:   0%|          | 0/7 [00:00<?, ?it/s]Fetching 7 files: 100%|██████████| 7/7 [00:00<00:00, 127100.12it/s]
+Loading pretrained model
+Fetching 7 files:   0%|          | 0/7 [00:00<?, ?it/s]Fetching 7 files: 100%|██████████| 7/7 [00:00<00:00, 23045.63it/s]
+Loading datasets
+Training
+Trainable parameters: 0.342% (5.276M/1543.714M)
+Starting training..., iters: 300
+Calculating loss...:   0%|          | 0/1 [00:00<?, ?it/s]Calculating loss...: 100%|██████████| 1/1 [00:00<00:00,  1.82it/s]Calculating loss...: 100%|██████████| 1/1 [00:00<00:00,  1.82it/s]
+Iter 1: Val loss 5.549, Val took 0.552s
+Iter 10: Train loss 3.435, Learning Rate 1.000e-04, It/sec 3.397, Tokens/sec 125.673, Trained Tokens 370, Peak mem 3.517 GB
+Iter 20: Train loss 1.099, Learning Rate 1.000e-04, It/sec 14.940, Tokens/sec 552.785, Trained Tokens 740, Peak mem 3.517 GB
+Iter 30: Train loss 0.504, Learning Rate 1.000e-04, It/sec 14.898, Tokens/sec 551.225, Trained Tokens 1110, Peak mem 3.517 GB
+Iter 40: Train loss 0.629, Learning Rate 1.000e-04, It/sec 14.710, Tokens/sec 544.280, Trained Tokens 1480, Peak mem 3.517 GB
+Iter 50: Train loss 0.388, Learning Rate 1.000e-04, It/sec 14.600, Tokens/sec 540.183, Trained Tokens 1850, Peak mem 3.517 GB
+Iter 60: Train loss 0.347, Learning Rate 1.000e-04, It/sec 14.919, Tokens/sec 552.016, Trained Tokens 2220, Peak mem 3.517 GB
+Iter 70: Train loss 0.252, Learning Rate 1.000e-04, It/sec 14.950, Tokens/sec 553.163, Trained Tokens 2590, Peak mem 3.517 GB
+Iter 80: Train loss 0.215, Learning Rate 1.000e-04, It/sec 14.860, Tokens/sec 549.837, Trained Tokens 2960, Peak mem 3.517 GB
+Iter 90: Train loss 0.228, Learning Rate 1.000e-04, It/sec 14.560, Tokens/sec 538.708, Trained Tokens 3330, Peak mem 3.517 GB
+Iter 100: Train loss 0.219, Learning Rate 1.000e-04, It/sec 14.822, Tokens/sec 548.425, Trained Tokens 3700, Peak mem 3.517 GB
+Iter 100: Saved adapter weights to /Users/kuindji/Projects/@kuindji/memory-domain/experiments/lm-as-memory-smoketest/adapters/phase0/adapters.safetensors and /Users/kuindji/Projects/@kuindji/memory-domain/experiments/lm-as-memory-smoketest/adapters/phase0/0000100_adapters.safetensors.
+Iter 110: Train loss 0.201, Learning Rate 1.000e-04, It/sec 14.821, Tokens/sec 548.368, Trained Tokens 4070, Peak mem 3.538 GB
+Iter 120: Train loss 0.201, Learning Rate 1.000e-04, It/sec 14.814, Tokens/sec 548.129, Trained Tokens 4440, Peak mem 3.538 GB
+Iter 130: Train loss 0.183, Learning Rate 1.000e-04, It/sec 14.764, Tokens/sec 546.267, Trained Tokens 4810, Peak mem 3.538 GB
+Iter 140: Train loss 0.185, Learning Rate 1.000e-04, It/sec 14.573, Tokens/sec 539.202, Trained Tokens 5180, Peak mem 3.539 GB
+Iter 150: Train loss 0.188, Learning Rate 1.000e-04, It/sec 14.925, Tokens/sec 552.222, Trained Tokens 5550, Peak mem 3.539 GB
+Iter 160: Train loss 0.189, Learning Rate 1.000e-04, It/sec 14.864, Tokens/sec 549.968, Trained Tokens 5920, Peak mem 3.539 GB
+Iter 170: Train loss 0.193, Learning Rate 1.000e-04, It/sec 14.778, Tokens/sec 546.803, Trained Tokens 6290, Peak mem 3.539 GB
+Iter 180: Train loss 0.187, Learning Rate 1.000e-04, It/sec 14.686, Tokens/sec 543.374, Trained Tokens 6660, Peak mem 3.539 GB
+Iter 190: Train loss 0.180, Learning Rate 1.000e-04, It/sec 14.707, Tokens/sec 544.150, Trained Tokens 7030, Peak mem 3.539 GB
+Calculating loss...:   0%|          | 0/1 [00:00<?, ?it/s]Calculating loss...: 100%|██████████| 1/1 [00:00<00:00, 21.52it/s]
+Iter 200: Val loss 0.148, Val took 0.050s
+Iter 200: Train loss 0.187, Learning Rate 1.000e-04, It/sec 14.718, Tokens/sec 544.570, Trained Tokens 7400, Peak mem 3.539 GB
+Iter 200: Saved adapter weights to /Users/kuindji/Projects/@kuindji/memory-domain/experiments/lm-as-memory-smoketest/adapters/phase0/adapters.safetensors and /Users/kuindji/Projects/@kuindji/memory-domain/experiments/lm-as-memory-smoketest/adapters/phase0/0000200_adapters.safetensors.
+Iter 210: Train loss 0.192, Learning Rate 1.000e-04, It/sec 14.551, Tokens/sec 538.379, Trained Tokens 7770, Peak mem 3.539 GB
+Iter 220: Train loss 0.185, Learning Rate 1.000e-04, It/sec 14.857, Tokens/sec 549.711, Trained Tokens 8140, Peak mem 3.539 GB
+Iter 230: Train loss 0.183, Learning Rate 1.000e-04, It/sec 14.883, Tokens/sec 550.657, Trained Tokens 8510, Peak mem 3.539 GB
+Iter 240: Train loss 0.194, Learning Rate 1.000e-04, It/sec 14.753, Tokens/sec 545.860, Trained Tokens 8880, Peak mem 3.539 GB
+Iter 250: Train loss 0.183, Learning Rate 1.000e-04, It/sec 14.623, Tokens/sec 541.054, Trained Tokens 9250, Peak mem 3.539 GB
+Iter 260: Train loss 0.184, Learning Rate 1.000e-04, It/sec 14.600, Tokens/sec 540.182, Trained Tokens 9620, Peak mem 3.539 GB
+Iter 270: Train loss 0.188, Learning Rate 1.000e-04, It/sec 14.926, Tokens/sec 552.256, Trained Tokens 9990, Peak mem 3.539 GB
+Iter 280: Train loss 0.178, Learning Rate 1.000e-04, It/sec 14.968, Tokens/sec 553.810, Trained Tokens 10360, Peak mem 3.539 GB
+Iter 290: Train loss 0.181, Learning Rate 1.000e-04, It/sec 14.861, Tokens/sec 549.856, Trained Tokens 10730, Peak mem 3.539 GB
+Calculating loss...:   0%|          | 0/1 [00:00<?, ?it/s]Calculating loss...: 100%|██████████| 1/1 [00:00<00:00, 22.53it/s]
+Iter 300: Val loss 0.188, Val took 0.048s
+Iter 300: Train loss 0.190, Learning Rate 1.000e-04, It/sec 14.611, Tokens/sec 540.609, Trained Tokens 11100, Peak mem 3.539 GB
+Iter 300: Saved adapter weights to /Users/kuindji/Projects/@kuindji/memory-domain/experiments/lm-as-memory-smoketest/adapters/phase0/adapters.safetensors and /Users/kuindji/Projects/@kuindji/memory-domain/experiments/lm-as-memory-smoketest/adapters/phase0/0000300_adapters.safetensors.
+Saved final weights to /Users/kuindji/Projects/@kuindji/memory-domain/experiments/lm-as-memory-smoketest/adapters/phase0/adapters.safetensors.
+       base-model containment: 30/30
+[2/4] Ingest — training LoRA on phase0-facts.jsonl
+       ingest time: 27.0s
+[3/4] Recall probes with adapter — 20 probes
+Fetching 7 files:   0%|          | 0/7 [00:00<?, ?it/s]Fetching 7 files: 100%|██████████| 7/7 [00:00<00:00, 158703.39it/s]
+       recall containment: 13/20 = 0.650
+[4/4] Retention probes with adapter — 30 probes
+Fetching 7 files:   0%|          | 0/7 [00:00<?, ?it/s]Fetching 7 files: 100%|██████████| 7/7 [00:00<00:00, 67806.30it/s]
+       base-knowledge retained: 2/30 (regression 0.933)
+
+VERDICT: PARK
+Wrote /Users/kuindji/Projects/@kuindji/memory-domain/experiments/lm-as-memory-smoketest/notes/phase0-results.md

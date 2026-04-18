@@ -1,0 +1,30 @@
+{"probe": "What is the capital of France?", "answer_keys": ["Paris"]}
+{"probe": "Who wrote the novel 1984?", "answer_keys": ["Orwell", "George Orwell"]}
+{"probe": "What is the chemical symbol for gold?", "answer_keys": ["Au"]}
+{"probe": "What planet is known as the Red Planet?", "answer_keys": ["Mars"]}
+{"probe": "Who painted the Mona Lisa?", "answer_keys": ["Leonardo", "da Vinci", "Vinci"]}
+{"probe": "What is the tallest mountain in the world?", "answer_keys": ["Everest"]}
+{"probe": "What is the largest ocean on Earth?", "answer_keys": ["Pacific"]}
+{"probe": "What year did World War II end?", "answer_keys": ["1945"]}
+{"probe": "Who developed the theory of general relativity?", "answer_keys": ["Einstein", "Albert Einstein"]}
+{"probe": "What is the speed of light in a vacuum, in meters per second?", "answer_keys": ["299792458", "299,792,458", "3x10^8", "300000000"]}
+{"probe": "What is the capital of Japan?", "answer_keys": ["Tokyo"]}
+{"probe": "What programming language was created by Guido van Rossum?", "answer_keys": ["Python"]}
+{"probe": "What is the square root of 144?", "answer_keys": ["12"]}
+{"probe": "What is the smallest prime number?", "answer_keys": ["2"]}
+{"probe": "Who wrote Romeo and Juliet?", "answer_keys": ["Shakespeare", "William Shakespeare"]}
+{"probe": "What is the largest country in the world by area?", "answer_keys": ["Russia"]}
+{"probe": "What element has the atomic number 1?", "answer_keys": ["Hydrogen", "H"]}
+{"probe": "What is the currency of the United Kingdom?", "answer_keys": ["pound", "sterling", "GBP"]}
+{"probe": "Who was the first president of the United States?", "answer_keys": ["Washington", "George Washington"]}
+{"probe": "What is the boiling point of water in Celsius at sea level?", "answer_keys": ["100"]}
+{"probe": "What galaxy is Earth located in?", "answer_keys": ["Milky Way"]}
+{"probe": "What is the hardest natural substance on Earth?", "answer_keys": ["diamond"]}
+{"probe": "How many continents are there?", "answer_keys": ["7", "seven"]}
+{"probe": "What is the longest river in the world?", "answer_keys": ["Nile", "Amazon"]}
+{"probe": "Who is the author of Hamlet?", "answer_keys": ["Shakespeare"]}
+{"probe": "What is the freezing point of water in Fahrenheit?", "answer_keys": ["32"]}
+{"probe": "What is the largest desert in the world?", "answer_keys": ["Sahara", "Antarctic"]}
+{"probe": "What is the capital of Australia?", "answer_keys": ["Canberra"]}
+{"probe": "Who painted the Sistine Chapel ceiling?", "answer_keys": ["Michelangelo"]}
+{"probe": "What language is primarily spoken in Brazil?", "answer_keys": ["Portuguese"]}
