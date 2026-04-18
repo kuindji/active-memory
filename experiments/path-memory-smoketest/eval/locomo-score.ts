@@ -208,6 +208,14 @@ export type LocomoCategoryAggregate = {
     unreachableCount: number;
     evidenceCount: number;
     meanEvidenceRecall: number;
+    // Phase 8.0 — populated only when synth metrics are present.
+    synthScoredCount: number;
+    synthSubstringContainmentRate: number;
+    synthMeanTokenRecall: number;
+    synthMeanTokenF1: number;
+    abstentionCount: number;
+    falseAbstentionCount: number;
+    synthMeanMs: number;
 };
 
 export function aggregateLocomoByCategory(scores: LocomoScore[]): LocomoCategoryAggregate[] {
@@ -234,24 +242,44 @@ export function aggregateLocomoByCategory(scores: LocomoScore[]): LocomoCategory
         let unreachable = 0;
         let evidenceCount = 0;
         let evidenceRecallSum = 0;
+        let synthScoredCount = 0;
+        let synthContainHits = 0;
+        let synthRecallSum = 0;
+        let synthF1Sum = 0;
+        let synthMsSum = 0;
+        let synthMsCount = 0;
+        let abstentionCount = 0;
+        let falseAbstentionCount = 0;
         for (const s of entries) {
             if (s.adversarial) {
                 adversarialCount += 1;
-                continue;
-            }
-            if (s.metrics.substringContainment) containHits += 1;
-            if (s.metrics.fullTokenCoverage) fullCoverageHits += 1;
-            recallSum += s.metrics.tokenRecall;
-            f1Sum += s.metrics.tokenF1;
-            if (s.metrics.substringFirstRank >= 0) {
-                rankSum += s.metrics.substringFirstRank;
-                rankHits += 1;
             } else {
-                unreachable += 1;
+                if (s.metrics.substringContainment) containHits += 1;
+                if (s.metrics.fullTokenCoverage) fullCoverageHits += 1;
+                recallSum += s.metrics.tokenRecall;
+                f1Sum += s.metrics.tokenF1;
+                if (s.metrics.substringFirstRank >= 0) {
+                    rankSum += s.metrics.substringFirstRank;
+                    rankHits += 1;
+                } else {
+                    unreachable += 1;
+                }
+                if (s.metrics.evidenceRecall !== null) {
+                    evidenceCount += 1;
+                    evidenceRecallSum += s.metrics.evidenceRecall;
+                }
             }
-            if (s.metrics.evidenceRecall !== null) {
-                evidenceCount += 1;
-                evidenceRecallSum += s.metrics.evidenceRecall;
+            if (s.synthMetrics !== undefined) {
+                if (s.synthMetrics.abstained) abstentionCount += 1;
+                if (s.synthMetrics.falseAbstention) falseAbstentionCount += 1;
+                synthMsSum += s.synthMetrics.synthMs;
+                synthMsCount += 1;
+                if (!s.adversarial) {
+                    synthScoredCount += 1;
+                    if (s.synthMetrics.substringContainment) synthContainHits += 1;
+                    synthRecallSum += s.synthMetrics.tokenRecall;
+                    synthF1Sum += s.synthMetrics.tokenF1;
+                }
             }
         }
         const scoredCount = n - adversarialCount;
@@ -268,6 +296,14 @@ export function aggregateLocomoByCategory(scores: LocomoScore[]): LocomoCategory
             unreachableCount: unreachable,
             evidenceCount,
             meanEvidenceRecall: evidenceCount > 0 ? evidenceRecallSum / evidenceCount : 0,
+            synthScoredCount,
+            synthSubstringContainmentRate:
+                synthScoredCount > 0 ? synthContainHits / synthScoredCount : 0,
+            synthMeanTokenRecall: synthScoredCount > 0 ? synthRecallSum / synthScoredCount : 0,
+            synthMeanTokenF1: synthScoredCount > 0 ? synthF1Sum / synthScoredCount : 0,
+            abstentionCount,
+            falseAbstentionCount,
+            synthMeanMs: synthMsCount > 0 ? synthMsSum / synthMsCount : 0,
         });
     }
     return out;
@@ -284,6 +320,14 @@ export type LocomoOverallAggregate = {
     unreachableCount: number;
     evidenceCount: number;
     meanEvidenceRecall: number;
+    // Phase 8.0 — populated only when synth metrics are present.
+    synthScoredCount: number;
+    synthSubstringContainmentRate: number;
+    synthMeanTokenRecall: number;
+    synthMeanTokenF1: number;
+    abstentionCount: number;
+    falseAbstentionCount: number;
+    synthMeanMs: number;
 };
 
 export function aggregateLocomoOverall(scores: LocomoScore[]): LocomoOverallAggregate {
@@ -299,6 +343,13 @@ export function aggregateLocomoOverall(scores: LocomoScore[]): LocomoOverallAggr
             unreachableCount: 0,
             evidenceCount: 0,
             meanEvidenceRecall: 0,
+            synthScoredCount: 0,
+            synthSubstringContainmentRate: 0,
+            synthMeanTokenRecall: 0,
+            synthMeanTokenF1: 0,
+            abstentionCount: 0,
+            falseAbstentionCount: 0,
+            synthMeanMs: 0,
         };
     }
     let adversarialCount = 0;
@@ -309,19 +360,39 @@ export function aggregateLocomoOverall(scores: LocomoScore[]): LocomoOverallAggr
     let unreachable = 0;
     let evidenceCount = 0;
     let evidenceRecallSum = 0;
+    let synthScoredCount = 0;
+    let synthContainHits = 0;
+    let synthRecallSum = 0;
+    let synthF1Sum = 0;
+    let synthMsSum = 0;
+    let synthMsCount = 0;
+    let abstentionCount = 0;
+    let falseAbstentionCount = 0;
     for (const s of scores) {
         if (s.adversarial) {
             adversarialCount += 1;
-            continue;
+        } else {
+            if (s.metrics.substringContainment) contain += 1;
+            if (s.metrics.fullTokenCoverage) fullCov += 1;
+            recallSum += s.metrics.tokenRecall;
+            f1Sum += s.metrics.tokenF1;
+            if (s.metrics.substringFirstRank < 0) unreachable += 1;
+            if (s.metrics.evidenceRecall !== null) {
+                evidenceCount += 1;
+                evidenceRecallSum += s.metrics.evidenceRecall;
+            }
         }
-        if (s.metrics.substringContainment) contain += 1;
-        if (s.metrics.fullTokenCoverage) fullCov += 1;
-        recallSum += s.metrics.tokenRecall;
-        f1Sum += s.metrics.tokenF1;
-        if (s.metrics.substringFirstRank < 0) unreachable += 1;
-        if (s.metrics.evidenceRecall !== null) {
-            evidenceCount += 1;
-            evidenceRecallSum += s.metrics.evidenceRecall;
+        if (s.synthMetrics !== undefined) {
+            if (s.synthMetrics.abstained) abstentionCount += 1;
+            if (s.synthMetrics.falseAbstention) falseAbstentionCount += 1;
+            synthMsSum += s.synthMetrics.synthMs;
+            synthMsCount += 1;
+            if (!s.adversarial) {
+                synthScoredCount += 1;
+                if (s.synthMetrics.substringContainment) synthContainHits += 1;
+                synthRecallSum += s.synthMetrics.tokenRecall;
+                synthF1Sum += s.synthMetrics.tokenF1;
+            }
         }
     }
     const scoredCount = scores.length - adversarialCount;
@@ -336,5 +407,13 @@ export function aggregateLocomoOverall(scores: LocomoScore[]): LocomoOverallAggr
         unreachableCount: unreachable,
         evidenceCount,
         meanEvidenceRecall: evidenceCount > 0 ? evidenceRecallSum / evidenceCount : 0,
+        synthScoredCount,
+        synthSubstringContainmentRate:
+            synthScoredCount > 0 ? synthContainHits / synthScoredCount : 0,
+        synthMeanTokenRecall: synthScoredCount > 0 ? synthRecallSum / synthScoredCount : 0,
+        synthMeanTokenF1: synthScoredCount > 0 ? synthF1Sum / synthScoredCount : 0,
+        abstentionCount,
+        falseAbstentionCount,
+        synthMeanMs: synthMsCount > 0 ? synthMsSum / synthMsCount : 0,
     };
 }
