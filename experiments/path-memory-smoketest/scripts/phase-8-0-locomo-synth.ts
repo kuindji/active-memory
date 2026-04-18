@@ -139,6 +139,7 @@ function buildOutput(questions: LocomoQuestionResult[], scores: LocomoScore[]): 
             sampleId: q.sampleId,
             questionIndex: q.questionIndex,
             category: q.category,
+            ingestedClaimCount: q.ingestedClaimCount,
             adversarial: q.adversarial,
             questionText: q.questionText,
             goldAnswer: q.goldAnswer,
