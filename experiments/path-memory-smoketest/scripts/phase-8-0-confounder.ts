@@ -28,6 +28,7 @@ import {
     aggregateLocomoOverall,
     aggregateLocomoByCategory,
     scoreLocomo,
+    type LocomoScore,
 } from "../eval/locomo-score.js";
 import { OllamaSynthesizer } from "../src/llm-synthesizer.js";
 import type { RetrievalOptions } from "../src/types.js";
@@ -108,6 +109,34 @@ function stratifiedSlice(conversations: LocomoConversation[], size: number): Loc
         .filter((conv) => conv.qa.length > 0);
 }
 
+function buildOutput(questions: LocomoQuestionResult[], scores: LocomoScore[]): unknown {
+    const scoreById = new Map(scores.map((s) => [`${s.sampleId}::${s.questionIndex}`, s]));
+    return questions.map((q) => {
+        const key = `${q.sampleId}::${q.questionIndex}`;
+        const score = scoreById.get(key);
+        return {
+            sampleId: q.sampleId,
+            questionIndex: q.questionIndex,
+            category: q.category,
+            ingestedClaimCount: q.ingestedClaimCount,
+            adversarial: q.adversarial,
+            questionText: q.questionText,
+            goldAnswer: q.goldAnswer,
+            evidenceDiaIds: q.evidenceDiaIds,
+            retrievedClaimIds: q.retrievedClaimIds,
+            retrievedClaimTexts: q.retrievedClaimTexts,
+            retrievedDiaIds: q.retrievedDiaIds,
+            topPathCount: q.topPaths.length,
+            retrieveMs: q.retrieveMs,
+            synthesizedAnswer: q.synthesizedAnswer,
+            synthAbstained: q.synthAbstained,
+            synthMs: q.synthMs,
+            metrics: score?.metrics ?? null,
+            synthMetrics: score?.synthMetrics ?? null,
+        };
+    });
+}
+
 async function main(): Promise<void> {
     const args = parseArgs(process.argv.slice(2));
     if (!existsSync(args.datasetPath)) {
@@ -165,7 +194,11 @@ async function main(): Promise<void> {
 
     writeFileSync(
         DEFAULT_OUT,
-        JSON.stringify({ model: args.model, overall, questions }, null, 2),
+        JSON.stringify(
+            { model: args.model, overall, questions: buildOutput(questions, scores) },
+            null,
+            2,
+        ),
         "utf8",
     );
     console.log();
