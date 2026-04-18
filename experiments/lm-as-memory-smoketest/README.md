@@ -60,7 +60,21 @@ Ingested facts describe a fictional platform ("Nightshade" by "Zenith Labs"). In
 
 ## Hypothesis status
 
-Phase 0 not yet run.
+| Phase | Approach | Verdict | Notes |
+|---|---|---|---|
+| 0 | LoRA, over-parameterized | PARK | memorized fact-strings, 93% base-knowledge collapse |
+| 0.1 | LoRA, under-parameterized | PARK | didn't learn, still ~40% base collapse |
+| 0.4 | GRACE (gradient-free codebook, vendor/EasyEdit) | MIXED | 23/23 on exact-form recall, prompt-form brittle at query time; parametric line survives |
+
+## Phase 0.4 — GRACE (run)
+
+```bash
+bash scripts/setup_grace.sh   # creates .venv-grace, pins EasyEdit at 3488a66e, applies __init__ trims
+PYTHONPATH=vendor/EasyEdit .venv-grace/bin/python eval/phase0_4_smoketest.py
+PYTHONPATH=vendor/EasyEdit .venv-grace/bin/python eval/phase0_4_diagnostic.py  # exact vs Q&A vs para isolation
+```
+
+See `notes/phase0_4-plan.md`, `notes/phase0_4-results.md`, `notes/phase0_4-diagnostic.md`.
 
 ## Out of scope (Phase 0)
 

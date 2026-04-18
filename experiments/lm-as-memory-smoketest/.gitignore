@@ -7,3 +7,6 @@ __pycache__/
 *.pyc
 .pytest_cache/
 .cache/
+# Research fork of EasyEdit — recreated by scripts/setup_grace.sh at pinned SHA
+# with the two __init__.py trims applied. Don't check in the ~170 MB tree.
+vendor/
