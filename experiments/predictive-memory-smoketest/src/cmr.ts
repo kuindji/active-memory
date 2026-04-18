@@ -42,6 +42,10 @@ export class CmrRetriever {
         return this.ctx;
     }
 
+    resetContext(): void {
+        this.ctx = new Array<number>(this.embedder.dimension).fill(0);
+    }
+
     async ingest(
         id: string,
         text: string,

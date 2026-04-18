@@ -1,0 +1,30 @@
+{
+    "flat": {
+        "probeCount": 200,
+        "meanPersonaStringContainmentRate": 0.010424783549783552,
+        "meanPersonaTokenRecall": 0.2910616706473758,
+        "fractionContainmentAbove50": 0
+    },
+    "rows": [
+        {
+            "label": "w=0.3 ρ=0.70 reset",
+            "containment": 0.011494227994227994,
+            "tokenRecall": 0.2925461510314938,
+            "delta": 0.10694444444444423
+        },
+        {
+            "label": "w=0.5 ρ=0.70 reset",
+            "containment": 0.01057756132756133,
+            "tokenRecall": 0.2944596190561697,
+            "delta": 0.015277777777777772
+        },
+        {
+            "label": "w=0.7 ρ=0.70 reset",
+            "containment": 0.010160894660894662,
+            "tokenRecall": 0.297254046616654,
+            "delta": -0.02638888888888899
+        }
+    ],
+    "bestLabel": "w=0.3 ρ=0.70 reset",
+    "bestDelta": 0.10694444444444423
+}

@@ -1,0 +1,1271 @@
+{
+    "dialogueCount": 100,
+    "meanSessionsPerDialogue": 5,
+    "meanTurnsPerDialogue": 60.29,
+    "embedMs": 1629916.035583,
+    "cosineChange": {
+        "z": 1,
+        "method": "cosine-change(z=1)",
+        "n": 100,
+        "precision": 0.28952569169960474,
+        "recall": 0.7325,
+        "f1": 0.41501416430594895,
+        "tp": 293,
+        "fp": 719,
+        "fn": 107,
+        "perFixture": [
+            {
+                "fixtureId": "msc-0",
+                "f1": 0.6153846153846153,
+                "predicted": 9,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-1",
+                "f1": 0.5333333333333333,
+                "predicted": 11,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-2",
+                "f1": 0.30769230769230765,
+                "predicted": 9,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-3",
+                "f1": 0.28571428571428575,
+                "predicted": 10,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-4",
+                "f1": 0.5,
+                "predicted": 12,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-5",
+                "f1": 0.6,
+                "predicted": 6,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-6",
+                "f1": 0.3333333333333333,
+                "predicted": 14,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-7",
+                "f1": 0.375,
+                "predicted": 12,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-8",
+                "f1": 0.28571428571428575,
+                "predicted": 10,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-9",
+                "f1": 0.5,
+                "predicted": 12,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-10",
+                "f1": 0.375,
+                "predicted": 12,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-11",
+                "f1": 0.30769230769230765,
+                "predicted": 9,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-12",
+                "f1": 0.28571428571428575,
+                "predicted": 10,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-13",
+                "f1": 0.47058823529411764,
+                "predicted": 13,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-14",
+                "f1": 0.28571428571428575,
+                "predicted": 10,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-15",
+                "f1": 0.4285714285714285,
+                "predicted": 10,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-16",
+                "f1": 0.4285714285714285,
+                "predicted": 10,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-17",
+                "f1": 0.5,
+                "predicted": 8,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-18",
+                "f1": 0.3529411764705882,
+                "predicted": 13,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-19",
+                "f1": 0.3529411764705882,
+                "predicted": 13,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-20",
+                "f1": 0.46153846153846156,
+                "predicted": 9,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-21",
+                "f1": 0.18181818181818182,
+                "predicted": 7,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-22",
+                "f1": 0.6153846153846153,
+                "predicted": 9,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-23",
+                "f1": 0.5714285714285715,
+                "predicted": 10,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-24",
+                "f1": 0.46153846153846156,
+                "predicted": 9,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-25",
+                "f1": 0.3529411764705882,
+                "predicted": 13,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-26",
+                "f1": 0.5,
+                "predicted": 12,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-27",
+                "f1": 0.4444444444444445,
+                "predicted": 14,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-28",
+                "f1": 0.5,
+                "predicted": 12,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-29",
+                "f1": 0.5333333333333333,
+                "predicted": 11,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-30",
+                "f1": 0.5714285714285715,
+                "predicted": 10,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-31",
+                "f1": 0.46153846153846156,
+                "predicted": 9,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-32",
+                "f1": 0.30769230769230765,
+                "predicted": 9,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-33",
+                "f1": 0.22222222222222224,
+                "predicted": 14,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-34",
+                "f1": 0.31578947368421056,
+                "predicted": 15,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-35",
+                "f1": 0.47058823529411764,
+                "predicted": 13,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-36",
+                "f1": 0.46153846153846156,
+                "predicted": 9,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-37",
+                "f1": 0.39999999999999997,
+                "predicted": 11,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-38",
+                "f1": 0.5333333333333333,
+                "predicted": 11,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-39",
+                "f1": 0.6153846153846153,
+                "predicted": 9,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-40",
+                "f1": 0.28571428571428575,
+                "predicted": 10,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-41",
+                "f1": 0.6153846153846153,
+                "predicted": 9,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-42",
+                "f1": 0.5333333333333333,
+                "predicted": 11,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-43",
+                "f1": 0.375,
+                "predicted": 12,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-44",
+                "f1": 0.28571428571428575,
+                "predicted": 10,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-45",
+                "f1": 0.39999999999999997,
+                "predicted": 11,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-46",
+                "f1": 0.5714285714285715,
+                "predicted": 10,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-47",
+                "f1": 0.5,
+                "predicted": 8,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-48",
+                "f1": 0.5,
+                "predicted": 8,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-49",
+                "f1": 0.47058823529411764,
+                "predicted": 13,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-50",
+                "f1": 0.5,
+                "predicted": 8,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-51",
+                "f1": 0.39999999999999997,
+                "predicted": 11,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-52",
+                "f1": 0.26666666666666666,
+                "predicted": 11,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-53",
+                "f1": 0.3333333333333333,
+                "predicted": 8,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-54",
+                "f1": 0.28571428571428575,
+                "predicted": 10,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-55",
+                "f1": 0.4285714285714285,
+                "predicted": 10,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-56",
+                "f1": 0.39999999999999997,
+                "predicted": 11,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-57",
+                "f1": 0.5454545454545454,
+                "predicted": 7,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-58",
+                "f1": 0.4444444444444445,
+                "predicted": 5,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-59",
+                "f1": 0.4285714285714285,
+                "predicted": 10,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-60",
+                "f1": 0.14285714285714288,
+                "predicted": 10,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-61",
+                "f1": 0.5454545454545454,
+                "predicted": 7,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-62",
+                "f1": 0.30769230769230765,
+                "predicted": 9,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-63",
+                "f1": 0.5333333333333333,
+                "predicted": 11,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-64",
+                "f1": 0.375,
+                "predicted": 12,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-65",
+                "f1": 0.5,
+                "predicted": 8,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-66",
+                "f1": 0.3333333333333333,
+                "predicted": 8,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-67",
+                "f1": 0.39999999999999997,
+                "predicted": 11,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-68",
+                "f1": 0.5,
+                "predicted": 8,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-69",
+                "f1": 0.28571428571428575,
+                "predicted": 10,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-70",
+                "f1": 0.5454545454545454,
+                "predicted": 7,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-71",
+                "f1": 0.25,
+                "predicted": 12,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-72",
+                "f1": 0.28571428571428575,
+                "predicted": 10,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-73",
+                "f1": 0.5333333333333333,
+                "predicted": 11,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-74",
+                "f1": 0.39999999999999997,
+                "predicted": 11,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-75",
+                "f1": 0.4285714285714285,
+                "predicted": 10,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-76",
+                "f1": 0.46153846153846156,
+                "predicted": 9,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-77",
+                "f1": 0.4285714285714285,
+                "predicted": 10,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-78",
+                "f1": 0.46153846153846156,
+                "predicted": 9,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-79",
+                "f1": 0.28571428571428575,
+                "predicted": 10,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-80",
+                "f1": 0.26666666666666666,
+                "predicted": 11,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-81",
+                "f1": 0.46153846153846156,
+                "predicted": 9,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-82",
+                "f1": 0.375,
+                "predicted": 12,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-83",
+                "f1": 0.4285714285714285,
+                "predicted": 10,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-84",
+                "f1": 0.5333333333333333,
+                "predicted": 11,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-85",
+                "f1": 0.47058823529411764,
+                "predicted": 13,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-86",
+                "f1": 0.5,
+                "predicted": 8,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-87",
+                "f1": 0.46153846153846156,
+                "predicted": 9,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-88",
+                "f1": 0.13333333333333333,
+                "predicted": 11,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-89",
+                "f1": 0.14285714285714288,
+                "predicted": 10,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-90",
+                "f1": 0.46153846153846156,
+                "predicted": 9,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-91",
+                "f1": 0.5333333333333333,
+                "predicted": 11,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-92",
+                "f1": 0.4285714285714285,
+                "predicted": 10,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-93",
+                "f1": 0.30769230769230765,
+                "predicted": 9,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-94",
+                "f1": 0.6666666666666666,
+                "predicted": 8,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-95",
+                "f1": 0.2,
+                "predicted": 6,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-96",
+                "f1": 0.5714285714285715,
+                "predicted": 10,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-97",
+                "f1": 0.3333333333333333,
+                "predicted": 8,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-98",
+                "f1": 0.28571428571428575,
+                "predicted": 10,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-99",
+                "f1": 0.5,
+                "predicted": 12,
+                "gold": 4
+            }
+        ]
+    },
+    "hmmOracle": {
+        "method": "hmm(k=oracle=5)",
+        "n": 100,
+        "precision": 0.4375,
+        "recall": 0.4375,
+        "f1": 0.4375,
+        "tp": 175,
+        "fp": 225,
+        "fn": 225,
+        "perFixture": [
+            {
+                "fixtureId": "msc-0",
+                "f1": 0.5,
+                "predicted": 4,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-1",
+                "f1": 0.75,
+                "predicted": 4,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-2",
+                "f1": 0.5,
+                "predicted": 4,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-3",
+                "f1": 0.25,
+                "predicted": 4,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-4",
+                "f1": 0.75,
+                "predicted": 4,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-5",
+                "f1": 0.25,
+                "predicted": 4,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-6",
+                "f1": 0.25,
+                "predicted": 4,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-7",
+                "f1": 0.25,
+                "predicted": 4,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-8",
+                "f1": 0.5,
+                "predicted": 4,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-9",
+                "f1": 0.25,
+                "predicted": 4,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-10",
+                "f1": 0,
+                "predicted": 4,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-11",
+                "f1": 0.75,
+                "predicted": 4,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-12",
+                "f1": 0.75,
+                "predicted": 4,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-13",
+                "f1": 0.5,
+                "predicted": 4,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-14",
+                "f1": 0.25,
+                "predicted": 4,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-15",
+                "f1": 0.5,
+                "predicted": 4,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-16",
+                "f1": 0.5,
+                "predicted": 4,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-17",
+                "f1": 0.5,
+                "predicted": 4,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-18",
+                "f1": 0.5,
+                "predicted": 4,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-19",
+                "f1": 0.5,
+                "predicted": 4,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-20",
+                "f1": 0.5,
+                "predicted": 4,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-21",
+                "f1": 0.5,
+                "predicted": 4,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-22",
+                "f1": 0.5,
+                "predicted": 4,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-23",
+                "f1": 0.25,
+                "predicted": 4,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-24",
+                "f1": 0,
+                "predicted": 4,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-25",
+                "f1": 0.75,
+                "predicted": 4,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-26",
+                "f1": 0.5,
+                "predicted": 4,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-27",
+                "f1": 0.75,
+                "predicted": 4,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-28",
+                "f1": 0.5,
+                "predicted": 4,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-29",
+                "f1": 0.5,
+                "predicted": 4,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-30",
+                "f1": 0.25,
+                "predicted": 4,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-31",
+                "f1": 0.25,
+                "predicted": 4,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-32",
+                "f1": 0.25,
+                "predicted": 4,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-33",
+                "f1": 0.25,
+                "predicted": 4,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-34",
+                "f1": 0.5,
+                "predicted": 4,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-35",
+                "f1": 0.5,
+                "predicted": 4,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-36",
+                "f1": 0.5,
+                "predicted": 4,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-37",
+                "f1": 0.25,
+                "predicted": 4,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-38",
+                "f1": 0.25,
+                "predicted": 4,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-39",
+                "f1": 0.75,
+                "predicted": 4,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-40",
+                "f1": 0.75,
+                "predicted": 4,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-41",
+                "f1": 0.25,
+                "predicted": 4,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-42",
+                "f1": 0.25,
+                "predicted": 4,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-43",
+                "f1": 0.75,
+                "predicted": 4,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-44",
+                "f1": 0.25,
+                "predicted": 4,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-45",
+                "f1": 0.75,
+                "predicted": 4,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-46",
+                "f1": 0.25,
+                "predicted": 4,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-47",
+                "f1": 0.25,
+                "predicted": 4,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-48",
+                "f1": 0.5,
+                "predicted": 4,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-49",
+                "f1": 0.5,
+                "predicted": 4,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-50",
+                "f1": 0.5,
+                "predicted": 4,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-51",
+                "f1": 0.5,
+                "predicted": 4,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-52",
+                "f1": 0.25,
+                "predicted": 4,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-53",
+                "f1": 0.5,
+                "predicted": 4,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-54",
+                "f1": 0.25,
+                "predicted": 4,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-55",
+                "f1": 0.5,
+                "predicted": 4,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-56",
+                "f1": 0.5,
+                "predicted": 4,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-57",
+                "f1": 0.5,
+                "predicted": 4,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-58",
+                "f1": 0.5,
+                "predicted": 4,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-59",
+                "f1": 0.75,
+                "predicted": 4,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-60",
+                "f1": 0.5,
+                "predicted": 4,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-61",
+                "f1": 0.5,
+                "predicted": 4,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-62",
+                "f1": 0.5,
+                "predicted": 4,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-63",
+                "f1": 0.5,
+                "predicted": 4,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-64",
+                "f1": 0.75,
+                "predicted": 4,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-65",
+                "f1": 0.5,
+                "predicted": 4,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-66",
+                "f1": 0.25,
+                "predicted": 4,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-67",
+                "f1": 0.25,
+                "predicted": 4,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-68",
+                "f1": 0.25,
+                "predicted": 4,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-69",
+                "f1": 0.5,
+                "predicted": 4,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-70",
+                "f1": 0.5,
+                "predicted": 4,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-71",
+                "f1": 0.25,
+                "predicted": 4,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-72",
+                "f1": 0.25,
+                "predicted": 4,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-73",
+                "f1": 0.5,
+                "predicted": 4,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-74",
+                "f1": 0.5,
+                "predicted": 4,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-75",
+                "f1": 0.5,
+                "predicted": 4,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-76",
+                "f1": 0.25,
+                "predicted": 4,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-77",
+                "f1": 0.75,
+                "predicted": 4,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-78",
+                "f1": 0.5,
+                "predicted": 4,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-79",
+                "f1": 0.25,
+                "predicted": 4,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-80",
+                "f1": 0.5,
+                "predicted": 4,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-81",
+                "f1": 0.25,
+                "predicted": 4,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-82",
+                "f1": 0.5,
+                "predicted": 4,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-83",
+                "f1": 0,
+                "predicted": 4,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-84",
+                "f1": 0.5,
+                "predicted": 4,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-85",
+                "f1": 0.5,
+                "predicted": 4,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-86",
+                "f1": 0.25,
+                "predicted": 4,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-87",
+                "f1": 0.25,
+                "predicted": 4,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-88",
+                "f1": 0.5,
+                "predicted": 4,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-89",
+                "f1": 0.5,
+                "predicted": 4,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-90",
+                "f1": 0.25,
+                "predicted": 4,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-91",
+                "f1": 0.75,
+                "predicted": 4,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-92",
+                "f1": 0.75,
+                "predicted": 4,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-93",
+                "f1": 0.5,
+                "predicted": 4,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-94",
+                "f1": 0.5,
+                "predicted": 4,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-95",
+                "f1": 0.25,
+                "predicted": 4,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-96",
+                "f1": 0.5,
+                "predicted": 4,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-97",
+                "f1": 0.5,
+                "predicted": 4,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-98",
+                "f1": 0.25,
+                "predicted": 4,
+                "gold": 4
+            },
+            {
+                "fixtureId": "msc-99",
+                "f1": 0.25,
+                "predicted": 4,
+                "gold": 4
+            }
+        ]
+    },
+    "hmmSweep": [
+        {
+            "k": 2,
+            "f1": 0.16000000000000003,
+            "p": 0.4,
+            "r": 0.1,
+            "tp": 40,
+            "fp": 60,
+            "fn": 360
+        },
+        {
+            "k": 4,
+            "f1": 0.40857142857142853,
+            "p": 0.4766666666666667,
+            "r": 0.3575,
+            "tp": 143,
+            "fp": 157,
+            "fn": 257
+        },
+        {
+            "k": 8,
+            "f1": 0.4654545454545454,
+            "p": 0.3657142857142857,
+            "r": 0.64,
+            "tp": 256,
+            "fp": 444,
+            "fn": 144
+        },
+        {
+            "k": 16,
+            "f1": 0.38105263157894737,
+            "p": 0.24133333333333334,
+            "r": 0.905,
+            "tp": 362,
+            "fp": 1138,
+            "fn": 38
+        }
+    ],
+    "h3Delta": 0.02248583569405105,
+    "h3Pass": false
+}
